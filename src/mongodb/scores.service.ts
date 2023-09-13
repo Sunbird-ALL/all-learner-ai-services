@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { CreateScoreDto } from './dto/create-score.dto';
 import { UpdateScoreDto } from './dto/update-score.dto';
 import { ScoreSchema, ScoreDocument } from './schemas/scores.schema';
+import { hexcodeMappingSchema, hexcodeMappingDocument } from './schemas/hexcodeMapping.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class ScoresService {
-  constructor(@InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>) { }
+  constructor(@InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>, @InjectModel('hexcodeMapping') private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>) { }
 
 
   async create(createScoreDto: any): Promise<any> {
@@ -201,5 +202,10 @@ export class ScoresService {
 
   remove(id: number) {
     return `This action removes a #${id} score`;
+  }
+
+  async gethexcodeMapping(language: String) {
+    const recordData = await this.hexcodeMappingModel.find({ language: language }).exec();
+    return recordData;
   }
 }
