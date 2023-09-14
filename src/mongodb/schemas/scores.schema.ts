@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Score {
     @Prop({ required: true, unique: true })
     user_id: string;
@@ -10,9 +10,11 @@ export class Score {
         type: [
             {
                 session_id: { type: String, required: true },
-                date: { type: String, required: true },
+                //date: { type: String, required: true },
+                createdAt: { type: Date, default: Date.now() },
                 original_text: { type: String, required: true },
                 response_text: { type: String, required: true },
+                language: { type: String, required: true },
                 confidence_scores: [
                     {
                         token: { type: String, required: true },
@@ -35,7 +37,7 @@ export class Score {
     })
     sessions: {
         session_id: string;
-        date: Date;
+        //date: Date;
         confidence_scores: {
             token: string;
             hexcode: string;
@@ -48,6 +50,7 @@ export class Score {
             confidence_score: number;
             identification_status: number
         }[];
+        createdAt: Date;
     }[];
 }
 

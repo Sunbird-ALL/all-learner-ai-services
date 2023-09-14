@@ -11,7 +11,7 @@ export class ScoresController {
   ) { }
 
   @Post()
-  async create(@Res() response: FastifyReply, @Body() createScoreDto: any) {
+  async create(@Res() response: FastifyReply, @Body() createScoreDto: CreateScoreDto) {
     try {
 
       let confidence_scoresArr = [];
@@ -44,13 +44,15 @@ export class ScoresController {
         "்",
       ];
 
-      if (createScoreDto.language === "hi") {
+      let language = createScoreDto?.language || "ta";
+
+      if (language === "hi") {
         vowelSignArr = hindiVowelSignArr;
-      } else if (createScoreDto.language === "ta") {
+      } else if (language === "ta") {
         vowelSignArr = taVowelSignArr;
       }
 
-      let tokenHexcodeData = this.scoresService.gethexcodeMapping(createScoreDto.language);
+      let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
       let tokenHexcodeDataArr = [];
 
       await tokenHexcodeData.then((tokenHexcodedata: any) => {
@@ -278,7 +280,7 @@ export class ScoresController {
         user_id: createScoreDto.user_id,
         session: {
           session_id: createScoreDto.session_id,
-          date: createScoreDto.date,
+          language: language,
           original_text: createScoreDto.original_text,
           response_text: responseText,
           confidence_scores: confidence_scoresArr,
