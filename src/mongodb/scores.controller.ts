@@ -233,28 +233,34 @@ export class ScoresController {
         if (value.charkey !== "" && value.charkey !== "▁") {
           if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
-            confidence_scoresArr.push(
-              {
-                token: value.charkey,
-                hexcode: hexcode,
-                confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
-              }
-            );
+
+            if (hexcode !== '') {
+              confidence_scoresArr.push(
+                {
+                  token: value.charkey,
+                  hexcode: hexcode,
+                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
+                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
+                }
+              );
+            }
           }
         }
       }
 
       for (let missingTokensEle of missingTokens) {
         let hexcode = getTokenHexcode(missingTokensEle);
-        confidence_scoresArr.push(
-          {
-            token: missingTokensEle,
-            hexcode: hexcode,
-            confidence_score: 0.10,
-            identification_status: 0
-          }
-        );
+
+        if (hexcode !== '') {
+          confidence_scoresArr.push(
+            {
+              token: missingTokensEle,
+              hexcode: hexcode,
+              confidence_score: 0.10,
+              identification_status: 0
+            }
+          );
+        }
       }
 
       for (let anamolyTokenArrEle of anamolyTokenArr) {
@@ -263,14 +269,16 @@ export class ScoresController {
 
         if (tokenString != '') {
           let hexcode = getTokenHexcode(tokenString);
-          anomaly_scoreArr.push(
-            {
-              token: tokenString,
-              hexcode: hexcode,
-              confidence_score: tokenValue,
-              identification_status: 0
-            }
-          );
+          if (hexcode !== '') {
+            anomaly_scoreArr.push(
+              {
+                token: tokenString.replaceAll("_", ""),
+                hexcode: hexcode,
+                confidence_score: tokenValue,
+                identification_status: 0
+              }
+            );
+          }
 
         }
 
