@@ -27,4 +27,4 @@ ENV MYSQL_DATABASE=
 EXPOSE $PORT
 
 # Start the application
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "start:dev"]
