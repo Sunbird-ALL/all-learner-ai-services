@@ -25,7 +25,7 @@ export class ScoresController {
       let correctTokens = [];
       let missingTokens = [];
 
-      let hindiVowelSignArr = ["ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ", "ं", "ः"];
+      let hindiVowelSignArr = ["ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ", "ं", "ः", "ँ", "ॉ", "ों", "्", "़", "़ा"];
 
       let vowelSignArr = [];
 
@@ -71,9 +71,14 @@ export class ScoresController {
         if (originalTextELE != ' ') {
           if (vowelSignArr.includes(originalTextELE)) {
             if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + originalTextELE;
-              originalTokenArr.push(prevEle);
+              if (language !== 'hi') {
+                let prevEleArr = prevEle.split("");
+                prevEle = prevEleArr[0] + originalTextELE;
+                originalTokenArr.push(prevEle);
+              } else {
+                prevEle = prevEle + originalTextELE;
+                originalTokenArr.push(prevEle);
+              }
             } else {
               prevEle = prevEle + originalTextELE;
               originalTokenArr.push(prevEle);
@@ -91,9 +96,14 @@ export class ScoresController {
         if (responseTextELE != ' ') {
           if (vowelSignArr.includes(responseTextELE)) {
             if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + responseTextELE;
-              responseTokenArr.push(prevEle);
+              if (language !== 'hi') {
+                let prevEleArr = prevEle.split("");
+                prevEle = prevEleArr[0] + responseTextELE;
+                responseTokenArr.push(prevEle);
+              } else {
+                prevEle = prevEle + responseTextELE;
+                responseTokenArr.push(prevEle);
+              }
             } else {
               prevEle = prevEle + responseTextELE;
               responseTokenArr.push(prevEle);
@@ -142,8 +152,6 @@ export class ScoresController {
         });
       });
 
-
-
       let uniqueChar = new Set();
       prevEle = '';
       isPrevVowel = false;
@@ -154,9 +162,15 @@ export class ScoresController {
         for (let keyEle of tokenString.split("")) {
           if (vowelSignArr.includes(keyEle)) {
             if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + keyEle;
-              uniqueChar.add(prevEle);
+              if (language !== 'hi') {
+                let prevEleArr = prevEle.split("");
+                prevEle = prevEleArr[0] + keyEle;
+                uniqueChar.add(prevEle);
+              } else {
+                //console.log(prevEle + keyEle);
+                prevEle = prevEle + keyEle;
+                uniqueChar.add(prevEle);
+              }
             } else {
               prevEle = prevEle + keyEle;
               uniqueChar.add(prevEle);
@@ -172,6 +186,8 @@ export class ScoresController {
 
       //unique token list for ai4bharat response
       let uniqueCharArr = Array.from(uniqueChar);
+
+      console.log(uniqueCharArr);
 
       isPrevVowel = false;
 
@@ -191,9 +207,14 @@ export class ScoresController {
 
             if (vowelSignArr.includes(charEle)) {
               if (isPrevVowel) {
-                let prevCharArr = prevChar.split("");
-                prevChar = prevCharArr[0] + charEle;
-                charEle = prevChar;
+                if (language !== 'hi') {
+                  let prevCharArr = prevChar.split("");
+                  prevChar = prevCharArr[0] + charEle;
+                  charEle = prevChar;
+                } else {
+                  prevChar = prevChar + charEle;
+                  charEle = prevChar;
+                }
               } else {
                 prevChar = prevChar + charEle;
                 charEle = prevChar;
@@ -217,6 +238,8 @@ export class ScoresController {
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
 
+      //console.log(filteredTokenArr);
+
       // Create confidence score array and anomoly array
       for (let value of filteredTokenArr) {
         let score: any = value.charvalue
@@ -234,7 +257,7 @@ export class ScoresController {
           if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
-            if (hexcode !== '') {
+            if (hexcode !== '' || language === 'hi') {
               confidence_scoresArr.push(
                 {
                   token: value.charkey,
@@ -245,21 +268,37 @@ export class ScoresController {
               );
             }
           }
+          else {
+            let hexcode = getTokenHexcode(value.charkey);
+
+            if (hexcode !== '' || language === 'hi') {
+              confidence_scoresArr.push(
+                {
+                  token: value.charkey,
+                  hexcode: hexcode,
+                  confidence_score: 0.10,
+                  identification_status: 0
+                }
+              );
+            }
+          }
         }
       }
 
       for (let missingTokensEle of missingTokens) {
         let hexcode = getTokenHexcode(missingTokensEle);
 
-        if (hexcode !== '') {
-          confidence_scoresArr.push(
-            {
-              token: missingTokensEle,
-              hexcode: hexcode,
-              confidence_score: 0.10,
-              identification_status: 0
-            }
-          );
+        if (hexcode !== '' || language === 'hi') {
+          if (hindiVowelSignArr.includes(missingTokensEle) || taVowelSignArr.includes(missingTokensEle)) { } else {
+            confidence_scoresArr.push(
+              {
+                token: missingTokensEle,
+                hexcode: hexcode,
+                confidence_score: 0.10,
+                identification_status: 0
+              }
+            );
+          }
         }
       }
 
@@ -269,15 +308,17 @@ export class ScoresController {
 
         if (tokenString != '') {
           let hexcode = getTokenHexcode(tokenString);
-          if (hexcode !== '') {
-            anomaly_scoreArr.push(
-              {
-                token: tokenString.replaceAll("_", ""),
-                hexcode: hexcode,
-                confidence_score: tokenValue,
-                identification_status: 0
-              }
-            );
+          if (hexcode !== '' || language === 'hi') {
+            if (hindiVowelSignArr.includes(tokenString) || taVowelSignArr.includes(tokenString)) { } else {
+              anomaly_scoreArr.push(
+                {
+                  token: tokenString.replaceAll("_", ""),
+                  hexcode: hexcode,
+                  confidence_score: tokenValue,
+                  identification_status: 0
+                }
+              );
+            }
           }
 
         }
@@ -303,8 +344,6 @@ export class ScoresController {
         let result = tokenHexcodeDataArr.find(item => item.token === token);
         return result?.hexcode || '';
       }
-
-
 
       return response.status(HttpStatus.CREATED).send({ status: 'success', missingTokens: missingTokens, correctTokens: correctTokens, confidence_scoresArr: confidence_scoresArr, anomaly_scoreArr: anomaly_scoreArr, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr })
     } catch (err) {
