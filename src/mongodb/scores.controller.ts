@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply } from 'fastify';
 import { ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('scores')
@@ -13,14 +13,14 @@ export class ScoresController {
 
   @ApiExcludeEndpoint(true)
   @Post()
-  async create(@Res() response: FastifyReply, @Body() createScoreDto: CreateLearnerProfileDto) {
+  async create(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
 
       let confidence_scoresArr = [];
       let anomaly_scoreArr = [];
 
-      let originalText = createScoreDto.original_text;
-      let responseText = createScoreDto.output[0].source;
+      let originalText = CreateLearnerProfileDto.original_text;
+      let responseText = CreateLearnerProfileDto.output[0].source;
       let originalTextTokensArr = originalText.split("");
       let responseTextTokensArr = responseText.split("");
 
@@ -46,7 +46,7 @@ export class ScoresController {
         "்",
       ];
 
-      let language = createScoreDto?.language || "ta";
+      let language = CreateLearnerProfileDto?.language || "ta";
 
       if (language === "hi") {
         vowelSignArr = hindiVowelSignArr;
@@ -137,7 +137,7 @@ export class ScoresController {
       let anamolyTokenArr = [];
 
       // Create Single Array from AI4bharat tokens array
-      createScoreDto.output[0].nBestTokens.forEach(element => {
+      CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
         element.tokens.forEach(token => {
           let key = Object.keys(token)[0];
           let value = Object.values(token)[0];
@@ -328,11 +328,11 @@ export class ScoresController {
       }
 
       let createScoreData = {
-        user_id: createScoreDto.user_id,
+        user_id: CreateLearnerProfileDto.user_id,
         session: {
-          session_id: createScoreDto.session_id,
+          session_id: CreateLearnerProfileDto.session_id,
           language: language,
-          original_text: createScoreDto.original_text,
+          original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
           confidence_scores: confidence_scoresArr,
           anamolydata_scores: anomaly_scoreArr
@@ -381,18 +381,18 @@ export class ScoresController {
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file' })
   @Post('/updateLearnerProfile')
-  async updateLearnerProfile(@Res() response: FastifyReply, @Body() createScoreDto: CreateLearnerProfileDto) {
+  async updateLearnerProfile(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let audioFile = createScoreDto.audio;
+      let audioFile = CreateLearnerProfileDto.audio;
       const decoded = audioFile.toString('base64');
-      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, createScoreDto.language);
-      createScoreDto['output'] = audioOutput.output;
+      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+      CreateLearnerProfileDto['output'] = audioOutput.output;
 
       let confidence_scoresArr = [];
       let anomaly_scoreArr = [];
 
-      let originalText = createScoreDto.original_text;
-      let responseText = createScoreDto.output[0].source;
+      let originalText = CreateLearnerProfileDto.original_text;
+      let responseText = CreateLearnerProfileDto.output[0].source;
       let originalTextTokensArr = originalText.split("");
       let responseTextTokensArr = responseText.split("");
 
@@ -418,7 +418,7 @@ export class ScoresController {
         "்",
       ];
 
-      let language = createScoreDto?.language || "ta";
+      let language = CreateLearnerProfileDto?.language || "ta";
 
       if (language === "hi") {
         vowelSignArr = hindiVowelSignArr;
@@ -509,7 +509,7 @@ export class ScoresController {
       let anamolyTokenArr = [];
 
       // Create Single Array from AI4bharat tokens array
-      createScoreDto.output[0].nBestTokens.forEach(element => {
+      CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
         element.tokens.forEach(token => {
           let key = Object.keys(token)[0];
           let value = Object.values(token)[0];
@@ -700,11 +700,11 @@ export class ScoresController {
       }
 
       let createScoreData = {
-        user_id: createScoreDto.user_id,
+        user_id: CreateLearnerProfileDto.user_id,
         session: {
-          session_id: createScoreDto.session_id,
+          session_id: CreateLearnerProfileDto.session_id,
           language: language,
-          original_text: createScoreDto.original_text,
+          original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
           confidence_scores: confidence_scoresArr,
           anamolydata_scores: anomaly_scoreArr
@@ -730,9 +730,9 @@ export class ScoresController {
 
   @ApiExcludeEndpoint(true)
   @Post('/bulk')
-  createBulk(@Res() response: FastifyReply, @Body() createScoreDto: any) {
+  createBulk(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: any) {
     try {
-      let data = this.scoresService.create(createScoreDto);
+      let data = this.scoresService.create(CreateLearnerProfileDto);
       return response.status(HttpStatus.CREATED).send({ status: 'success', msg: 'Successfully Added' })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -798,11 +798,11 @@ export class ScoresController {
     return this.scoresService.getTargetsByUser(id);
   }
 
-  @Get('/GetConfidentSet/session/:sessionId')
-  @ApiOperation({ summary: 'Get ConfidentSet character API by session id' })
+  @Get('/GetFamiliarity/session/:sessionId')
+  @ApiOperation({ summary: 'Get Familiarity of characters by session id' })
   @ApiResponse({
     status: 200,
-    description: 'Success response with Get ConfidentSet Word character and score for session id',
+    description: 'Success response for Get Familiarity of characters with score for session id',
     schema: {
       properties: {
         character: { type: 'string' },
@@ -810,15 +810,15 @@ export class ScoresController {
       }
     },
   })
-  GetConfidentSetBysession(@Param('sessionId') id: string) {
-    return this.scoresService.getConfidentSetBySession(id);
+  GetFamiliarityBysession(@Param('sessionId') id: string) {
+    return this.scoresService.getFamiliarityBySession(id);
   }
 
-  @Get('/GetConfidentSet/user/:userId')
-  @ApiOperation({ summary: 'Get ConfidentSet character API by user id' })
+  @Get('/GetFamiliarity/user/:userId')
+  @ApiOperation({ summary: 'Get Familiarity of characters by user id' })
   @ApiResponse({
     status: 200,
-    description: 'Success response with Get Confident Set of character and score for user id',
+    description: 'Success response for Get Familiarity of characters with score for user id',
     schema: {
       properties: {
         character: { type: 'string' },
@@ -826,8 +826,8 @@ export class ScoresController {
       }
     },
   })
-  GetConfidentSetByUser(@Param('userId') id: string) {
-    return this.scoresService.getConfidentSetByUser(id);
+  GetFamiliarityByUser(@Param('userId') id: string) {
+    return this.scoresService.getFamiliarityByUser(id);
   }
 
   @Get('/GetMeanScore/user/:userId')
@@ -862,11 +862,11 @@ export class ScoresController {
     return this.scoresService.getMeanLearnerBySession(id);
   }
 
-  @Get('/GetFamiliarityScore/user/:userId')
-  @ApiOperation({ summary: 'Familiarity of Learner Profile for each character by user id' })
+  @Get('/GetConfidentVector/user/:userId')
+  @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI' })
   @ApiResponse({
     status: 200,
-    description: 'Familiarity Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI',
+    description: 'Confident Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI',
     schema: {
       properties: {
         token: { type: 'string' },
@@ -874,15 +874,15 @@ export class ScoresController {
       }
     },
   })
-  GetFamiliarityScoreLearnerByUser(@Param('userId') id: string) {
-    return this.scoresService.getFamiliarityLearnerByUser(id);
+  GetConfidentVectorLearnerByUser(@Param('userId') id: string) {
+    return this.scoresService.getConfidentVectorByUser(id);
   }
 
-  @Get('/GetFamiliarityScore/session/:sessionId')
-  @ApiOperation({ summary: 'Familiarity Vector of Learner Profile, that provides a score against each character by given session id evaluated by the Learner AI' })
+  @Get('/GetConfidentVector/session/:sessionId')
+  @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given session id evaluated by the Learner AI' })
   @ApiResponse({
     status: 200,
-    description: 'Success response with Familiarity of Learner Profile for each character by session id',
+    description: 'Success response with Confident Vector of Learner Profile for each character by session id',
     schema: {
       properties: {
         token: { type: 'string' },
@@ -890,7 +890,7 @@ export class ScoresController {
       }
     },
   })
-  GetFamiliarityScoreLearnerBySession(@Param('sessionId') id: string) {
-    return this.scoresService.getFamiliarityLearnerBySession(id);
+  GetConfidentVectorLearnerBySession(@Param('sessionId') id: string) {
+    return this.scoresService.getConfidentVectorBySession(id);
   }
 }

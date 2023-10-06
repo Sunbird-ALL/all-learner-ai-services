@@ -219,7 +219,7 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getConfidentSetBySession(sessionId: string) {
+  async getFamiliarityBySession(sessionId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -276,7 +276,7 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getConfidentSetByUser(userId: string) {
+  async getFamiliarityByUser(userId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -428,7 +428,7 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFamiliarityLearnerByUser(userId: string) {
+  async getConfidentVectorByUser(userId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -503,7 +503,7 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFamiliarityLearnerBySession(sessionId: string) {
+  async getConfidentVectorBySession(sessionId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
