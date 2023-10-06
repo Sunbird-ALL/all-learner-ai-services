@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { CreateScoreDto } from './dto/create-score.dto';
-import { UpdateScoreDto } from './dto/update-score.dto';
+import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { ScoreSchema, ScoreDocument } from './schemas/scores.schema';
 import { hexcodeMappingSchema, hexcodeMappingDocument } from './schemas/hexcodeMapping.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import axios from 'axios';
 
 @Injectable()
 export class ScoresService {
@@ -34,6 +34,61 @@ export class ScoresService {
     }
   }
 
+  async audioFileToAsrOutput(data: any, language: String): Promise<any> {
+    let asrOut: any;
+
+    let serviceId = '';
+    switch (language) {
+      case "ta":
+        serviceId = "ai4bharat/conformer-ta-gpu--t4";
+        break;
+      case "hi":
+        serviceId = "ai4bharat/conformer-hi-gpu--t4";
+        break;
+      default:
+        serviceId = "ai4bharat/conformer-ta-gpu--t4";
+    }
+
+    let options = JSON.stringify({
+      "config": {
+        "serviceId": `ai4bharat/conformer-${language}-gpu--t4`,
+        "language": {
+          "sourceLanguage": language
+        },
+        "audioFormat": "wav",
+        "transcriptionFormat": {
+          "value": "transcript"
+        },
+        "bestTokenCount": 2
+      },
+      "audio": [
+        {
+          "audioContent": data
+        }
+      ]
+    });
+
+    let config = {
+      method: 'post',
+      url: 'https://api.dhruva.ai4bharat.org/services/inference/asr',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': process.env.AI4BHARAT_API_KEY
+      },
+      data: options
+    };
+
+    await axios.request(config)
+      .then((response) => {
+        asrOut = response.data;
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+
+    return asrOut;
+  }
+
   async findAll(): Promise<any> {
     const recordData = await this.scoreModel.find().exec();
     return recordData;
@@ -56,7 +111,7 @@ export class ScoresService {
     return UserRecordData;
   }
 
-  async getGapBySession(sessionId: string) {
+  async getTargetsBySession(sessionId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -81,6 +136,11 @@ export class ScoresService {
         }
       },
       {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
         $project: {
           _id: 0,
           character: '$sessions.confidence_scores.token',
@@ -88,10 +148,27 @@ export class ScoresService {
         }
       }
     ]);
-    return RecordData;
+    let charScoreData = [];
+
+    let uniqueChar = new Set();
+
+    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+
+
+    for (let char of uniqueChar) {
+      let score = 0;
+      for (let checkRecordDataele of RecordData) {
+        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
+          score = checkRecordDataele.score;
+        }
+      }
+      charScoreData.push({ character: char, score: score });
+    }
+
+    return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getGapByUser(userId: string) {
+  async getTargetsByUser(userId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -121,10 +198,28 @@ export class ScoresService {
         }
       }
     ]);
-    return RecordData;
+
+    let charScoreData = [];
+
+    let uniqueChar = new Set();
+
+    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+
+
+    for (let char of uniqueChar) {
+      let score = 0;
+      for (let checkRecordDataele of RecordData) {
+        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
+          score = checkRecordDataele.score;
+        }
+      }
+      charScoreData.push({ character: char, score: score });
+    }
+
+    return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getRecommendedWordsBySession(sessionId: string) {
+  async getConfidentSetBySession(sessionId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -149,6 +244,11 @@ export class ScoresService {
         }
       },
       {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
         $project: {
           _id: 0,
           character: '$sessions.confidence_scores.token',
@@ -156,10 +256,27 @@ export class ScoresService {
         }
       }
     ]);
-    return RecordData;
+    let charScoreData = [];
+
+    let uniqueChar = new Set();
+
+    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+
+
+    for (let char of uniqueChar) {
+      let score = 0;
+      for (let checkRecordDataele of RecordData) {
+        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
+          score = checkRecordDataele.score;
+        }
+      }
+      charScoreData.push({ character: char, score: score });
+    }
+
+    return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getRecommendedWordsByUser(userId: string) {
+  async getConfidentSetByUser(userId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -188,7 +305,24 @@ export class ScoresService {
         }
       }
     ]);
-    return RecordData;
+    let charScoreData = [];
+
+    let uniqueChar = new Set();
+
+    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+
+
+    for (let char of uniqueChar) {
+      let score = 0;
+      for (let checkRecordDataele of RecordData) {
+        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
+          score = checkRecordDataele.score;
+        }
+      }
+      charScoreData.push({ character: char, score: score });
+    }
+
+    return charScoreData.sort((a, b) => a.score - b.score);
   }
 
   async findbyUser(id: string) {
@@ -196,16 +330,256 @@ export class ScoresService {
     return UserRecordData;
   }
 
-  async update(id: number, updateScoreDto: UpdateScoreDto) {
-    return `This action update a #${id} score`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} score`;
-  }
-
   async gethexcodeMapping(language: String) {
     const recordData = await this.hexcodeMappingModel.find({ language: language }).exec();
     return recordData;
+  }
+
+  async getMeanLearnerBySession(sessionId: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $unwind: '$sessions.confidence_scores'
+      },
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          session_id: '$sessions.session_id',
+          token: '$sessions.confidence_scores.token',
+          score: '$sessions.confidence_scores.confidence_score',
+          hexcode: '$sessions.confidence_scores.hexcode',
+        }
+      },
+      {
+        $group: {
+          _id: {
+            user_id: '$user_id',
+            token: '$token'
+          },
+          mean: { $avg: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          token: '$_id.token',
+          mean: 1
+        }
+      }
+    ]
+    );
+    return RecordData;
+  }
+
+  async getMeanLearnerByUser(userId: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id': userId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $unwind: '$sessions.confidence_scores'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          session_id: '$sessions.session_id',
+          token: '$sessions.confidence_scores.token',
+          score: '$sessions.confidence_scores.confidence_score',
+          hexcode: '$sessions.confidence_scores.hexcode',
+        }
+      },
+      {
+        $group: {
+          _id: {
+            user_id: '$user_id',
+            token: '$token'
+          },
+          mean: { $avg: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          token: '$_id.token',
+          mean: 1
+        }
+      }
+    ]
+    );
+    return RecordData;
+  }
+
+  async getFamiliarityLearnerByUser(userId: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id': userId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $unwind: '$sessions.confidence_scores'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          token: '$sessions.confidence_scores.token',
+          score: '$sessions.confidence_scores.confidence_score'
+        }
+      },
+      {
+        $group: {
+          _id: {
+            user_id: '$user_id',
+            token: '$token'
+          },
+          scores: { $push: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: '$_id.user_id',
+          token: '$_id.token',
+          count: { $size: '$scores' },
+          score:
+          {
+            $sortArray:
+            {
+              input: '$scores',
+              sortBy: 1
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          token: 1,
+          // score: 1,
+          median: {
+            $cond: {
+              if: { $eq: ['$count', 0] },
+              then: null,
+              else: {
+                $cond: {
+                  if: { $eq: [{ $mod: ['$count', 2] }, 1] },
+                  then: { $arrayElemAt: ['$score', { $floor: { $divide: ['$count', 2] } }] },
+                  else: {
+                    $avg: [
+                      { $arrayElemAt: ['$score', { $subtract: [{ $round: { $divide: ['$count', 2] } }, 1] }] },
+                      { $arrayElemAt: ['$score', { $divide: ['$count', 2] }] }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+    );
+    return RecordData;
+  }
+
+  async getFamiliarityLearnerBySession(sessionId: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $unwind: '$sessions.confidence_scores'
+      },
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          token: '$sessions.confidence_scores.token',
+          score: '$sessions.confidence_scores.confidence_score'
+        }
+      },
+      {
+        $group: {
+          _id: {
+            user_id: '$user_id',
+            token: '$token'
+          },
+          scores: { $push: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: '$_id.user_id',
+          token: '$_id.token',
+          count: { $size: '$scores' },
+          score:
+          {
+            $sortArray:
+            {
+              input: '$scores',
+              sortBy: 1
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          token: 1,
+          // score: 1,
+          median: {
+            $cond: {
+              if: { $eq: ['$count', 0] },
+              then: null,
+              else: {
+                $cond: {
+                  if: { $eq: [{ $mod: ['$count', 2] }, 1] },
+                  then: { $arrayElemAt: ['$score', { $floor: { $divide: ['$count', 2] } }] },
+                  else: {
+                    $avg: [
+                      { $arrayElemAt: ['$score', { $subtract: [{ $round: { $divide: ['$count', 2] } }, 1] }] },
+                      { $arrayElemAt: ['$score', { $divide: ['$count', 2] }] }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+    );
+    return RecordData;
   }
 }
