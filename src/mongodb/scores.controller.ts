@@ -259,10 +259,19 @@ export class ScoresController {
           if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
-            if (hexcode !== '' || language === 'hi') {
+            if (hexcode !== '') {
               confidence_scoresArr.push(
                 {
                   token: value.charkey,
+                  hexcode: hexcode,
+                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
+                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
+                }
+              );
+            } else {
+              anomaly_scoreArr.push(
+                {
+                  token: value.charkey.replaceAll("_", ""),
                   hexcode: hexcode,
                   confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
                   identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
@@ -273,7 +282,7 @@ export class ScoresController {
           else {
             let hexcode = getTokenHexcode(value.charkey);
 
-            if (hexcode !== '' || language === 'hi') {
+            if (hexcode !== '') {
               confidence_scoresArr.push(
                 {
                   token: value.charkey,
@@ -290,7 +299,7 @@ export class ScoresController {
       for (let missingTokensEle of missingTokens) {
         let hexcode = getTokenHexcode(missingTokensEle);
 
-        if (hexcode !== '' || language === 'hi') {
+        if (hexcode !== '') {
           if (hindiVowelSignArr.includes(missingTokensEle) || taVowelSignArr.includes(missingTokensEle)) { } else {
             confidence_scoresArr.push(
               {
@@ -310,7 +319,7 @@ export class ScoresController {
 
         if (tokenString != '') {
           let hexcode = getTokenHexcode(tokenString);
-          if (hexcode !== '' || language === 'hi') {
+          if (hexcode !== '') {
             if (hindiVowelSignArr.includes(tokenString) || taVowelSignArr.includes(tokenString)) { } else {
               anomaly_scoreArr.push(
                 {
@@ -346,6 +355,7 @@ export class ScoresController {
         let result = tokenHexcodeDataArr.find(item => item.token === token);
         return result?.hexcode || '';
       }
+
 
       return response.status(HttpStatus.CREATED).send({ status: 'success', missingTokens: missingTokens, correctTokens: correctTokens, confidence_scoresArr: confidence_scoresArr, anomaly_scoreArr: anomaly_scoreArr, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr })
     } catch (err) {
@@ -631,7 +641,7 @@ export class ScoresController {
           if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
-            if (hexcode !== '' || language === 'hi') {
+            if (hexcode !== '') {
               confidence_scoresArr.push(
                 {
                   token: value.charkey,
@@ -645,7 +655,7 @@ export class ScoresController {
           else {
             let hexcode = getTokenHexcode(value.charkey);
 
-            if (hexcode !== '' || language === 'hi') {
+            if (hexcode !== '') {
               confidence_scoresArr.push(
                 {
                   token: value.charkey,
@@ -662,7 +672,7 @@ export class ScoresController {
       for (let missingTokensEle of missingTokens) {
         let hexcode = getTokenHexcode(missingTokensEle);
 
-        if (hexcode !== '' || language === 'hi') {
+        if (hexcode !== '') {
           if (hindiVowelSignArr.includes(missingTokensEle) || taVowelSignArr.includes(missingTokensEle)) { } else {
             confidence_scoresArr.push(
               {
@@ -682,7 +692,7 @@ export class ScoresController {
 
         if (tokenString != '') {
           let hexcode = getTokenHexcode(tokenString);
-          if (hexcode !== '' || language === 'hi') {
+          if (hexcode !== '') {
             if (hindiVowelSignArr.includes(tokenString) || taVowelSignArr.includes(tokenString)) { } else {
               anomaly_scoreArr.push(
                 {
