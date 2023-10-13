@@ -582,4 +582,15 @@ export class ScoresService {
     );
     return RecordData;
   }
+
+  async getMissingChars(language: string) {
+    const RecordData = await this.hexcodeMappingModel.find({
+      'language': language
+    }, { 'token': 1, '_id': 0 }).exec();
+    console.log(RecordData);
+    let tokenArray = RecordData.map((data) => {
+      return data.token;
+    })
+    return tokenArray;
+  }
 }

@@ -1527,4 +1527,76 @@ export class ScoresController {
   GetConfidentVectorLearnerBySession(@Param('sessionId') id: string) {
     return this.scoresService.getConfidentVectorBySession(id);
   }
+
+  @Post('/GetMissingChars')
+  async GetMissingChars(@Res() response: FastifyReply, @Body() storyData: any) {
+    let data = await this.scoresService.getMissingChars(storyData.storyLanguage);
+
+    let storyString = storyData.storyString;
+
+    let tokenArr = storyString.split("");
+
+    let taVowelSignArr = [
+      "ா",
+      "ி",
+      "ீ",
+      "ு",
+      "ூ",
+      "ெ",
+      "ே",
+      "ை",
+      "ொ",
+      "ோ",
+      "ௌ",
+      "்",
+    ];
+
+    let vowelSignArr = taVowelSignArr;
+
+    let uniqueChar = new Set();
+    let uniqueCharArr = [];
+    let prevEle = '';
+    let isPrevVowel = false;
+
+    // Create Unique token array
+    for (let tokenArrEle of tokenArr) {
+
+      for (let keyEle of tokenArrEle.split("")) {
+        if (vowelSignArr.includes(keyEle)) {
+          if (isPrevVowel) {
+            let prevEleArr = prevEle.split("");
+            if (prevEleArr.length) {
+              prevEle = prevEleArr[0] + keyEle;
+              uniqueCharArr[uniqueCharArr.length - 1] = prevEle;
+            }
+          } else {
+            prevEle = prevEle + keyEle;
+            uniqueCharArr[uniqueCharArr.length - 1] = prevEle;
+            //uniqueCharArr.push(prevEle);
+          }
+          isPrevVowel = true;
+        } else {
+          if (keyEle != ' ') {
+            uniqueCharArr.push(keyEle);
+          }
+          prevEle = keyEle;
+          isPrevVowel = false;
+        }
+      }
+    }
+
+    //let uniqueCharArr = Array.from(uniqueChar);
+    let matched = uniqueCharArr.filter(element => data.includes(element));
+    let matchtedTotal = matched.length;
+
+    let notIncluded = data.filter(element => {
+      if (!uniqueCharArr.includes(element)) {
+        return element;
+      }
+    });
+    let notIncludedTotal = notIncluded.length;
+
+    console.log(uniqueCharArr);
+    return response.status(HttpStatus.CREATED).send({ status: 'success', matched: matched, matchtedTotal: matchtedTotal, notIncluded: notIncluded, notIncludedTotal: notIncludedTotal })
+  }
 }
