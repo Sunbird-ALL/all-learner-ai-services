@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
+import { AssessmentInputDto } from './dto/AssessmentInput.dto';
 import { FastifyReply } from 'fastify';
 import { ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
@@ -1598,5 +1599,11 @@ export class ScoresController {
 
     console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({ status: 'success', matched: matched, matchtedTotal: matchtedTotal, notIncluded: notIncluded, notIncludedTotal: notIncludedTotal })
+  }
+
+  @Post('/addAssessmentInput')
+  async AddAssessmentInput(@Res() response: FastifyReply, @Body() assessmentInput: AssessmentInputDto) {
+    let data = await this.scoresService.assessmentInputCreate(assessmentInput);
+    return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to Assessment Input" })
   }
 }

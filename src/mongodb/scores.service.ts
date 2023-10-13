@@ -2,13 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { ScoreSchema, ScoreDocument } from './schemas/scores.schema';
 import { hexcodeMappingSchema, hexcodeMappingDocument } from './schemas/hexcodeMapping.schema';
+import { assessmentInputSchema, assessmentInputDocument } from './schemas/assessmentInput.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 
 @Injectable()
 export class ScoresService {
-  constructor(@InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>, @InjectModel('hexcodeMapping') private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>) { }
+  constructor(
+    @InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>,
+    @InjectModel('hexcodeMapping') private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>,
+    @InjectModel('assessmentInput') private readonly assessmentInputModel: Model<assessmentInputDocument>
+  ) { }
 
 
   async create(createScoreDto: any): Promise<any> {
@@ -592,5 +597,15 @@ export class ScoresService {
       return data.token;
     })
     return tokenArray;
+  }
+
+  async assessmentInputCreate(assessmentInputData: any): Promise<any> {
+    try {
+      const assessmentInput = new this.assessmentInputModel(assessmentInputData);
+      const result = await assessmentInput.save();
+      return result;
+    } catch (err) {
+      return err;
+    }
   }
 }
