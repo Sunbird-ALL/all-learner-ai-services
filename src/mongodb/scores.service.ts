@@ -135,11 +135,11 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      {
-        $match: {
-          'sessions.confidence_scores.confidence_score': { $lt: threshold }
-        }
-      },
+      // {
+      //   $match: {
+      //     'sessions.confidence_scores.confidence_score': { $lt: threshold }
+      //   }
+      // },
       {
         $match: {
           'sessions.session_id': sessionId
@@ -167,7 +167,9 @@ export class ScoresService {
           score = checkRecordDataele.score;
         }
       }
-      charScoreData.push({ character: char, score: score });
+      if (score < 0.90) {
+        charScoreData.push({ character: char, score: score });
+      }
     }
 
     return charScoreData.sort((a, b) => a.score - b.score);
@@ -187,11 +189,11 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      {
-        $match: {
-          'sessions.confidence_scores.confidence_score': { $lt: 0.90 }
-        }
-      },
+      // {
+      //   $match: {
+      //     'sessions.confidence_scores.confidence_score': { $lt: 0.90 }
+      //   }
+      // },
       {
         $project: {
           _id: 0,
@@ -218,7 +220,9 @@ export class ScoresService {
           score = checkRecordDataele.score;
         }
       }
-      charScoreData.push({ character: char, score: score });
+      if (score < 0.90) {
+        charScoreData.push({ character: char, score: score });
+      }
     }
 
     return charScoreData.sort((a, b) => a.score - b.score);
@@ -243,11 +247,11 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      {
-        $match: {
-          'sessions.confidence_scores.confidence_score': { $gte: threshold }
-        }
-      },
+      // {
+      //   $match: {
+      //     'sessions.confidence_scores.confidence_score': { $gte: threshold }
+      //   }
+      // },
       {
         $match: {
           'sessions.session_id': sessionId
@@ -275,7 +279,10 @@ export class ScoresService {
           score = checkRecordDataele.score;
         }
       }
-      charScoreData.push({ character: char, score: score });
+
+      if (score >= 0.90) {
+        charScoreData.push({ character: char, score: score });
+      }
     }
 
     return charScoreData.sort((a, b) => a.score - b.score);
@@ -295,11 +302,11 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      {
-        $match: {
-          'sessions.confidence_scores.confidence_score': { $gte: threshold }
-        }
-      },
+      // {
+      //   $match: {
+      //     'sessions.confidence_scores.confidence_score': { $gte: threshold }
+      //   }
+      // },
       {
         $project: {
           _id: 0,
@@ -324,7 +331,10 @@ export class ScoresService {
           score = checkRecordDataele.score;
         }
       }
-      charScoreData.push({ character: char, score: score });
+
+      if (score >= 0.90) {
+        charScoreData.push({ character: char, score: score });
+      }
     }
 
     return charScoreData.sort((a, b) => a.score - b.score);
