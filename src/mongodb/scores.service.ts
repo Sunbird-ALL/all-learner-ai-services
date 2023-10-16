@@ -611,9 +611,16 @@ export class ScoresService {
 
   async assessmentInputCreate(assessmentInputData: any): Promise<any> {
     try {
-      const assessmentInput = new this.assessmentInputModel(assessmentInputData);
-      const result = await assessmentInput.save();
-      return result;
+      // const assessmentInput = new this.assessmentInputModel(assessmentInputData);
+      // const result = await assessmentInput.save();
+
+      const assessmentInput = this.assessmentInputModel.findOneAndUpdate(
+        { user_id: assessmentInputData.user_id, session_id: assessmentInputData.session_id, token: assessmentInputData.token },
+        { $set: { feedback: assessmentInputData.feedback } },
+        { new: true, upsert: true }
+      );
+
+      return await assessmentInput;
     } catch (err) {
       return err;
     }
