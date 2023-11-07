@@ -44,19 +44,16 @@ export class ScoresService {
 
     let serviceId = '';
     switch (language) {
-      case "ta":
-        serviceId = "ai4bharat/conformer-ta-gpu--t4";
-        break;
-      case "hi":
+      case "kn":
         serviceId = "ai4bharat/conformer-hi-gpu--t4";
         break;
       default:
-        serviceId = "ai4bharat/conformer-ta-gpu--t4";
+        serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
 
     let options = JSON.stringify({
       "config": {
-        "serviceId": `ai4bharat/conformer-${language}-gpu--t4`,
+        "serviceId": serviceId,
         "language": {
           "sourceLanguage": language
         },
