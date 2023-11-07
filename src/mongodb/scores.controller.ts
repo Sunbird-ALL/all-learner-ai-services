@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -18,12 +18,43 @@ export class ScoresController {
     try {
 
       let confidence_scoresArr = [];
+      let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
 
       let originalText = CreateLearnerProfileDto.original_text;
       let responseText = CreateLearnerProfileDto.output[0].source;
       let originalTextTokensArr = originalText.split("");
       let responseTextTokensArr = responseText.split("");
+
+      let originalTextArr = originalText.split(" ");
+      let responseTextArr = responseText.split(" ");
+
+      let originalTextWordCount = [];
+
+      for (let originalTextSetEle of new Set(originalTextArr)) {
+        let wordCount = 0;
+        for (let originalTextArrEle of originalTextArr) {
+          if (originalTextSetEle === originalTextArrEle) {
+            wordCount++;
+          }
+        }
+        originalTextWordCount.push({ word: originalTextSetEle, count: wordCount });
+      }
+
+      for (let originalTextWordCountEle of originalTextWordCount) {
+        let count = 0;
+        for (let responseTextArrEle of responseTextArr) {
+          if (originalTextWordCountEle.word === responseTextArrEle) {
+            count++;
+          }
+        }
+        if (count != 0 && originalTextWordCountEle.count < count) {
+          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+            status: "error",
+            message: "Avoid repetitions and record again"
+          });
+        }
+      }
 
       let correctTokens = [];
       let missingTokens = [];
@@ -74,17 +105,9 @@ export class ScoresController {
         if (originalTextELE != ' ') {
           if (vowelSignArr.includes(originalTextELE)) {
             if (isPrevVowel) {
-              if (language !== 'hi') {
-                let prevEleArr = prevEle.split("");
-                prevEle = prevEleArr[0] + originalTextELE;
-                originalTokenArr.push(prevEle);
-              } else {
-                prevEle = prevEle + originalTextELE;
-                originalTokenArr.push(prevEle);
-              }
             } else {
               prevEle = prevEle + originalTextELE;
-              originalTokenArr.push(prevEle);
+              originalTokenArr[originalTokenArr.length - 1] = prevEle;
             }
             isPrevVowel = true;
           } else {
@@ -99,17 +122,12 @@ export class ScoresController {
         if (responseTextELE != ' ') {
           if (vowelSignArr.includes(responseTextELE)) {
             if (isPrevVowel) {
-              if (language !== 'hi') {
-                let prevEleArr = prevEle.split("");
-                prevEle = prevEleArr[0] + responseTextELE;
-                responseTokenArr.push(prevEle);
-              } else {
-                prevEle = prevEle + responseTextELE;
-                responseTokenArr.push(prevEle);
-              }
+              // let prevEleArr = prevEle.split("");
+              // prevEle = prevEleArr[0] + responseTextELE;
+              // responseTokenArr.push(prevEle);
             } else {
               prevEle = prevEle + responseTextELE;
-              responseTokenArr.push(prevEle);
+              responseTokenArr[responseTokenArr.length - 1] = prevEle;
             }
             isPrevVowel = true;
           } else {
@@ -252,12 +270,10 @@ export class ScoresController {
           identification_status = 1;
         } else if (score >= 0.40) {
           identification_status = -1;
-        } else {
-          identification_status = 0;
         }
 
         if (value.charkey !== "" && value.charkey !== "▁") {
-          if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
+          if (correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
             if (hexcode !== '') {
@@ -265,33 +281,21 @@ export class ScoresController {
                 {
                   token: value.charkey,
                   hexcode: hexcode,
-                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
                 }
               );
             } else {
-              anomaly_scoreArr.push(
-                {
-                  token: value.charkey.replaceAll("_", ""),
-                  hexcode: hexcode,
-                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
-                }
-              );
-            }
-          }
-          else {
-            let hexcode = getTokenHexcode(value.charkey);
-
-            if (hexcode !== '') {
-              confidence_scoresArr.push(
-                {
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: 0.10,
-                  identification_status: 0
-                }
-              );
+              if (!missingTokens.includes(value.charkey) && !responseTokenArr.includes(value.charkey)) {
+                anomaly_scoreArr.push(
+                  {
+                    token: value.charkey.replaceAll("_", ""),
+                    hexcode: hexcode,
+                    confidence_score: value.charvalue,
+                    identification_status: identification_status
+                  }
+                );
+              }
             }
           }
         }
@@ -302,7 +306,7 @@ export class ScoresController {
 
         if (hexcode !== '') {
           if (hindiVowelSignArr.includes(missingTokensEle) || taVowelSignArr.includes(missingTokensEle)) { } else {
-            confidence_scoresArr.push(
+            missing_token_scoresArr.push(
               {
                 token: missingTokensEle,
                 hexcode: hexcode,
@@ -345,7 +349,9 @@ export class ScoresController {
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
           confidence_scores: confidence_scoresArr,
-          anamolydata_scores: anomaly_scoreArr
+          anamolydata_scores: anomaly_scoreArr,
+          missing_token_scores: missing_token_scoresArr,
+          asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
         }
       };
 
@@ -358,7 +364,7 @@ export class ScoresController {
       }
 
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', missingTokens: missingTokens, correctTokens: correctTokens, confidence_scoresArr: confidence_scoresArr, anomaly_scoreArr: anomaly_scoreArr, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr })
+      return response.status(HttpStatus.CREATED).send({ status: 'success', missingTokens: missingTokens, correctTokens: correctTokens, confidence_scoresArr: confidence_scoresArr, anomaly_scoreArr: anomaly_scoreArr, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr, missing_token_scoresArr: missing_token_scoresArr })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -712,12 +718,43 @@ export class ScoresController {
       CreateLearnerProfileDto['output'] = audioOutput.output;
 
       let confidence_scoresArr = [];
+      let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
 
       let originalText = CreateLearnerProfileDto.original_text;
       let responseText = CreateLearnerProfileDto.output[0].source;
       let originalTextTokensArr = originalText.split("");
       let responseTextTokensArr = responseText.split("");
+
+      let originalTextArr = originalText.split(" ");
+      let responseTextArr = responseText.split(" ");
+
+      let originalTextWordCount = [];
+
+      // for (let originalTextSetEle of new Set(originalTextArr)) {
+      //   let wordCount = 0;
+      //   for (let originalTextArrEle of originalTextArr) {
+      //     if (originalTextSetEle === originalTextArrEle) {
+      //       wordCount++;
+      //     }
+      //   }
+      //   originalTextWordCount.push({ word: originalTextSetEle, count: wordCount });
+      // }
+
+      // for (let originalTextWordCountEle of originalTextWordCount) {
+      //   let count = 0;
+      //   for (let responseTextArrEle of responseTextArr) {
+      //     if (originalTextWordCountEle.word === responseTextArrEle) {
+      //       count++;
+      //     }
+      //   }
+      //   if (count != 0 && originalTextWordCountEle.count < count) {
+      //     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+      //       status: "error",
+      //       message: "Avoid repetitions and record again"
+      //     });
+      //   }
+      // }
 
       let correctTokens = [];
       let missingTokens = [];
@@ -763,9 +800,9 @@ export class ScoresController {
         if (originalTextELE != ' ') {
           if (vowelSignArr.includes(originalTextELE)) {
             if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + originalTextELE;
-              originalTokenArr.push(prevEle);
+              // let prevEleArr = prevEle.split("");
+              // prevEle = prevEleArr[0] + originalTextELE;
+              // originalTokenArr.push(prevEle);
             } else {
               prevEle = prevEle + originalTextELE;
               originalTokenArr.push(prevEle);
@@ -783,9 +820,9 @@ export class ScoresController {
         if (responseTextELE != ' ') {
           if (vowelSignArr.includes(responseTextELE)) {
             if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + responseTextELE;
-              responseTokenArr.push(prevEle);
+              // let prevEleArr = prevEle.split("");
+              // prevEle = prevEleArr[0] + responseTextELE;
+              // responseTokenArr.push(prevEle);
             } else {
               prevEle = prevEle + responseTextELE;
               responseTokenArr.push(prevEle);
@@ -925,7 +962,7 @@ export class ScoresController {
         }
 
         if (value.charkey !== "" && value.charkey !== "▁") {
-          if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
+          if (correctTokens.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
             if (hexcode !== '') {
@@ -933,24 +970,21 @@ export class ScoresController {
                 {
                   token: value.charkey,
                   hexcode: hexcode,
-                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
                 }
               );
-            }
-          }
-          else {
-            let hexcode = getTokenHexcode(value.charkey);
-
-            if (hexcode !== '') {
-              confidence_scoresArr.push(
-                {
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: 0.10,
-                  identification_status: 0
-                }
-              );
+            } else {
+              if (!missingTokens.includes(value.charkey) && !responseTokenArr.includes(value.charkey)) {
+                anomaly_scoreArr.push(
+                  {
+                    token: value.charkey.replaceAll("_", ""),
+                    hexcode: hexcode,
+                    confidence_score: value.charvalue,
+                    identification_status: identification_status
+                  }
+                );
+              }
             }
           }
         }
@@ -961,7 +995,7 @@ export class ScoresController {
 
         if (hexcode !== '') {
           if (taVowelSignArr.includes(missingTokensEle)) { } else {
-            confidence_scoresArr.push(
+            missing_token_scoresArr.push(
               {
                 token: missingTokensEle,
                 hexcode: hexcode,
@@ -1004,7 +1038,9 @@ export class ScoresController {
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
           confidence_scores: confidence_scoresArr,
-          anamolydata_scores: anomaly_scoreArr
+          anamolydata_scores: anomaly_scoreArr,
+          missing_token_scores: missing_token_scoresArr,
+          asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
         }
       };
 
@@ -1245,16 +1281,15 @@ export class ScoresController {
         let score: any = value.charvalue
 
         let identification_status = 0;
+
         if (score >= 0.90) {
           identification_status = 1;
         } else if (score >= 0.40) {
           identification_status = -1;
-        } else {
-          identification_status = 0;
         }
 
         if (value.charkey !== "" && value.charkey !== "▁") {
-          if (missingTokens.includes(value.charkey) || correctTokens.includes(value.charkey)) {
+          if (correctTokens.includes(value.charkey) || originalTokenArr.includes(value.charkey)) {
             let hexcode = getTokenHexcode(value.charkey);
 
             if (hexcode !== '') {
@@ -1262,8 +1297,8 @@ export class ScoresController {
                 {
                   token: value.charkey,
                   hexcode: hexcode,
-                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
                 }
               );
             } else {
@@ -1271,22 +1306,8 @@ export class ScoresController {
                 {
                   token: value.charkey.replaceAll("_", ""),
                   hexcode: hexcode,
-                  confidence_score: missingTokens.includes(value.charkey) && !correctTokens.includes(value.charkey) ? 0.10 : value.charvalue,
-                  identification_status: missingTokens.includes(value.charkey) ? 0 : identification_status
-                }
-              );
-            }
-          }
-          else {
-            let hexcode = getTokenHexcode(value.charkey);
-
-            if (hexcode !== '') {
-              confidence_scoresArr.push(
-                {
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: 0.10,
-                  identification_status: 0
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
                 }
               );
             }
@@ -1355,6 +1376,330 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText })
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiResponse({
+    status: 201,
+    description: 'Success message when data is stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'success' },
+        msg: { type: 'string', example: 'Successfully stored data to learner profile' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error while data is being stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Hindi' })
+  @Post('/updateLearnerProfile/kn')
+  async updateLearnerProfileKn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
+    try {
+      let audioFile = CreateLearnerProfileDto.audio;
+      const decoded = audioFile.toString('base64');
+      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+      CreateLearnerProfileDto['output'] = audioOutput.output;
+
+      let confidence_scoresArr = [];
+      let anomaly_scoreArr = [];
+
+      let originalText = CreateLearnerProfileDto.original_text;
+      let responseText = CreateLearnerProfileDto.output[0].source;
+      let originalTextTokensArr = originalText.split("");
+      let responseTextTokensArr = responseText.split("");
+
+      let correctTokens = [];
+      let missingTokens = [];
+
+      let kannadaVowelSignArr = ["ಾ", "ಿ", "ೀ", "ು", "ೂ", "ೃ", "ೆ", "ೇ", "ೈ", "ೊ", "ೋ", "ೌ", "ಂ", "ಃ", "ೄ", "್", "ಀ", "ಁ", "಼"];
+
+      let vowelSignArr = [];
+
+      let language = "kn";
+
+
+      vowelSignArr = kannadaVowelSignArr;
+
+      let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
+      let tokenHexcodeDataArr = [];
+
+      await tokenHexcodeData.then((tokenHexcodedata: any) => {
+        tokenHexcodeDataArr = tokenHexcodedata;
+      });
+
+      let prevEle = '';
+      let isPrevVowel = false;
+
+
+      let originalTokenArr = [];
+      let responseTokenArr = [];
+
+
+      for (let originalTextELE of originalText.split("")) {
+        if (originalTextELE != ' ') {
+          if (vowelSignArr.includes(originalTextELE)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + originalTextELE;
+              originalTokenArr.push(prevEle);
+            } else {
+              prevEle = prevEle + originalTextELE;
+              originalTokenArr.push(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            originalTokenArr.push(originalTextELE);
+            prevEle = originalTextELE;
+            isPrevVowel = false;
+          }
+        }
+      }
+
+      for (let responseTextELE of responseText.split("")) {
+        if (responseTextELE != ' ') {
+          if (vowelSignArr.includes(responseTextELE)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + responseTextELE;
+              responseTokenArr.push(prevEle);
+            } else {
+              prevEle = prevEle + responseTextELE;
+              responseTokenArr.push(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            responseTokenArr.push(responseTextELE);
+            prevEle = responseTextELE;
+            isPrevVowel = false;
+          }
+        }
+      }
+
+
+      // Comparison Logic
+
+      for (let originalTokenArrEle of originalTokenArr) {
+        if (responseTokenArr.includes(originalTokenArrEle)) {
+          correctTokens.push(originalTokenArrEle);
+        } else {
+          missingTokens.push(originalTokenArrEle);
+        }
+      }
+
+      let filteredTokenArr = [];
+
+      //token list for ai4bharat response
+      let tokenArr = [];
+      let anamolyTokenArr = [];
+
+      // Create Single Array from AI4bharat tokens array
+      CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
+        element.tokens.forEach(token => {
+          let key = Object.keys(token)[0];
+          let value = Object.values(token)[0];
+
+          let insertObj = {};
+          insertObj[key] = value;
+          tokenArr.push(insertObj);
+
+          let key1 = Object.keys(token)[1];
+          let value1 = Object.values(token)[1];
+          insertObj = {}
+          insertObj[key1] = value1;
+          anamolyTokenArr.push(insertObj);
+        });
+      });
+
+      let uniqueChar = new Set();
+      prevEle = '';
+      isPrevVowel = false;
+
+      // Create Unique token array
+      for (let tokenArrEle of tokenArr) {
+        let tokenString = Object.keys(tokenArrEle)[0];
+        for (let keyEle of tokenString.split("")) {
+          if (vowelSignArr.includes(keyEle)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + keyEle;
+              uniqueChar.add(prevEle);
+            } else {
+              prevEle = prevEle + keyEle;
+              uniqueChar.add(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            uniqueChar.add(keyEle);
+            isPrevVowel = false;
+            prevEle = keyEle
+          }
+        }
+      }
+
+      //unique token list for ai4bharat response
+      let uniqueCharArr = Array.from(uniqueChar);
+
+      //console.log(uniqueCharArr);
+
+      isPrevVowel = false;
+
+      // Get best score for Each Char
+      for (let char of uniqueCharArr) {
+        let score = 0.0;
+        let prevChar = '';
+        let isPrevVowel = false;
+
+        for (let tokenArrEle of tokenArr) {
+          let tokenString = Object.keys(tokenArrEle)[0];
+          let tokenValue = Object.values(tokenArrEle)[0];
+
+          for (let keyEle of tokenString.split("")) {
+            let scoreVal: any = tokenValue;
+            let charEle: any = keyEle;
+
+            if (vowelSignArr.includes(charEle)) {
+              if (isPrevVowel) {
+                prevChar = prevChar + charEle;
+                charEle = prevChar;
+              } else {
+                prevChar = prevChar + charEle;
+                charEle = prevChar;
+              }
+              isPrevVowel = true;
+            } else {
+              prevChar = charEle;
+              isPrevVowel = false;
+            }
+
+
+
+            if (char === charEle) {
+              if (scoreVal > score) {
+                score = scoreVal;
+              }
+            }
+          }
+        }
+
+        filteredTokenArr.push({ charkey: char, charvalue: score });
+      }
+
+      //console.log(filteredTokenArr);
+
+      // Create confidence score array and anomoly array
+      for (let value of filteredTokenArr) {
+        let score: any = value.charvalue
+
+        let identification_status = 0;
+
+        if (score >= 0.90) {
+          identification_status = 1;
+        } else if (score >= 0.40) {
+          identification_status = -1;
+        }
+
+        if (value.charkey !== "" && value.charkey !== "▁") {
+          if (correctTokens.includes(value.charkey) || originalTokenArr.includes(value.charkey)) {
+            let hexcode = getTokenHexcode(value.charkey);
+
+            if (hexcode !== '') {
+              confidence_scoresArr.push(
+                {
+                  token: value.charkey,
+                  hexcode: hexcode,
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
+                }
+              );
+            } else {
+              anomaly_scoreArr.push(
+                {
+                  token: value.charkey.replaceAll("_", ""),
+                  hexcode: hexcode,
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status
+                }
+              );
+            }
+          }
+        }
+      }
+
+      for (let missingTokensEle of missingTokens) {
+        let hexcode = getTokenHexcode(missingTokensEle);
+
+        if (hexcode !== '') {
+          if (kannadaVowelSignArr.includes(missingTokensEle)) { } else {
+            confidence_scoresArr.push(
+              {
+                token: missingTokensEle,
+                hexcode: hexcode,
+                confidence_score: 0.10,
+                identification_status: 0
+              }
+            );
+          }
+        }
+      }
+
+      for (let anamolyTokenArrEle of anamolyTokenArr) {
+        let tokenString = Object.keys(anamolyTokenArrEle)[0];
+        let tokenValue = Object.values(anamolyTokenArrEle)[0];
+
+        if (tokenString != '') {
+          let hexcode = getTokenHexcode(tokenString);
+          if (hexcode !== '') {
+            if (kannadaVowelSignArr.includes(tokenString)) { } else {
+              anomaly_scoreArr.push(
+                {
+                  token: tokenString.replaceAll("_", ""),
+                  hexcode: hexcode,
+                  confidence_score: tokenValue,
+                  identification_status: 0
+                }
+              );
+            }
+          }
+
+        }
+
+      }
+
+      let createScoreData = {
+        user_id: CreateLearnerProfileDto.user_id,
+        session: {
+          session_id: CreateLearnerProfileDto.session_id,
+          language: language,
+          original_text: CreateLearnerProfileDto.original_text,
+          response_text: responseText,
+          confidence_scores: confidence_scoresArr,
+          anamolydata_scores: anomaly_scoreArr,
+          asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
+        }
+      };
+
+      // Store Array to DB
+      let data = this.scoresService.create(createScoreData);
+
+      function getTokenHexcode(token: string) {
+        let result = tokenHexcodeDataArr.find(item => item.token.trim() === token.trim());
+        return result?.hexcode || '';
+      }
+
+      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, originalTokenArr: originalTokenArr, correctTokens: correctTokens, responseTokenArr: responseTokenArr, createScoreData: createScoreData, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",

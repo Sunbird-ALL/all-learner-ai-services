@@ -23,6 +23,14 @@ export class Score {
                         identification_status: { type: Number },
                     },
                 ],
+                missing_token_scores: [
+                    {
+                        token: { type: String, required: true },
+                        hexcode: { type: String },
+                        confidence_score: { type: Number, required: true },
+                        identification_status: { type: Number },
+                    },
+                ],
                 anamolydata_scores: [
                     {
                         token: { type: String, required: true },
@@ -31,6 +39,7 @@ export class Score {
                         identification_status: { type: Number },
                     },
                 ],
+                asrOutput: { type: String, required: true },
             },
         ],
         required: true,
@@ -44,12 +53,19 @@ export class Score {
             confidence_score: number;
             identification_status: number
         }[];
+        missing_token_scores: {
+            token: string;
+            hexcode: string;
+            confidence_score: number;
+            identification_status: number
+        }[];
         anamolydata_scores: {
             token: string;
             hexcode: string;
             confidence_score: number;
             identification_status: number
         }[];
+        asrOutput: string;
         createdAt: Date;
     }[];
 }
