@@ -45,7 +45,7 @@ export class ScoresService {
     let serviceId = '';
     switch (language) {
       case "kn":
-        serviceId = "ai4bharat/conformer-hi-gpu--t4";
+        serviceId = "ai4bharat/conformer-multilingual-dravidian-gpu--t4";
         break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;

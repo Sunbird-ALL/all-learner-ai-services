@@ -31,6 +31,7 @@ export class Score {
                         identification_status: { type: Number },
                     },
                 ],
+                asrOutput: { type: String, required: true },
             },
         ],
         required: true,
@@ -50,6 +51,7 @@ export class Score {
             confidence_score: number;
             identification_status: number
         }[];
+        asrOutput: string;
         createdAt: Date;
     }[];
 }
