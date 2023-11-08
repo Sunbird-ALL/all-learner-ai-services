@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Query } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -1929,5 +1929,20 @@ export class ScoresController {
   async AddAssessmentInput(@Res() response: FastifyReply, @Body() assessmentInput: AssessmentInputDto) {
     let data = await this.scoresService.assessmentInputCreate(assessmentInput);
     return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to Assessment Input" })
+  }
+
+  @Get('/GetSessionIds/:userId')
+  @ApiOperation({ summary: 'Get latest Session ids for user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response for get latest session ids for user',
+    schema: {
+      properties: {
+        session_id: { type: 'string' }
+      }
+    },
+  })
+  GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
+    return this.scoresService.getAllSessions(id, limit);
   }
 }

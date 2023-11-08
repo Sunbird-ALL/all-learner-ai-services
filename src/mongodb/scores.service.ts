@@ -622,4 +622,46 @@ export class ScoresService {
       return err;
     }
   }
+
+  async getAllSessions(userId: string, limit: number) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        "$match": {
+          "user_id": userId
+        }
+      },
+      {
+        "$unwind": '$sessions'
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "user_id": 1,
+          "date": '$sessions.createdAt',
+          "session_id": '$sessions.session_id'
+        }
+      },
+      {
+        "$group": {
+          "_id": "$session_id",
+          "user_id": { "$first": "$user_id" },
+          "date": { "$first": "$date" }
+        }
+      },
+      {
+        "$sort": {
+          "date": -1
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "session_id": "$_id",
+        }
+      }
+    ]).limit(Number(limit));
+
+    const sessionIds = RecordData.map(item => item.session_id)
+    return sessionIds;
+  }
 }
