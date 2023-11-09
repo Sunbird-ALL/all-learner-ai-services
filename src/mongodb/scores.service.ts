@@ -45,7 +45,7 @@ export class ScoresService {
     let serviceId = '';
     switch (language) {
       case "kn":
-        serviceId = "ai4bharat/conformer-hi-gpu--t4";
+        serviceId = "ai4bharat/conformer-multilingual-dravidian-gpu--t4";
         break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
@@ -159,13 +159,16 @@ export class ScoresService {
 
     for (let char of uniqueChar) {
       let score = 0;
+      let count = 0;
       for (let checkRecordDataele of RecordData) {
         if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-          score = checkRecordDataele.score;
+          score += checkRecordDataele.score;
+          count++;
         }
       }
-      if (score < 0.90) {
-        charScoreData.push({ character: char, score: score });
+      let avgScore = score / count;
+      if (avgScore < 0.90) {
+        charScoreData.push({ character: char, score: avgScore });
       }
     }
 
@@ -212,13 +215,16 @@ export class ScoresService {
 
     for (let char of uniqueChar) {
       let score = 0;
+      let count = 0;
       for (let checkRecordDataele of RecordData) {
         if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-          score = checkRecordDataele.score;
+          score += checkRecordDataele.score;
+          count++;
         }
       }
-      if (score < 0.90) {
-        charScoreData.push({ character: char, score: score });
+      let avgScore = score / count;
+      if (avgScore < 0.90) {
+        charScoreData.push({ character: char, score: avgScore });
       }
     }
 
@@ -271,13 +277,16 @@ export class ScoresService {
 
     for (let char of uniqueChar) {
       let score = 0;
+      let count = 0;
       for (let checkRecordDataele of RecordData) {
         if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-          score = checkRecordDataele.score;
+          score += checkRecordDataele.score;
+          count++;
         }
       }
 
-      if (score >= 0.90) {
+      let avgScore = score / count;
+      if (avgScore >= 0.90) {
         charScoreData.push({ character: char, score: score });
       }
     }
@@ -323,13 +332,17 @@ export class ScoresService {
 
     for (let char of uniqueChar) {
       let score = 0;
+      let count = 0;
+
       for (let checkRecordDataele of RecordData) {
         if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-          score = checkRecordDataele.score;
+          score += checkRecordDataele.score;
+          count++;
         }
       }
 
-      if (score >= 0.90) {
+      let avgScore = score / count;
+      if (avgScore >= 0.90) {
         charScoreData.push({ character: char, score: score });
       }
     }
@@ -621,5 +634,47 @@ export class ScoresService {
     } catch (err) {
       return err;
     }
+  }
+
+  async getAllSessions(userId: string, limit: number) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        "$match": {
+          "user_id": userId
+        }
+      },
+      {
+        "$unwind": '$sessions'
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "user_id": 1,
+          "date": '$sessions.createdAt',
+          "session_id": '$sessions.session_id'
+        }
+      },
+      {
+        "$group": {
+          "_id": "$session_id",
+          "user_id": { "$first": "$user_id" },
+          "date": { "$first": "$date" }
+        }
+      },
+      {
+        "$sort": {
+          "date": -1
+        }
+      },
+      {
+        "$project": {
+          "_id": 0,
+          "session_id": "$_id",
+        }
+      }
+    ]).limit(Number(limit));
+
+    const sessionIds = RecordData.map(item => item.session_id)
+    return sessionIds;
   }
 }

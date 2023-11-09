@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -712,10 +712,12 @@ export class ScoresController {
   @Post('/updateLearnerProfile/ta')
   async updateLearnerProfileTa(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let audioFile = CreateLearnerProfileDto.audio;
-      const decoded = audioFile.toString('base64');
-      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-      CreateLearnerProfileDto['output'] = audioOutput.output;
+      if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
+        let audioFile = CreateLearnerProfileDto.audio;
+        const decoded = audioFile.toString('base64');
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        CreateLearnerProfileDto['output'] = audioOutput.output;
+      }
 
       let confidence_scoresArr = [];
       let missing_token_scoresArr = [];
@@ -846,6 +848,10 @@ export class ScoresController {
           missingTokens.push(originalTokenArrEle);
         }
       }
+
+      let missingTokenSet = new Set(missingTokens);
+
+      missingTokens = Array.from(missingTokenSet)
 
       let filteredTokenArr = [];
 
@@ -990,7 +996,7 @@ export class ScoresController {
         }
       }
 
-      for (let missingTokensEle of missingTokens) {
+      for (let missingTokensEle of missingTokenSet) {
         let hexcode = getTokenHexcode(missingTokensEle);
 
         if (hexcode !== '') {
@@ -1088,10 +1094,12 @@ export class ScoresController {
   @Post('/updateLearnerProfile/hi')
   async updateLearnerProfileHi(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let audioFile = CreateLearnerProfileDto.audio;
-      const decoded = audioFile.toString('base64');
-      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-      CreateLearnerProfileDto['output'] = audioOutput.output;
+      if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
+        let audioFile = CreateLearnerProfileDto.audio;
+        const decoded = audioFile.toString('base64');
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        CreateLearnerProfileDto['output'] = audioOutput.output;
+      }
 
       let confidence_scoresArr = [];
       let anomaly_scoreArr = [];
@@ -1176,6 +1184,10 @@ export class ScoresController {
           missingTokens.push(originalTokenArrEle);
         }
       }
+
+      let missingTokenSet = new Set(missingTokens);
+
+      missingTokens = Array.from(missingTokenSet)
 
       let filteredTokenArr = [];
 
@@ -1411,10 +1423,13 @@ export class ScoresController {
   @Post('/updateLearnerProfile/kn')
   async updateLearnerProfileKn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let audioFile = CreateLearnerProfileDto.audio;
-      const decoded = audioFile.toString('base64');
-      let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-      CreateLearnerProfileDto['output'] = audioOutput.output;
+
+      if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
+        let audioFile = CreateLearnerProfileDto.audio;
+        const decoded = audioFile.toString('base64');
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        CreateLearnerProfileDto['output'] = audioOutput.output;
+      }
 
       let confidence_scoresArr = [];
       let anomaly_scoreArr = [];
@@ -1499,6 +1514,10 @@ export class ScoresController {
           missingTokens.push(originalTokenArrEle);
         }
       }
+
+      let missingTokenSet = new Set(missingTokens);
+
+      missingTokens = Array.from(missingTokenSet)
 
       let filteredTokenArr = [];
 
@@ -1951,4 +1970,10 @@ export class ScoresController {
     let data = await this.scoresService.assessmentInputCreate(assessmentInput);
     return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to Assessment Input" })
   }
+
+  @Get('/GetSessionIds/:userId')
+  GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
+    return this.scoresService.getAllSessions(id, limit);
+  }
+
 }
