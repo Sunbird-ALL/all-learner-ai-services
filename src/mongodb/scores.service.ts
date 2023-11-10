@@ -132,11 +132,6 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      // {
-      //   $match: {
-      //     'sessions.confidence_scores.confidence_score': { $lt: threshold }
-      //   }
-      // },
       {
         $match: {
           'sessions.session_id': sessionId
@@ -150,6 +145,38 @@ export class ScoresService {
         }
       }
     ]);
+
+    const MissingRecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $unwind: '$sessions.missing_token_scores'
+      },
+      {
+        $match: {
+          'sessions.session_id': sessionId
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          character: '$sessions.missing_token_scores.token',
+          score: '$sessions.missing_token_scores.confidence_score'
+        }
+      }
+    ]);
+
     let charScoreData = [];
 
     let uniqueChar = new Set();
@@ -169,6 +196,12 @@ export class ScoresService {
       let avgScore = score / count;
       if (avgScore < 0.90) {
         charScoreData.push({ character: char, score: avgScore });
+      }
+    }
+
+    for (let MissingRecordDataEle of MissingRecordData) {
+      if (!uniqueChar.has(MissingRecordDataEle.character)) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
       }
     }
 
@@ -206,6 +239,30 @@ export class ScoresService {
       }
     ]);
 
+    const MissingRecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id': userId
+        }
+      },
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $unwind: '$sessions.missing_token_scores'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          date: '$sessions.date',
+          session_id: '$sessions.session_id',
+          character: '$sessions.missing_token_scores.token',
+          score: '$sessions.missing_token_scores.confidence_score'
+        }
+      }
+    ]);
+
     let charScoreData = [];
 
     let uniqueChar = new Set();
@@ -225,6 +282,12 @@ export class ScoresService {
       let avgScore = score / count;
       if (avgScore < 0.90) {
         charScoreData.push({ character: char, score: avgScore });
+      }
+    }
+
+    for (let MissingRecordDataEle of MissingRecordData) {
+      if (!uniqueChar.has(MissingRecordDataEle.character)) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
       }
     }
 
@@ -308,11 +371,6 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      // {
-      //   $match: {
-      //     'sessions.confidence_scores.confidence_score': { $gte: threshold }
-      //   }
-      // },
       {
         $project: {
           _id: 0,
