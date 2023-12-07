@@ -3,7 +3,7 @@ import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
 import { FastifyReply } from 'fastify';
-import { ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -373,6 +373,21 @@ export class ScoresController {
     }
   }
 
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        original_text: { type: 'string', example: 'விமானம் வானில் பறக்கின்றது' },
+        audio: { type: 'string', example: 'Add tamil Wav file base64 string here' },
+        user_id: { type: 'string', example: '8635444062' },
+        session_id: { type: 'string', example: '86354440621701972584385' },
+        language: { type: 'string', example: 'ta' },
+        date: {
+          type: 'date', example: "2023-12-07T17:52:23.753Z"
+        }
+      }
+    }
+  })
   @ApiResponse({
     status: 201,
     description: 'Success message when data is stored to the learner profile',
@@ -757,6 +772,21 @@ export class ScoresController {
     }
   }
 
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        original_text: { type: 'string', example: 'आपसे मिलकर अच्छा लगा' },
+        audio: { type: 'string', example: 'Add hindi Wav file base64 string here' },
+        user_id: { type: 'string', example: '1390074473' },
+        session_id: { type: 'string', example: '13900744731701973109305' },
+        language: { type: 'string', example: 'hi' },
+        date: {
+          type: 'date', example: "2023-12-07T17:52:23.753Z"
+        }
+      }
+    }
+  })
   @ApiResponse({
     status: 201,
     description: 'Success message when data is stored to the learner profile',
@@ -1090,6 +1120,21 @@ export class ScoresController {
     }
   }
 
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        original_text: { type: 'string', example: 'ಆಕಾಶನ ಮನೆಯು ಅಂಗಡಿಯ ಹತ್ತಿರ ಇದೆ' },
+        audio: { type: 'string', example: 'Add kannada Wav file base64 string here' },
+        user_id: { type: 'string', example: '8550552703' },
+        session_id: { type: 'string', example: '85505527031701973332940' },
+        language: { type: 'string', example: 'kn' },
+        date: {
+          type: 'date', example: "2023-12-07T17:52:23.753Z"
+        }
+      }
+    }
+  })
   @ApiResponse({
     status: 201,
     description: 'Success message when data is stored to the learner profile',
@@ -1113,7 +1158,7 @@ export class ScoresController {
     },
   })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
-  @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Hindi' })
+  @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Kannada' })
   @Post('/updateLearnerProfile/kn')
   async updateLearnerProfileKn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
@@ -1425,6 +1470,10 @@ export class ScoresController {
     }
   }
 
+  @ApiParam({
+    name: "sessionId",
+    example: "20200765061699008295109"
+  })
   @Get('/GetTargets/session/:sessionId')
   @ApiResponse({
     status: 200,
@@ -1441,6 +1490,10 @@ export class ScoresController {
     return this.scoresService.getTargetsBySession(id);
   }
 
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
   @Get('/GetTargets/user/:userId')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
@@ -1457,6 +1510,10 @@ export class ScoresController {
     return this.scoresService.getTargetsByUser(id);
   }
 
+  @ApiParam({
+    name: "sessionId",
+    example: "20200765061699008295109"
+  })
   @Get('/GetFamiliarity/session/:sessionId')
   @ApiOperation({ summary: 'Get Familiarity of characters by session id' })
   @ApiResponse({
@@ -1473,6 +1530,10 @@ export class ScoresController {
     return this.scoresService.getFamiliarityBySession(id);
   }
 
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
   @Get('/GetFamiliarity/user/:userId')
   @ApiOperation({ summary: 'Get Familiarity of characters by user id' })
   @ApiResponse({
@@ -1489,6 +1550,7 @@ export class ScoresController {
     return this.scoresService.getFamiliarityByUser(id);
   }
 
+  @ApiExcludeEndpoint(true)
   @Get('/GetMeanScore/user/:userId')
   @ApiOperation({ summary: 'Mean score of each character by user id' })
   @ApiResponse({
@@ -1505,6 +1567,7 @@ export class ScoresController {
     return this.scoresService.getMeanLearnerByUser(id);
   }
 
+  @ApiExcludeEndpoint(true)
   @Get('/GetMeanScore/session/:sessionId')
   @ApiOperation({ summary: 'Mean score of each character by session id' })
   @ApiResponse({
@@ -1521,6 +1584,7 @@ export class ScoresController {
     return this.scoresService.getMeanLearnerBySession(id);
   }
 
+  @ApiExcludeEndpoint(true)
   @Get('/GetConfidentVector/user/:userId')
   @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI' })
   @ApiResponse({
@@ -1537,6 +1601,7 @@ export class ScoresController {
     return this.scoresService.getConfidentVectorByUser(id);
   }
 
+  @ApiExcludeEndpoint(true)
   @Get('/GetConfidentVector/session/:sessionId')
   @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given session id evaluated by the Learner AI' })
   @ApiResponse({
@@ -1553,6 +1618,7 @@ export class ScoresController {
     return this.scoresService.getConfidentVectorBySession(id);
   }
 
+  @ApiExcludeEndpoint(true)
   @Post('/GetMissingChars')
   async GetMissingChars(@Res() response: FastifyReply, @Body() storyData: any) {
     let data = await this.scoresService.getMissingChars(storyData.storyLanguage);
@@ -1625,12 +1691,14 @@ export class ScoresController {
     return response.status(HttpStatus.CREATED).send({ status: 'success', matched: matched, matchtedTotal: matchtedTotal, notIncluded: notIncluded, notIncludedTotal: notIncludedTotal })
   }
 
+  @ApiExcludeEndpoint(true)
   @Post('/addAssessmentInput')
   async AddAssessmentInput(@Res() response: FastifyReply, @Body() assessmentInput: AssessmentInputDto) {
     let data = await this.scoresService.assessmentInputCreate(assessmentInput);
     return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to Assessment Input" })
   }
 
+  @ApiExcludeEndpoint(true)
   @Get('/GetSessionIds/:userId')
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);

@@ -19,6 +19,7 @@ async function bootstrap() {
     .setDescription("ALL Learner AI API Spec Documentation")
     .setVersion('v1')
     .addTag('scores')
+    .addServer(process.env.SERVER_URL, 'Learner AI Dev Server APIs')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
