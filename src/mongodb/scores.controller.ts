@@ -4,12 +4,15 @@ import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
 import { FastifyReply } from 'fastify';
 import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { lastValueFrom, map } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
 
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
   constructor(
-    private readonly scoresService: ScoresService
+    private readonly scoresService: ScoresService,
+    private readonly httpService: HttpService
   ) { }
 
   @ApiExcludeEndpoint(true)
@@ -1508,6 +1511,156 @@ export class ScoresController {
   })
   GetTargetsbyUser(@Param('userId') id: string) {
     return this.scoresService.getTargetsByUser(id);
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('GetContent/word/:userId')
+  @ApiOperation({ summary: 'Get Targets character by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get Targets character and score for user id',
+    schema: {
+      properties: {
+        character: { type: 'string' },
+        score: { type: 'number', format: 'float' },
+      }
+    },
+  })
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= 5) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Word",
+      "limit": limit || 5
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+  }
+
+  // @ApiParam({
+  //   name: "userId",
+  //   example: "2020076506"
+  // })
+  @Get('GetContent/sentence/:userId')
+  // @ApiOperation({ summary: 'Get Targets character by user id' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Success response with Get Targets character and score for user id',
+  //   schema: {
+  //     properties: {
+  //       character: { type: 'string' },
+  //       score: { type: 'number', format: 'float' },
+  //     }
+  //   },
+  // })
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= 5) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Sentence",
+      "limit": limit || 5
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+  }
+
+  // @ApiParam({
+  //   name: "userId",
+  //   example: "2020076506"
+  // })
+  @Get('GetContent/paragraph/:userId')
+  // @ApiOperation({ summary: 'Get Targets character by user id' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Success response with Get Targets character and score for user id',
+  //   schema: {
+  //     properties: {
+  //       character: { type: 'string' },
+  //       score: { type: 'number', format: 'float' },
+  //     }
+  //   },
+  // })
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= 5) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Paragraph",
+      "limit": limit || 5
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
