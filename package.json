@@ -32,13 +32,18 @@
     "@nestjs/swagger": "^7.1.12",
     "@nestjs/typeorm": "^10.0.0",
     "axios": "^1.6.2",
+    "character-error-rate": "^1.1.4",
+    "diff-match-patch": "^1.0.5",
+    "difflib": "^0.2.4",
     "fastify-multer": "^2.0.3",
     "mongoose": "^7.4.2",
     "mysql2": "^3.5.2",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
+    "stt-evaluation": "^1.4.0",
     "swagger-ui-express": "^5.0.0",
-    "typeorm": "^0.3.17"
+    "typeorm": "^0.3.17",
+    "word-error-rate": "^0.0.7"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
