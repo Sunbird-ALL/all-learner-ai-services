@@ -6,6 +6,10 @@ import { FastifyReply } from 'fastify';
 import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { wordErrorRate } from "word-error-rate";
+import * as calcCER from 'character-error-rate';
+import * as DiffMatchPatch from 'diff-match-patch';
+import * as difflib from 'difflib';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -1569,10 +1573,10 @@ export class ScoresController {
       }
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
-    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= 5) {
+      if (index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1586,7 +1590,7 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Word",
-      "limit": limit || 5
+      "limit": contentlimit || 5
     };
 
     const newContent = await lastValueFrom(
@@ -1619,10 +1623,10 @@ export class ScoresController {
       }
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
-    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= 5) {
+      if (index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1636,7 +1640,7 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Sentence",
-      "limit": limit || 5
+      "limit": contentlimit || 5
     };
 
     const newContent = await lastValueFrom(
@@ -1669,10 +1673,10 @@ export class ScoresController {
       }
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { limit = 5 }) {
-    let getGetTarget = await this.scoresService.getTargetsByUser(id);
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= 5) {
+      if (index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1686,7 +1690,7 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Paragraph",
-      "limit": limit || 5
+      "limit": contentlimit || 5
     };
 
     const newContent = await lastValueFrom(

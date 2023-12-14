@@ -208,7 +208,7 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getTargetsByUser(userId: string) {
+  async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -233,6 +233,7 @@ export class ScoresService {
           user_id: 1,
           date: '$sessions.date',
           session_id: '$sessions.session_id',
+          language: '$sessions.language',
           character: '$sessions.confidence_scores.token',
           score: '$sessions.confidence_scores.confidence_score'
         }
@@ -257,6 +258,7 @@ export class ScoresService {
           user_id: 1,
           date: '$sessions.date',
           session_id: '$sessions.session_id',
+          language: '$sessions.language',
           character: '$sessions.missing_token_scores.token',
           score: '$sessions.missing_token_scores.confidence_score'
         }
@@ -267,7 +269,11 @@ export class ScoresService {
 
     let uniqueChar = new Set();
 
-    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+    for (let RecordDataele of RecordData) {
+      if (language != null && RecordDataele.language === language) {
+        uniqueChar.add(RecordDataele.character)
+      }
+    };
 
 
     for (let char of uniqueChar) {
@@ -286,7 +292,7 @@ export class ScoresService {
     }
 
     for (let MissingRecordDataEle of MissingRecordData) {
-      if (!uniqueChar.has(MissingRecordDataEle.character)) {
+      if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
       }
     }
