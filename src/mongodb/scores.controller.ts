@@ -1625,6 +1625,11 @@ export class ScoresController {
     },
   })
   async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+    console.log(typeof tags);
+    if (!Array.isArray(tags)) {
+      tags = Array.of(tags);
+    }
+
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
       if (index >= gettargetlimit) {
