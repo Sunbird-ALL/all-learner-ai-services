@@ -685,16 +685,48 @@ export class ScoresService {
 
   async assessmentInputCreate(assessmentInputData: any): Promise<any> {
     try {
-      // const assessmentInput = new this.assessmentInputModel(assessmentInputData);
-      // const result = await assessmentInput.save();
 
-      const assessmentInput = this.assessmentInputModel.findOneAndUpdate(
+      const assessmentInput = this.assessmentInputModel.updateMany(
         { user_id: assessmentInputData.user_id, session_id: assessmentInputData.session_id, token: assessmentInputData.token },
         { $set: { feedback: assessmentInputData.feedback } },
         { new: true, upsert: true }
       );
 
       return await assessmentInput;
+    } catch (err) {
+      return err;
+    }
+  }
+
+  async getAssessmentRecords(userId: any): Promise<any> {
+    try {
+
+      const AssessmentRecords = await this.assessmentInputModel.aggregate([
+        {
+          $group: {
+            _id: {
+              user_id: userId,
+              token: "$token"
+            },
+            feedback: { $max: "$feedback" }
+          }
+        },
+        {
+          $match: {
+            feedback: 0
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            user_id: "$_id.user_id",
+            token: "$_id.token",
+            feedback: 1
+          }
+        }
+      ])
+
+      return AssessmentRecords;
     } catch (err) {
       return err;
     }

@@ -1573,7 +1573,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
       if (index >= gettargetlimit) {
@@ -1590,7 +1590,8 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Word",
-      "limit": contentlimit || 5
+      "limit": contentlimit || 5,
+      "tags": tags
     };
 
     const newContent = await lastValueFrom(
@@ -1623,7 +1624,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
       if (index >= gettargetlimit) {
@@ -1640,7 +1641,8 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Sentence",
-      "limit": contentlimit || 5
+      "limit": contentlimit || 5,
+      "tags": tags
     };
 
     const newContent = await lastValueFrom(
@@ -1673,7 +1675,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }) {
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
       if (index >= gettargetlimit) {
@@ -1690,7 +1692,8 @@ export class ScoresController {
       "tokenArr": getGetTargetCharArr,
       "language": language || "ta",
       "contentType": "Paragraph",
-      "limit": contentlimit || 5
+      "limit": contentlimit || 5,
+      "tags": tags
     };
 
     const newContent = await lastValueFrom(
@@ -1705,6 +1708,29 @@ export class ScoresController {
 
 
     return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('/getlearningstatus/user/:userId')
+  @ApiOperation({ summary: 'Get Learning status by user id' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Success response with Get Targets character and score for user id',
+  //   schema: {
+  //     properties: {
+  //       character: { type: 'string' },
+  //       score: { type: 'number', format: 'float' },
+  //     }
+  //   },
+  // })
+  async getLearningStatusbyUser(@Param('userId') id: string) {
+    let targets = await this.scoresService.getTargetsByUser(id, 'ta');
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    return { targets: targets, targetsCount: targets.length, validations: validations, validationsCount: validations.length };
   }
 
   @ApiExcludeEndpoint(true)

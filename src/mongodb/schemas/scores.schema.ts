@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Mixed } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Score {
@@ -10,10 +10,10 @@ export class Score {
         type: [
             {
                 session_id: { type: String, required: true },
-                //date: { type: String, required: true },
                 createdAt: { type: Date, default: Date.now() },
                 original_text: { type: String, required: true },
                 response_text: { type: String, required: true },
+                construct_text: { type: String, required: true },
                 language: { type: String, required: true },
                 confidence_scores: [
                     {
@@ -39,6 +39,32 @@ export class Score {
                         identification_status: { type: Number },
                     },
                 ],
+                error_rate: {
+                    word: { type: Number },
+                    character: { type: Number }
+                },
+                count_diff: {
+                    character: { type: Number },
+                    word: { type: Number }
+                },
+                no_of_repetitions: { type: Number },
+                eucledian_distance: {
+                    insertions: {
+                        chars: [{ type: String }],
+                        count: { type: Number }
+                    },
+                    deletions: {
+                        chars: [{ type: String }],
+                        count: { type: Number }
+                    },
+                    substitutions: {
+                        chars: [{
+                            removed: { type: String },
+                            replaced: { type: String }
+                        }],
+                        count: { type: Number }
+                    }
+                },
                 asrOutput: { type: String, required: true },
             },
         ],
@@ -46,7 +72,9 @@ export class Score {
     })
     sessions: {
         session_id: string;
-        //date: Date;
+        original_text: string;
+        response_text: string;
+        construct_text: string;
         confidence_scores: {
             token: string;
             hexcode: string;
@@ -65,6 +93,29 @@ export class Score {
             confidence_score: number;
             identification_status: number
         }[];
+        error_rate: {
+            word: number;
+            character: number;
+        };
+        count_diff: {
+            character: number,
+            word: number
+        },
+        no_of_repetitions: number;
+        eucledian_distance: {
+            insertions: {
+                chars: [string],
+                count: number
+            },
+            deletions: {
+                chars: [string],
+                count: number
+            },
+            substitutions: {
+                chars: [Mixed],
+                count: number
+            }
+        };
         asrOutput: string;
         createdAt: Date;
     }[];
