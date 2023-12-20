@@ -698,14 +698,19 @@ export class ScoresService {
     }
   }
 
-  async getAssessmentRecords(userId: any): Promise<any> {
+  async getAssessmentRecords(sessionId: string): Promise<any> {
     try {
-
+      console.log(sessionId);
       const AssessmentRecords = await this.assessmentInputModel.aggregate([
+        {
+          $match: {
+            session_id: sessionId
+          }
+        },
         {
           $group: {
             _id: {
-              user_id: userId,
+              session_id: sessionId,
               token: "$token"
             },
             feedback: { $max: "$feedback" }
@@ -713,18 +718,20 @@ export class ScoresService {
         },
         {
           $match: {
-            feedback: 0
+            feedback: 1
           }
         },
         {
           $project: {
             _id: 0,
-            user_id: "$_id.user_id",
+            session_id: "$_id.session_id",
             token: "$_id.token",
             feedback: 1
           }
         }
-      ])
+      ]);
+
+      console.log(AssessmentRecords);
 
       return AssessmentRecords;
     } catch (err) {

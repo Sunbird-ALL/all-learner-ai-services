@@ -1738,6 +1738,46 @@ export class ScoresController {
     return { targets: targets, targetsCount: targets.length, validations: validations, validationsCount: validations.length };
   }
 
+  @ApiParam({
+    name: "sesssionId",
+    example: "27519278861697549531193"
+  })
+  @Get('/getMilstoneProgress/session/:sessionId')
+  @ApiOperation({ summary: 'Get Milstone Progress by session id' })
+  // @ApiResponse({
+  //   status: 200,
+  //   description: 'Success response with Get Targets character and score for user id',
+  //   schema: {
+  //     properties: {
+  //       character: { type: 'string' },
+  //       score: { type: 'number', format: 'float' },
+  //     }
+  //   },
+  // })
+  async getMilstoneForSession(@Param('sessionId') id: string) {
+    let targets = await this.scoresService.getTargetsBySession(id);
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    let totalTargets = targets.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = '';
+
+    if (totalTargets > 30 && totalValidation <= 3 && totalValidation > 0) {
+      currentLevel = 'm1';
+    } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
+      currentLevel = 'm2';
+    } else if (totalTargets < 10 && totalValidation === 0) {
+      currentLevel = 'm3';
+    } else if (totalTargets === 0 && totalValidation === 0) {
+      currentLevel = 'm4';
+    } else {
+      currentLevel = 'm1';
+    }
+
+    return { currentLevel: currentLevel, targetsCount: targets.length, validationsCount: validations.length, targets: targets, validations: validations };
+  }
+
   @ApiExcludeEndpoint(true)
   @Get('/GetMeanScore/user/:userId')
   @ApiOperation({ summary: 'Mean score of each character by user id' })
