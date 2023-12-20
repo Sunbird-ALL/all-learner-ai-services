@@ -718,7 +718,7 @@ export class ScoresService {
         },
         {
           $match: {
-            feedback: 1
+            feedback: 0
           }
         },
         {
