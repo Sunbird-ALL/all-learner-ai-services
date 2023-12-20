@@ -1716,45 +1716,24 @@ export class ScoresController {
   }
 
   @ApiParam({
-    name: "userId",
-    example: "2020076506"
-  })
-  @Get('/getlearningstatus/user/:userId')
-  @ApiOperation({ summary: 'Get Learning status by user id' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Success response with Get Targets character and score for user id',
-  //   schema: {
-  //     properties: {
-  //       character: { type: 'string' },
-  //       score: { type: 'number', format: 'float' },
-  //     }
-  //   },
-  // })
-  async getLearningStatusbyUser(@Param('userId') id: string) {
-    let targets = await this.scoresService.getTargetsByUser(id, 'ta');
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    return { targets: targets, targetsCount: targets.length, validations: validations, validationsCount: validations.length };
-  }
-
-  @ApiParam({
-    name: "sesssionId",
+    name: "sessionId",
     example: "27519278861697549531193"
   })
-  @Get('/getMilstoneProgress/session/:sessionId')
+  @Get('/getMilestoneProgress/session/:sessionId')
   @ApiOperation({ summary: 'Get Milstone Progress by session id' })
-  // @ApiResponse({
-  //   status: 200,
-  //   description: 'Success response with Get Targets character and score for user id',
-  //   schema: {
-  //     properties: {
-  //       character: { type: 'string' },
-  //       score: { type: 'number', format: 'float' },
-  //     }
-  //   },
-  // })
-  async getMilstoneForSession(@Param('sessionId') id: string) {
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get Targets character and score for user id',
+    schema: {
+      properties: {
+        currentLevel: { type: 'string' },
+        targetsCount: { type: 'number', format: 'float' },
+        validationsCount: { type: 'number', format: 'float' },
+
+      }
+    },
+  })
+  async getMilestoneForSession(@Param('sessionId') id: string) {
     let targets = await this.scoresService.getTargetsBySession(id);
     let validations = await this.scoresService.getAssessmentRecords(id);
 
