@@ -1584,6 +1584,9 @@ export class ScoresController {
       return charData.character
     });
 
+    let contentLevel = '';
+    let complexityLevel = [];
+
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
     const textData = {
@@ -1591,7 +1594,9 @@ export class ScoresController {
       "language": language || "ta",
       "contentType": "Word",
       "limit": contentlimit || 5,
-      "tags": tags
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
     };
 
     const newContent = await lastValueFrom(
@@ -1605,7 +1610,7 @@ export class ScoresController {
     );
 
 
-    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
@@ -1625,10 +1630,6 @@ export class ScoresController {
     },
   })
   async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-    console.log(typeof tags);
-    if (!Array.isArray(tags)) {
-      tags = Array.of(tags);
-    }
 
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
@@ -1640,6 +1641,9 @@ export class ScoresController {
       return charData.character
     });
 
+    let contentLevel = '';
+    let complexityLevel = [];
+
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
     const textData = {
@@ -1647,7 +1651,9 @@ export class ScoresController {
       "language": language || "ta",
       "contentType": "Sentence",
       "limit": contentlimit || 5,
-      "tags": tags
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
     };
 
     const newContent = await lastValueFrom(
@@ -1661,7 +1667,7 @@ export class ScoresController {
     );
 
 
-    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
@@ -1691,6 +1697,9 @@ export class ScoresController {
       return charData.character
     });
 
+    let contentLevel = '';
+    let complexityLevel = [];
+
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
     const textData = {
@@ -1698,7 +1707,9 @@ export class ScoresController {
       "language": language || "ta",
       "contentType": "Paragraph",
       "limit": contentlimit || 5,
-      "tags": tags
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
     };
 
     const newContent = await lastValueFrom(
@@ -1712,7 +1723,7 @@ export class ScoresController {
     );
 
 
-    return { content: newContent.data, getTargetChar: getGetTargetCharArr };
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
