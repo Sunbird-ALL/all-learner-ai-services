@@ -113,7 +113,7 @@ export class ScoresService {
     return UserRecordData;
   }
 
-  async getTargetsBySession(sessionId: string) {
+  async getTargetsBySession(sessionId: string, language: string = null) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -181,7 +181,13 @@ export class ScoresService {
 
     let uniqueChar = new Set();
 
-    for (let RecordDataele of RecordData) { uniqueChar.add(RecordDataele.character) };
+    for (let RecordDataele of RecordData) {
+      if (language != null && RecordDataele.language === language) {
+        uniqueChar.add(RecordDataele.character)
+      } else {
+        uniqueChar.add(RecordDataele.character)
+      }
+    };
 
 
     for (let char of uniqueChar) {
@@ -200,7 +206,9 @@ export class ScoresService {
     }
 
     for (let MissingRecordDataEle of MissingRecordData) {
-      if (!uniqueChar.has(MissingRecordDataEle.character)) {
+      if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+      } else if (!uniqueChar.has(MissingRecordDataEle.character)) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
       }
     }
@@ -700,7 +708,6 @@ export class ScoresService {
 
   async getAssessmentRecords(sessionId: string): Promise<any> {
     try {
-      console.log(sessionId);
       const AssessmentRecords = await this.assessmentInputModel.aggregate([
         {
           $match: {
@@ -730,8 +737,6 @@ export class ScoresService {
           }
         }
       ]);
-
-      console.log(AssessmentRecords);
 
       return AssessmentRecords;
     } catch (err) {

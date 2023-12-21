@@ -1716,6 +1716,289 @@ export class ScoresController {
   }
 
   @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('GetContent/word/session/:sessionId')
+  @ApiOperation({ summary: 'Get a set of words for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get content and GetTarget chars for user id',
+    schema: {
+      properties: {
+        content: { type: 'string' },
+        getTargetChar: { type: 'string' }
+      }
+    },
+  })
+  async GetContentWordbySession(@Param('sessionId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+    // if (!Array.isArray(tags)) {
+    //   tags = Array.of(tags);
+    // }
+
+    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = '';
+
+    if (totalTargets > 30 && totalValidation > 3) {
+      currentLevel = 'm1';
+    } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
+      currentLevel = 'm2';
+    } else if (totalTargets < 10 && totalValidation === 0) {
+      currentLevel = 'm3';
+    } else if (totalTargets === 0 && totalValidation === 0) {
+      currentLevel = 'm4';
+    } else {
+      currentLevel = 'm1';
+    }
+
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
+
+
+
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= gettargetlimit) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Word",
+      "limit": contentlimit || 5,
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
+    };
+
+    console.log(textData);
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('GetContent/sentence/session/:sessionId')
+  @ApiOperation({ summary: 'Get a set of sentences for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get content and GetTarget chars for user id',
+    schema: {
+      properties: {
+        content: { type: 'string' },
+        getTargetChar: { type: 'string' }
+      }
+    },
+  })
+  async GetContentSentencebySession(@Param('sessionId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+
+    // if (!Array.isArray(tags)) {
+    //   tags = Array.of(tags);
+    // }
+
+    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = '';
+
+    if (totalTargets > 30 && totalValidation > 3) {
+      currentLevel = 'm1';
+    } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
+      currentLevel = 'm2';
+    } else if (totalTargets < 10 && totalValidation === 0) {
+      currentLevel = 'm3';
+    } else if (totalTargets === 0 && totalValidation === 0) {
+      currentLevel = 'm4';
+    } else {
+      currentLevel = 'm1';
+    }
+
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
+
+
+
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= gettargetlimit) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Sentence",
+      "limit": contentlimit || 5,
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('GetContent/paragraph/session/:sessionId')
+  @ApiOperation({ summary: 'Get a set of paragraphs for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get content and GetTarget chars for user id',
+    schema: {
+      properties: {
+        content: { type: 'string' },
+        getTargetChar: { type: 'string' }
+      }
+    },
+  })
+  async GetContentParagraphbySession(@Param('sessionId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+    // if (!Array.isArray(tags)) {
+    //   tags = Array.of(tags);
+    // }
+
+    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = '';
+
+    if (totalTargets > 30 && totalValidation > 3) {
+      currentLevel = 'm1';
+    } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
+      currentLevel = 'm2';
+    } else if (totalTargets < 10 && totalValidation === 0) {
+      currentLevel = 'm3';
+    } else if (totalTargets === 0 && totalValidation === 0) {
+      currentLevel = 'm4';
+    } else {
+      currentLevel = 'm1';
+    }
+
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
+
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (index >= gettargetlimit) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "Paragraph",
+      "limit": contentlimit || 5,
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+
+    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+  }
+
+  @ApiParam({
     name: "sessionId",
     example: "27519278861697549531193"
   })
@@ -1742,7 +2025,7 @@ export class ScoresController {
 
     let currentLevel = '';
 
-    if (totalTargets > 30 && totalValidation <= 3 && totalValidation > 0) {
+    if (totalTargets > 30 && totalValidation > 3) {
       currentLevel = 'm1';
     } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
       currentLevel = 'm2';
