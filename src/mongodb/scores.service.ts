@@ -184,8 +184,16 @@ export class ScoresService {
     for (let RecordDataele of RecordData) {
       if (language != null && RecordDataele.language === language) {
         uniqueChar.add(RecordDataele.character)
-      } else {
+      } else if (language === null) {
         uniqueChar.add(RecordDataele.character)
+      }
+    };
+
+    for (let MissingRecordDataele of MissingRecordData) {
+      if (language != null && MissingRecordDataele.language === language) {
+        uniqueChar.add(MissingRecordDataele.character)
+      } else if (language === null) {
+        uniqueChar.add(MissingRecordDataele.character)
       }
     };
 
@@ -216,7 +224,7 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getTargetsByUser(userId: string, language: string = null) {
+  async getTargetsByUser(userId: string, language: string = 'ta') {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -230,11 +238,6 @@ export class ScoresService {
       {
         $unwind: '$sessions.confidence_scores'
       },
-      // {
-      //   $match: {
-      //     'sessions.confidence_scores.confidence_score': { $lt: 0.90 }
-      //   }
-      // },
       {
         $project: {
           _id: 0,
@@ -277,12 +280,22 @@ export class ScoresService {
 
     let uniqueChar = new Set();
 
+
     for (let RecordDataele of RecordData) {
       if (language != null && RecordDataele.language === language) {
+        uniqueChar.add(RecordDataele.character)
+      } else if (language === null) {
         uniqueChar.add(RecordDataele.character)
       }
     };
 
+    for (let MissingRecordDataele of MissingRecordData) {
+      if (language != null && MissingRecordDataele.language === language) {
+        uniqueChar.add(MissingRecordDataele.character)
+      } else if (language === null) {
+        uniqueChar.add(MissingRecordDataele.character)
+      }
+    };
 
     for (let char of uniqueChar) {
       let score = 0;
@@ -301,6 +314,8 @@ export class ScoresService {
 
     for (let MissingRecordDataEle of MissingRecordData) {
       if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+      } else if (!uniqueChar.has(MissingRecordDataEle.character)) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
       }
     }
