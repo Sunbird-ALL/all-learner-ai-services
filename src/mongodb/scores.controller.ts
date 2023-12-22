@@ -1609,8 +1609,23 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
@@ -1666,8 +1681,23 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
@@ -1722,8 +1752,24 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
   }
 
   @ApiParam({
@@ -1749,6 +1795,8 @@ export class ScoresController {
 
     let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
     let validations = await this.scoresService.getAssessmentRecords(id);
+
+    console.log(getGetTarget);
 
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
@@ -1818,8 +1866,22 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
   }
 
   @ApiParam({
@@ -1913,8 +1975,23 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
   }
 
   @ApiParam({
@@ -2005,8 +2082,23 @@ export class ScoresController {
       )
     );
 
+    let contentArr;
+    let contentForTokenArr;
 
-    return { content: newContent.data.wordsArr, contentForToken: newContent.data.contentForToken, getTargetChar: getGetTargetCharArr };
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
   }
 
   @ApiParam({
