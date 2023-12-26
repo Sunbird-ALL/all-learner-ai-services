@@ -189,7 +189,6 @@ export class ScoresService {
 
     let uniqueChar = new Set();
 
-    console.log(RecordData);
 
     for (let RecordDataele of RecordData) {
       if (language != null && RecordDataele.language === language) {
@@ -199,7 +198,13 @@ export class ScoresService {
       }
     };
 
-    console.log(uniqueChar);
+    for (let MissingRecordDataele of MissingRecordData) {
+      if (language != null && MissingRecordDataele.language === language) {
+        uniqueChar.add(MissingRecordDataele.character)
+      } else if (language === null) {
+        uniqueChar.add(MissingRecordDataele.character)
+      }
+    };
 
     for (let char of uniqueChar) {
       let score = 0;
@@ -215,16 +220,6 @@ export class ScoresService {
         charScoreData.push({ character: char, score: avgScore });
       }
     }
-
-    for (let MissingRecordDataele of MissingRecordData) {
-      if (language != null && MissingRecordDataele.language === language) {
-        uniqueChar.add(MissingRecordDataele.character)
-      } else if (language === null) {
-        uniqueChar.add(MissingRecordDataele.character)
-      }
-    };
-
-    console.log(MissingRecordData);
 
     for (let MissingRecordDataEle of MissingRecordData) {
       if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
