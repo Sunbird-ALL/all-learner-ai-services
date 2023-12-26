@@ -193,11 +193,16 @@ export class ScoresService {
       }
     }
 
+
+    let missingUniqueChar = new Set();
+
     for (let MissingRecordDataEle of MissingRecordData) {
-      if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
+      if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-      } else if (!uniqueChar.has(MissingRecordDataEle.character)) {
+        missingUniqueChar.add(MissingRecordDataEle.character)
+      } else if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character)) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+        missingUniqueChar.add(MissingRecordDataEle.character)
       }
     }
 
@@ -284,11 +289,15 @@ export class ScoresService {
       }
     }
 
+    let missingUniqueChar = new Set();
+
     for (let MissingRecordDataEle of MissingRecordData) {
-      if (!uniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
+      if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-      } else if (!uniqueChar.has(MissingRecordDataEle.character)) {
+        missingUniqueChar.add(MissingRecordDataEle.character)
+      } else if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character)) {
         charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+        missingUniqueChar.add(MissingRecordDataEle.character)
       }
     }
 
