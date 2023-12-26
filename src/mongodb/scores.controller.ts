@@ -1807,10 +1807,14 @@ export class ScoresController {
       currentLevel = 'm1';
     } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
       currentLevel = 'm2';
-    } else if (totalTargets < 10 && totalValidation === 0) {
-      currentLevel = 'm3';
-    } else if (totalTargets === 0 && totalValidation === 0) {
-      currentLevel = 'm4';
+    } else if (totalTargets < 10) {
+      if (totalValidation === 0) {
+        currentLevel = 'm4';
+      } else if (totalValidation < 3) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm2';
+      }
     } else {
       currentLevel = 'm1';
     }
@@ -1918,10 +1922,14 @@ export class ScoresController {
       currentLevel = 'm1';
     } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
       currentLevel = 'm2';
-    } else if (totalTargets < 10 && totalValidation === 0) {
-      currentLevel = 'm3';
-    } else if (totalTargets === 0 && totalValidation === 0) {
-      currentLevel = 'm4';
+    } else if (totalTargets < 10) {
+      if (totalValidation === 0) {
+        currentLevel = 'm4';
+      } else if (totalValidation < 3) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm2';
+      }
     } else {
       currentLevel = 'm1';
     }
@@ -2027,10 +2035,14 @@ export class ScoresController {
       currentLevel = 'm1';
     } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
       currentLevel = 'm2';
-    } else if (totalTargets < 10 && totalValidation === 0) {
-      currentLevel = 'm3';
-    } else if (totalTargets === 0 && totalValidation === 0) {
-      currentLevel = 'm4';
+    } else if (totalTargets < 10) {
+      if (totalValidation === 0) {
+        currentLevel = 'm4';
+      } else if (totalValidation < 3) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm2';
+      }
     } else {
       currentLevel = 'm1';
     }
@@ -2132,10 +2144,14 @@ export class ScoresController {
       currentLevel = 'm1';
     } else if (totalTargets > 10 && totalTargets < 30 && totalValidation <= 3 && totalValidation > 0) {
       currentLevel = 'm2';
-    } else if (totalTargets < 10 && totalValidation === 0) {
-      currentLevel = 'm3';
-    } else if (totalTargets === 0 && totalValidation === 0) {
-      currentLevel = 'm4';
+    } else if (totalTargets < 10) {
+      if (totalValidation === 0) {
+        currentLevel = 'm4';
+      } else if (totalValidation < 3) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm2';
+      }
     } else {
       currentLevel = 'm1';
     }
