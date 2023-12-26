@@ -10,8 +10,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.forRoot(process.env.DATABASE),
-    new FastifyAdapter({ logger: true }),
-    { rawBody: true }
+    new FastifyAdapter({ logger: true, bodyLimit: 30 * 1024 * 1024 })
   );
 
   await app.register(fastifyMultipart, {
@@ -36,7 +35,7 @@ async function bootstrap() {
     credentials: false,
   });
 
-  app.useBodyParser('application/json', { bodyLimit: 100 * 1000 * 1024 });
+  //app.useBodyParser('application/json', { bodyLimit: 100 * 1000 * 1024 });
 
   await app.listen(process.env.PORT, '0.0.0.0');
 }
