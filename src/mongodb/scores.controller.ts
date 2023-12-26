@@ -1789,14 +1789,9 @@ export class ScoresController {
     },
   })
   async GetContentWordbySession(@Param('sessionId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-    // if (!Array.isArray(tags)) {
-    //   tags = Array.of(tags);
-    // }
 
     let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
     let validations = await this.scoresService.getAssessmentRecords(id);
-
-    console.log(getGetTarget);
 
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
@@ -1857,8 +1852,6 @@ export class ScoresController {
       "cLevel": contentLevel,
       "complexityLevel": complexityLevel
     };
-
-    console.log(textData);
 
     const newContent = await lastValueFrom(
       this.httpService.post(url, JSON.stringify(textData), {

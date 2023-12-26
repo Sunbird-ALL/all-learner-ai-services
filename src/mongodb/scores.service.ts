@@ -117,11 +117,6 @@ export class ScoresService {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
       {
-        $match: {
-          'sessions.session_id': sessionId
-        }
-      },
-      {
         $unwind: '$sessions'
       },
       {
@@ -131,11 +126,6 @@ export class ScoresService {
       },
       {
         $unwind: '$sessions.confidence_scores'
-      },
-      {
-        $match: {
-          'sessions.session_id': sessionId
-        }
       },
       {
         $project: {
@@ -152,11 +142,6 @@ export class ScoresService {
 
     const MissingRecordData = await this.scoreModel.aggregate([
       {
-        $match: {
-          'sessions.session_id': sessionId
-        }
-      },
-      {
         $unwind: '$sessions'
       },
       {
@@ -166,11 +151,6 @@ export class ScoresService {
       },
       {
         $unwind: '$sessions.missing_token_scores'
-      },
-      {
-        $match: {
-          'sessions.session_id': sessionId
-        }
       },
       {
         $project: {
@@ -198,14 +178,6 @@ export class ScoresService {
       }
     };
 
-    for (let MissingRecordDataele of MissingRecordData) {
-      if (language != null && MissingRecordDataele.language === language) {
-        uniqueChar.add(MissingRecordDataele.character)
-      } else if (language === null) {
-        uniqueChar.add(MissingRecordDataele.character)
-      }
-    };
-
     for (let char of uniqueChar) {
       let score = 0;
       let count = 0;
@@ -216,7 +188,7 @@ export class ScoresService {
         }
       }
       let avgScore = score / count;
-      if (avgScore < 0.90) {
+      if (avgScore < 0.90 && count > 0) {
         charScoreData.push({ character: char, score: avgScore });
       }
     }
@@ -294,14 +266,6 @@ export class ScoresService {
         uniqueChar.add(RecordDataele.character)
       } else if (language === null) {
         uniqueChar.add(RecordDataele.character)
-      }
-    };
-
-    for (let MissingRecordDataele of MissingRecordData) {
-      if (language != null && MissingRecordDataele.language === language) {
-        uniqueChar.add(MissingRecordDataele.character)
-      } else if (language === null) {
-        uniqueChar.add(MissingRecordDataele.character)
       }
     };
 
