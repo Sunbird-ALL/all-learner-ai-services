@@ -425,7 +425,7 @@ export class ScoresController {
       if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
         let audioFile = CreateLearnerProfileDto.audio;
         const decoded = audioFile.toString('base64');
-        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "ta");
         CreateLearnerProfileDto['output'] = audioOutput.output;
       }
 
@@ -824,7 +824,7 @@ export class ScoresController {
       if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
         let audioFile = CreateLearnerProfileDto.audio;
         const decoded = audioFile.toString('base64');
-        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "hi");
         CreateLearnerProfileDto['output'] = audioOutput.output;
       }
 
@@ -1173,7 +1173,7 @@ export class ScoresController {
       if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
         let audioFile = CreateLearnerProfileDto.audio;
         const decoded = audioFile.toString('base64');
-        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "kn");
         CreateLearnerProfileDto['output'] = audioOutput.output;
       }
 

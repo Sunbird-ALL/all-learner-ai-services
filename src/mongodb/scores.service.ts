@@ -45,7 +45,16 @@ export class ScoresService {
     let serviceId = '';
     switch (language) {
       case "kn":
-        serviceId = "ai4bharat/conformer-multilingual-dravidian-gpu--t4";
+        serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
+        break;
+      case "ta":
+        serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
+        break;
+      case "en":
+        serviceId = "ai4bharat/whisper--gpu-t4";
+        break;
+      case "hi":
+        serviceId = "ai4bharat/conformer-hi--gpu-t4";
         break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
@@ -72,7 +81,7 @@ export class ScoresService {
 
     let config = {
       method: 'post',
-      url: 'https://api.dhruva.ai4bharat.org/services/inference/asr',
+      url: process.env.AI4BHARAT_URL,
       headers: {
         'Content-Type': 'application/json',
         'Authorization': process.env.AI4BHARAT_API_KEY
