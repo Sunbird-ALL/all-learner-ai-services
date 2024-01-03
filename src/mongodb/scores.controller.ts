@@ -6,10 +6,6 @@ import { FastifyReply } from 'fastify';
 import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
-import { wordErrorRate } from "word-error-rate";
-import * as calcCER from 'character-error-rate';
-import * as DiffMatchPatch from 'diff-match-patch';
-import * as difflib from 'difflib';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -425,7 +421,7 @@ export class ScoresController {
       if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
         let audioFile = CreateLearnerProfileDto.audio;
         const decoded = audioFile.toString('base64');
-        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "ta");
+        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
         CreateLearnerProfileDto['output'] = audioOutput.output;
       }
 
@@ -435,38 +431,12 @@ export class ScoresController {
 
       let originalText = CreateLearnerProfileDto.original_text;
       let responseText = CreateLearnerProfileDto.output[0].source;
+      let constructText = '';
       let originalTextTokensArr = originalText.split("");
       let responseTextTokensArr = responseText.split("");
 
       let originalTextArr = originalText.split(" ");
       let responseTextArr = responseText.split(" ");
-
-      let originalTextWordCount = [];
-
-      // for (let originalTextSetEle of new Set(originalTextArr)) {
-      //   let wordCount = 0;
-      //   for (let originalTextArrEle of originalTextArr) {
-      //     if (originalTextSetEle === originalTextArrEle) {
-      //       wordCount++;
-      //     }
-      //   }
-      //   originalTextWordCount.push({ word: originalTextSetEle, count: wordCount });
-      // }
-
-      // for (let originalTextWordCountEle of originalTextWordCount) {
-      //   let count = 0;
-      //   for (let responseTextArrEle of responseTextArr) {
-      //     if (originalTextWordCountEle.word === responseTextArrEle) {
-      //       count++;
-      //     }
-      //   }
-      //   if (count != 0 && originalTextWordCountEle.count < count) {
-      //     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-      //       status: "error",
-      //       message: "Avoid repetitions and record again"
-      //     });
-      //   }
-      // }
 
       let correctTokens = [];
       let missingTokens = [];
@@ -500,12 +470,96 @@ export class ScoresController {
         tokenHexcodeDataArr = tokenHexcodedata;
       });
 
+      // Prepare Constructed Text
+      let compareCharArr = [];
+
+      let constructTextSet = new Set();
+
+      let reptitionCount = 0;
+
+      for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
+        let originalRepCount = 0;
+        for (let sourceEle of responseText.split(" ")) {
+          if (similarity(originalEle, sourceEle) >= 0.40) {
+            compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
+            //break;
+          }
+          if (similarity(originalEle, sourceEle) >= 0.60) {
+            originalRepCount++;
+          }
+        }
+        if (originalRepCount >= 2) {
+          reptitionCount++;
+        }
+      }
+
+      for (let compareCharArrEle of compareCharArr) {
+        let score = 0;
+        let word = '';
+        for (let compareCharArrCmpEle of compareCharArr) {
+          if (compareCharArrEle.original_text === compareCharArrCmpEle.original_text) {
+            if (compareCharArrCmpEle.score > score) {
+              score = compareCharArrCmpEle.score;
+              word = compareCharArrCmpEle.response_text;
+            }
+          }
+        }
+        constructTextSet.add(word);
+      }
+
+      for (let constructTextSetEle of constructTextSet) {
+        constructText += constructTextSetEle + ' ';
+      }
+      constructText = constructText.trim();
+
+      function similarity(s1, s2) {
+        var longer = s1;
+        var shorter = s2;
+        if (s1.length < s2.length) {
+          longer = s2;
+          shorter = s1;
+        }
+        var longerLength = longer.length;
+        if (longerLength == 0) {
+          return 1.0;
+        }
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+      }
+
+      function editDistance(s1, s2) {
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+
+        var costs = new Array();
+        for (var i = 0; i <= s1.length; i++) {
+          var lastValue = i;
+          for (var j = 0; j <= s2.length; j++) {
+            if (i == 0)
+              costs[j] = j;
+            else {
+              if (j > 0) {
+                var newValue = costs[j - 1];
+                if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                  newValue = Math.min(Math.min(newValue, lastValue),
+                    costs[j]) + 1;
+                costs[j - 1] = lastValue;
+                lastValue = newValue;
+              }
+            }
+          }
+          if (i > 0)
+            costs[s2.length] = lastValue;
+        }
+        return costs[s2.length];
+      }
+
       let prevEle = '';
       let isPrevVowel = false;
 
 
       let originalTokenArr = [];
       let responseTokenArr = [];
+      let constructTokenArr = [];
 
 
       for (let originalTextELE of originalText.split("")) {
@@ -528,21 +582,21 @@ export class ScoresController {
         }
       }
 
-      for (let responseTextELE of responseText.split("")) {
-        if (responseTextELE != ' ') {
-          if (vowelSignArr.includes(responseTextELE)) {
+      for (let constructTextELE of constructText.split("")) {
+        if (constructTextELE != ' ') {
+          if (vowelSignArr.includes(constructTextELE)) {
             if (isPrevVowel) {
               // let prevEleArr = prevEle.split("");
               // prevEle = prevEleArr[0] + responseTextELE;
               // responseTokenArr.push(prevEle);
             } else {
-              prevEle = prevEle + responseTextELE;
-              responseTokenArr.push(prevEle);
+              prevEle = prevEle + constructTextELE;
+              constructTokenArr.push(prevEle);
             }
             isPrevVowel = true;
           } else {
-            responseTokenArr.push(responseTextELE);
-            prevEle = responseTextELE;
+            constructTokenArr.push(constructTextELE);
+            prevEle = constructTextELE;
             isPrevVowel = false;
           }
         }
@@ -552,7 +606,7 @@ export class ScoresController {
       // Comparison Logic
 
       for (let originalTokenArrEle of originalTokenArr) {
-        if (responseTokenArr.includes(originalTokenArrEle)) {
+        if (constructTokenArr.includes(originalTokenArrEle)) {
           correctTokens.push(originalTokenArrEle);
         } else {
           missingTokens.push(originalTokenArrEle);
@@ -662,8 +716,6 @@ export class ScoresController {
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
 
-      //console.log(filteredTokenArr);
-
       // Create confidence score array and anomoly array
       for (let value of filteredTokenArr) {
         let score: any = value.charvalue
@@ -691,7 +743,7 @@ export class ScoresController {
                 }
               );
             } else {
-              if (!missingTokens.includes(value.charkey) && !responseTokenArr.includes(value.charkey)) {
+              if (!missingTokens.includes(value.charkey) && !constructTokenArr.includes(value.charkey)) {
                 anomaly_scoreArr.push(
                   {
                     token: value.charkey.replaceAll("_", ""),
@@ -748,6 +800,35 @@ export class ScoresController {
 
       }
 
+      const url = process.env.ALL_TEXT_EVAL_API;
+
+      const textData = {
+        "reference": CreateLearnerProfileDto.original_text,
+        "hypothesis": CreateLearnerProfileDto.output[0].source
+      };
+
+      const textEvalMatrices = await lastValueFrom(
+        this.httpService.post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).pipe(
+          map((resp) => resp.data)
+        )
+      );
+
+      let wer = textEvalMatrices.wer;
+      let cercal = textEvalMatrices.cer * 2;
+      let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
+      let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
+      let repetitions = reptitionCount;
+      let pauseCount = 0;
+      let ins = textEvalMatrices.insertion.length;
+      let del = textEvalMatrices.deletion.length;
+      let sub = textEvalMatrices.substitution.length;
+
+      let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+
       let createScoreData = {
         user_id: CreateLearnerProfileDto.user_id,
         session: {
@@ -755,9 +836,38 @@ export class ScoresController {
           language: language,
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
+          construct_text: constructText,
           confidence_scores: confidence_scoresArr,
           anamolydata_scores: anomaly_scoreArr,
           missing_token_scores: missing_token_scoresArr,
+          error_rate: {
+            character: textEvalMatrices.cer,
+            word: textEvalMatrices.wer
+          },
+          count_diff: {
+            character: Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length),
+            word: Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length)
+          },
+          eucledian_distance: {
+            insertions: {
+              chars: textEvalMatrices.insertion,
+              count: textEvalMatrices.insertion.length
+            },
+            deletions: {
+              chars: textEvalMatrices.deletion,
+              count: textEvalMatrices.deletion.length
+            },
+            substitutions: {
+              chars: textEvalMatrices.substitution,
+              count: textEvalMatrices.substitution.length
+            }
+          },
+          fluencyScore: fluencyScore.toFixed(3),
+          silence_Pause: {
+            total_duration: 0,
+            count: 0,
+          },
+          reptitionsCount: reptitionCount,
           asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
         }
       };
@@ -770,7 +880,7 @@ export class ScoresController {
         return result?.hexcode || '';
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText })
+      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",

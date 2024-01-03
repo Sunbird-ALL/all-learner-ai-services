@@ -65,6 +65,12 @@ export class Score {
                         count: { type: Number }
                     }
                 },
+                fluencyScore: { type: Number },
+                silence_Pause: {
+                    total_duration: { type: Number },
+                    count: { type: Number },
+                },
+                reptitionsCount: { type: Number },
                 asrOutput: { type: String, required: true },
             },
         ],
@@ -116,6 +122,12 @@ export class Score {
                 count: number
             }
         };
+        fluencyScore: number;
+        silence_Pause: {
+            total_duration: number;
+            count: number;
+        };
+        reptitionsCount: number;
         asrOutput: string;
         createdAt: Date;
     }[];
