@@ -1909,28 +1909,24 @@ export class ScoresController {
     let currentLevel = 'No Level Matched';
 
     if (totalTargets >= 30) {
-      if (totalValidation > 10) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm1';
-      }
+      currentLevel = 'm1';
     } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation < 15 && totalValidation > 5) {
-        currentLevel = 'm2';
-      } else {
+      if (totalValidation > 5) {
         currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
       }
     } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation < 8 && totalValidation > 2) {
-        currentLevel = 'm3';
-      } else {
+      if (totalValidation > 2) {
         currentLevel = 'm2';
-      }
-    } else if (totalTargets <= 2 && totalTargets >= 0) {
-      if (totalValidation <= 2 && totalValidation >= 0) {
-        currentLevel = 'm4';
       } else {
         currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
       }
     }
 
@@ -2032,28 +2028,24 @@ export class ScoresController {
     let currentLevel = 'No Level Matched';
 
     if (totalTargets >= 30) {
-      if (totalValidation > 10) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm1';
-      }
+      currentLevel = 'm1';
     } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation < 15 && totalValidation > 5) {
-        currentLevel = 'm2';
-      } else {
+      if (totalValidation > 5) {
         currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
       }
     } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation < 8 && totalValidation > 2) {
-        currentLevel = 'm3';
-      } else {
+      if (totalValidation > 2) {
         currentLevel = 'm2';
-      }
-    } else if (totalTargets <= 2 && totalTargets >= 0) {
-      if (totalValidation <= 2 && totalValidation >= 0) {
-        currentLevel = 'm4';
       } else {
         currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
       }
     }
 
@@ -2155,28 +2147,24 @@ export class ScoresController {
     let currentLevel = 'No Level Matched';
 
     if (totalTargets >= 30) {
-      if (totalValidation > 10) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm1';
-      }
+      currentLevel = 'm1';
     } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation < 15 && totalValidation > 5) {
-        currentLevel = 'm2';
-      } else {
+      if (totalValidation > 5) {
         currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
       }
     } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation < 8 && totalValidation > 2) {
-        currentLevel = 'm3';
-      } else {
+      if (totalValidation > 2) {
         currentLevel = 'm2';
-      }
-    } else if (totalTargets <= 2 && totalTargets >= 0) {
-      if (totalValidation <= 2 && totalValidation >= 0) {
-        currentLevel = 'm4';
       } else {
         currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
       }
     }
 
@@ -2271,31 +2259,27 @@ export class ScoresController {
     let totalTargets = targets.length;
     let totalValidation = validations.length;
 
-    let currentLevel = 'No Level Matched';
+    let currentLevel = 'm1';
 
     if (totalTargets >= 30) {
-      if (totalValidation > 10) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm1';
-      }
+      currentLevel = 'm1';
     } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation < 15 && totalValidation > 5) {
-        currentLevel = 'm2';
-      } else {
+      if (totalValidation > 5) {
         currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
       }
     } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation < 8 && totalValidation > 2) {
-        currentLevel = 'm3';
-      } else {
+      if (totalValidation > 2) {
         currentLevel = 'm2';
-      }
-    } else if (totalTargets <= 2 && totalTargets >= 0) {
-      if (totalValidation <= 2 && totalValidation >= 0) {
-        currentLevel = 'm4';
       } else {
         currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
       }
     }
 
