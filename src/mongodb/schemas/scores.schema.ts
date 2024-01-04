@@ -10,7 +10,7 @@ export class Score {
         type: [
             {
                 session_id: { type: String, required: true },
-                createdAt: { type: Date, default: Date.now() },
+                createdAt: { type: Date, required: true },
                 original_text: { type: String, required: true },
                 response_text: { type: String, required: true },
                 construct_text: { type: String, required: true },

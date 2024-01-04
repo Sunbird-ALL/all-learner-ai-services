@@ -829,10 +829,14 @@ export class ScoresController {
 
       let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
 
+      let createdAt = new Date().toISOString().replace('Z', '+00:00')
+      console.log(createdAt);
+
       let createScoreData = {
         user_id: CreateLearnerProfileDto.user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
+          createdAt: createdAt,
           language: language,
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
@@ -1207,10 +1211,13 @@ export class ScoresController {
 
       }
 
+      let createdAt = new Date().toISOString().replace('Z', '+00:00');
+
       let createScoreData = {
         user_id: CreateLearnerProfileDto.user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
+          createdAt: createdAt,
           language: language,
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
@@ -1556,10 +1563,13 @@ export class ScoresController {
 
       }
 
+      let createdAt = new Date().toISOString().replace('Z', '+00:00');
+
       let createScoreData = {
         user_id: CreateLearnerProfileDto.user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
+          createdAt: createdAt,
           language: language,
           original_text: CreateLearnerProfileDto.original_text,
           response_text: responseText,
