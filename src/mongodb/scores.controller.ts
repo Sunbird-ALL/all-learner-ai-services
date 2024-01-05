@@ -1681,6 +1681,119 @@ export class ScoresController {
     name: "userId",
     example: "2020076506"
   })
+  @Get('GetContent/char/:userId')
+  @ApiOperation({ summary: 'Get a set of chars for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get content and GetTarget chars for user id',
+    schema: {
+      properties: {
+        content: { type: 'string' },
+        getTargetChar: { type: 'string' }
+      }
+    },
+  })
+  async GetContentCharbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (gettargetlimit > 0 && index >= gettargetlimit) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = 'No Level Matched';
+
+    if (totalTargets >= 30) {
+      currentLevel = 'm1';
+    } else if (totalTargets < 30 && totalTargets >= 16) {
+      if (totalValidation > 5) {
+        currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
+      }
+    } else if (totalTargets < 16 && totalTargets > 2) {
+      if (totalValidation > 2) {
+        currentLevel = 'm2';
+      } else {
+        currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
+      }
+    }
+
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "char",
+      "limit": contentlimit || 5,
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+    let contentArr;
+    let contentForTokenArr;
+
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
   @Get('GetContent/word/:userId')
   @ApiOperation({ summary: 'Get a set of words for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
   @ApiResponse({
@@ -1695,8 +1808,9 @@ export class ScoresController {
   })
   async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit > 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1704,8 +1818,48 @@ export class ScoresController {
       return charData.character
     });
 
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = 'No Level Matched';
+
+    if (totalTargets >= 30) {
+      currentLevel = 'm1';
+    } else if (totalTargets < 30 && totalTargets >= 16) {
+      if (totalValidation > 5) {
+        currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
+      }
+    } else if (totalTargets < 16 && totalTargets > 2) {
+      if (totalValidation > 2) {
+        currentLevel = 'm2';
+      } else {
+        currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
+      }
+    }
+
     let contentLevel = '';
     let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
 
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
@@ -1745,7 +1899,7 @@ export class ScoresController {
     }
 
 
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -1767,8 +1921,9 @@ export class ScoresController {
   async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
 
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit > 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1776,8 +1931,48 @@ export class ScoresController {
       return charData.character
     });
 
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = 'No Level Matched';
+
+    if (totalTargets >= 30) {
+      currentLevel = 'm1';
+    } else if (totalTargets < 30 && totalTargets >= 16) {
+      if (totalValidation > 5) {
+        currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
+      }
+    } else if (totalTargets < 16 && totalTargets > 2) {
+      if (totalValidation > 2) {
+        currentLevel = 'm2';
+      } else {
+        currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
+      }
+    }
+
     let contentLevel = '';
     let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
 
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
@@ -1817,7 +2012,7 @@ export class ScoresController {
     }
 
 
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -1838,8 +2033,9 @@ export class ScoresController {
   })
   async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
     let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit > 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -1847,8 +2043,48 @@ export class ScoresController {
       return charData.character
     });
 
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = 'No Level Matched';
+
+    if (totalTargets >= 30) {
+      currentLevel = 'm1';
+    } else if (totalTargets < 30 && totalTargets >= 16) {
+      if (totalValidation > 5) {
+        currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
+      }
+    } else if (totalTargets < 16 && totalTargets > 2) {
+      if (totalValidation > 2) {
+        currentLevel = 'm2';
+      } else {
+        currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
+      }
+    }
+
     let contentLevel = '';
     let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
 
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
@@ -1889,7 +2125,123 @@ export class ScoresController {
 
 
 
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr };
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
+  }
+
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('GetContent/char/session/:sessionId')
+  @ApiOperation({ summary: 'Get a set of chars for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get content and GetTarget chars for user id',
+    schema: {
+      properties: {
+        content: { type: 'string' },
+        getTargetChar: { type: 'string' }
+      }
+    },
+  })
+  async GetContentCharbySession(@Param('sessionId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+
+    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+    let totalTargets = getGetTarget.length;
+    let totalValidation = validations.length;
+
+    let currentLevel = 'No Level Matched';
+
+    if (totalTargets >= 30) {
+      currentLevel = 'm1';
+    } else if (totalTargets < 30 && totalTargets >= 16) {
+      if (totalValidation > 5) {
+        currentLevel = 'm1';
+      } else {
+        currentLevel = 'm2';
+      }
+    } else if (totalTargets < 16 && totalTargets > 2) {
+      if (totalValidation > 2) {
+        currentLevel = 'm2';
+      } else {
+        currentLevel = 'm3';
+      }
+    } else if (totalTargets <= 2) {
+      if (totalValidation > 0) {
+        currentLevel = 'm3';
+      } else {
+        currentLevel = 'm4';
+      }
+    }
+
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (currentLevel === 'm1') {
+      contentLevel = 'L1';
+    } else if (currentLevel === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ["C1"]
+    } else if (currentLevel === 'm3') {
+      contentLevel = 'L3';
+      complexityLevel = ["C1", "C2"];
+    } else if (currentLevel === 'm4') {
+      contentLevel = 'L4';
+      complexityLevel = ["C1", "C2", "C3"]
+    }
+
+    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+      if (gettargetlimit > 0 && index >= gettargetlimit) {
+        return false;
+      }
+      return true;
+    }).map(charData => {
+      return charData.character
+    });
+
+    console.log(gettargetlimit);
+
+    const url = process.env.ALL_CONTENT_SERVICE_API;
+
+    const textData = {
+      "tokenArr": getGetTargetCharArr,
+      "language": language || "ta",
+      "contentType": "char",
+      "limit": contentlimit || 5,
+      "tags": tags,
+      "cLevel": contentLevel,
+      "complexityLevel": complexityLevel
+    };
+
+    const newContent = await lastValueFrom(
+      this.httpService.post(url, JSON.stringify(textData), {
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).pipe(
+        map((resp) => resp.data)
+      )
+    );
+
+    let contentArr;
+    let contentForTokenArr;
+
+    if (newContent.data.hasOwnProperty('wordsArr')) {
+      contentArr = newContent.data.wordsArr;
+    } else {
+      contentArr = [];
+    }
+
+    if (newContent.data.hasOwnProperty('contentForToken')) {
+      contentForTokenArr = newContent.data.contentForToken;
+    } else {
+      contentForTokenArr = [];
+    }
+
+    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -1956,10 +2308,8 @@ export class ScoresController {
       complexityLevel = ["C1", "C2", "C3"]
     }
 
-
-
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit !== 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -2078,7 +2428,7 @@ export class ScoresController {
 
 
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit !== 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
@@ -2195,7 +2545,7 @@ export class ScoresController {
     }
 
     let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (index >= gettargetlimit) {
+      if (gettargetlimit !== 0 && index >= gettargetlimit) {
         return false;
       }
       return true;
