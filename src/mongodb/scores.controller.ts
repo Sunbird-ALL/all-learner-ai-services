@@ -1709,27 +1709,33 @@ export class ScoresController {
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
 
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
+    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let totalSession = sessions.length;
+    let currentLevel = 'm0';
+    if (totalSession === 0) {
       currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
+    } else {
+
+      if (totalTargets >= 30) {
         currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
+      } else if (totalTargets < 30 && totalTargets >= 16) {
+        if (totalValidation > 5) {
+          currentLevel = 'm1';
+        } else {
+          currentLevel = 'm2';
+        }
+      } else if (totalTargets < 16 && totalTargets > 2) {
+        if (totalValidation > 2) {
+          currentLevel = 'm2';
+        } else {
+          currentLevel = 'm3';
+        }
+      } else if (totalTargets <= 2) {
+        if (totalValidation > 0) {
+          currentLevel = 'm3';
+        } else {
+          currentLevel = 'm4';
+        }
       }
     }
 
@@ -1821,27 +1827,33 @@ export class ScoresController {
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
 
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
+    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let totalSession = sessions.length;
+    let currentLevel = 'm0';
+    if (totalSession === 0) {
       currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
+    } else {
+
+      if (totalTargets >= 30) {
         currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
+      } else if (totalTargets < 30 && totalTargets >= 16) {
+        if (totalValidation > 5) {
+          currentLevel = 'm1';
+        } else {
+          currentLevel = 'm2';
+        }
+      } else if (totalTargets < 16 && totalTargets > 2) {
+        if (totalValidation > 2) {
+          currentLevel = 'm2';
+        } else {
+          currentLevel = 'm3';
+        }
+      } else if (totalTargets <= 2) {
+        if (totalValidation > 0) {
+          currentLevel = 'm3';
+        } else {
+          currentLevel = 'm4';
+        }
       }
     }
 
@@ -1934,27 +1946,33 @@ export class ScoresController {
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
 
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
+    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let totalSession = sessions.length;
+    let currentLevel = 'm0';
+    if (totalSession === 0) {
       currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
+    } else {
+
+      if (totalTargets >= 30) {
         currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
+      } else if (totalTargets < 30 && totalTargets >= 16) {
+        if (totalValidation > 5) {
+          currentLevel = 'm1';
+        } else {
+          currentLevel = 'm2';
+        }
+      } else if (totalTargets < 16 && totalTargets > 2) {
+        if (totalValidation > 2) {
+          currentLevel = 'm2';
+        } else {
+          currentLevel = 'm3';
+        }
+      } else if (totalTargets <= 2) {
+        if (totalValidation > 0) {
+          currentLevel = 'm3';
+        } else {
+          currentLevel = 'm4';
+        }
       }
     }
 
@@ -2046,27 +2064,33 @@ export class ScoresController {
     let totalTargets = getGetTarget.length;
     let totalValidation = validations.length;
 
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
+    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let totalSession = sessions.length;
+    let currentLevel = 'm0';
+    if (totalSession === 0) {
       currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
+    } else {
+
+      if (totalTargets >= 30) {
         currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
+      } else if (totalTargets < 30 && totalTargets >= 16) {
+        if (totalValidation > 5) {
+          currentLevel = 'm1';
+        } else {
+          currentLevel = 'm2';
+        }
+      } else if (totalTargets < 16 && totalTargets > 2) {
+        if (totalValidation > 2) {
+          currentLevel = 'm2';
+        } else {
+          currentLevel = 'm3';
+        }
+      } else if (totalTargets <= 2) {
+        if (totalValidation > 0) {
+          currentLevel = 'm3';
+        } else {
+          currentLevel = 'm4';
+        }
       }
     }
 
