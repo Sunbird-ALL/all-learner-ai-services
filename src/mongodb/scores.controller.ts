@@ -2646,6 +2646,65 @@ export class ScoresController {
     return { currentLevel: currentLevel, targetsCount: targets.length, validationsCount: validations.length, targets: targets, validations: validations };
   }
 
+  @ApiParam({
+    name: "userId",
+    example: "27519278861697549531193"
+  })
+  @Get('/getMilestoneProgress/user/:userId')
+  @ApiOperation({ summary: 'Get Milstone Progress by session id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get Targets character and score for user id',
+    schema: {
+      properties: {
+        currentLevel: { type: 'string' },
+        targetsCount: { type: 'number', format: 'float' },
+        validationsCount: { type: 'number', format: 'float' },
+
+      }
+    },
+  })
+  async getMilestoneForUser(@Param('userId') id: string) {
+    let targets = await this.scoresService.getTargetsByUser(id, 'ta');
+    let validations = await this.scoresService.getAssessmentRecords(id);
+
+
+
+    let totalTargets = targets.length;
+    let totalValidation = validations.length;
+
+    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let totalSession = sessions.length;
+    let currentLevel = 'm0';
+    if (totalSession === 0) {
+      currentLevel = 'm0';
+    } else {
+      if (totalTargets >= 30) {
+        currentLevel = 'm1';
+      } else if (totalTargets < 30 && totalTargets >= 16) {
+        if (totalValidation > 5) {
+          currentLevel = 'm1';
+        } else {
+          currentLevel = 'm2';
+        }
+      } else if (totalTargets < 16 && totalTargets > 2) {
+        if (totalValidation > 2) {
+          currentLevel = 'm2';
+        } else {
+          currentLevel = 'm3';
+        }
+      } else if (totalTargets <= 2) {
+        if (totalValidation > 0) {
+          currentLevel = 'm3';
+        } else {
+          currentLevel = 'm4';
+        }
+      }
+    }
+
+    return { currentLevel: currentLevel, targetsCount: targets.length, validationsCount: validations.length, targets: targets, validations: validations };
+  }
+
   @ApiExcludeEndpoint(true)
   @Get('/GetMeanScore/user/:userId')
   @ApiOperation({ summary: 'Mean score of each character by user id' })
