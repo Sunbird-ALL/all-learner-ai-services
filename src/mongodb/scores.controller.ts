@@ -2692,41 +2692,98 @@ export class ScoresController {
     let targets = await this.scoresService.getTargetsByUser(id, 'ta');
     let validations = await this.scoresService.getAssessmentRecords(id);
 
-
-
     let totalTargets = targets.length;
     let totalValidation = validations.length;
 
-    let sessions = await this.scoresService.getAllSessions(id, 5);
+    let sessions = await this.scoresService.getAllSessions(id, 100, true);
     let totalSession = sessions.length;
-    let currentLevel = 'm0';
+    let currentLevel: any = 0;
+
     if (totalSession === 0) {
-      currentLevel = 'm0';
+      currentLevel = 0;
     } else {
       if (totalTargets >= 30) {
-        currentLevel = 'm1';
+        currentLevel = 1;
       } else if (totalTargets < 30 && totalTargets >= 16) {
         if (totalValidation > 5) {
-          currentLevel = 'm1';
+          currentLevel = 1;
         } else {
-          currentLevel = 'm2';
+          currentLevel = 2;
         }
       } else if (totalTargets < 16 && totalTargets > 2) {
         if (totalValidation > 2) {
-          currentLevel = 'm2';
+          currentLevel = 2;
         } else {
-          currentLevel = 'm3';
+          currentLevel = 3;
         }
       } else if (totalTargets <= 2) {
         if (totalValidation > 0) {
-          currentLevel = 'm3';
+          currentLevel = 3;
         } else {
-          currentLevel = 'm4';
+          currentLevel = 4;
         }
       }
     }
 
-    return { currentLevel: currentLevel, targetsCount: targets.length, validationsCount: validations.length, targets: targets, validations: validations };
+    let sessionHighestLevel: any = 0;
+    let sessionHighestTargets = 0;
+    let sessionHighestValidations = 0;
+
+    for (let sessionEle of sessions) {
+
+      let sessionLevel = 0;
+      let sessionTargets: any = await this.scoresService.getTargetsBySession(sessionEle);
+      let sessionValidations: any = await this.scoresService.getAssessmentRecords(sessionEle);
+
+      let totalSessionTargets = sessionTargets.length;
+      let totalSessionValidations = sessionValidations.length;
+
+      if (totalSession === 0) {
+        sessionLevel = 0;
+      } else {
+        if (totalSessionTargets >= 30) {
+          sessionLevel = 1;
+        } else if (totalSessionTargets < 30 && totalSessionTargets >= 16) {
+          console.log(totalSessionTargets);
+          console.log(totalSessionValidations);
+          if (totalSessionValidations > 5) {
+            sessionLevel = 1;
+          } else {
+            sessionLevel = 2;
+          }
+        } else if (totalSessionTargets < 16 && totalSessionTargets > 2) {
+          if (totalSessionValidations > 2) {
+            sessionLevel = 2;
+          } else {
+            sessionLevel = 3;
+          }
+        } else if (totalSessionTargets <= 2) {
+          if (totalSessionValidations > 0) {
+            sessionLevel = 3;
+          } else {
+            sessionLevel = 4;
+          }
+        }
+      }
+
+      if (sessionHighestLevel < sessionLevel) {
+        sessionHighestLevel = sessionLevel;
+        sessionHighestTargets = totalSessionTargets;
+        sessionHighestValidations = totalSessionValidations;
+      }
+    }
+
+    console.log(sessionHighestLevel);
+
+    if (currentLevel < sessionHighestLevel) {
+      currentLevel = sessionHighestLevel;
+      totalTargets = sessionHighestTargets;
+      totalValidation = sessionHighestValidations;
+    }
+
+    currentLevel = 'm' + currentLevel;
+
+    return { currentLevel: currentLevel, targetsCount: totalTargets, validationsCount: totalValidation, targets: targets, validations: validations };
   }
 
   @ApiExcludeEndpoint(true)

@@ -787,7 +787,7 @@ export class ScoresService {
     }
   }
 
-  async getAllSessions(userId: string, limit: number) {
+  async getAllSessions(userId: string, limit: number, calculateMilestone: boolean = false) {
     const RecordData = await this.scoreModel.aggregate([
       {
         "$match": {
@@ -809,7 +809,8 @@ export class ScoresService {
         "$group": {
           "_id": "$session_id",
           "user_id": { "$first": "$user_id" },
-          "date": { "$first": "$date" }
+          "date": { "$first": "$date" },
+          "totalrecords": { "$count": {} }
         }
       },
       {
@@ -821,11 +822,23 @@ export class ScoresService {
         "$project": {
           "_id": 0,
           "session_id": "$_id",
+          "totalrecords": "$totalrecords"
         }
       }
     ]).limit(Number(limit));
 
-    const sessionIds = RecordData.map(item => item.session_id)
+
+
+    const sessionIds = RecordData.map(item => {
+      if (calculateMilestone && item.totalrecords < 3) {
+
+      } else if (!calculateMilestone) {
+        return item.session_id
+      } else {
+        return item.session_id
+      }
+    }).filter((sessionIdEle) => sessionIdEle != undefined)
+
     return sessionIds;
   }
 }
