@@ -218,6 +218,102 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
+  async getTargetsBysubSession(subSessionId: string, language: string = null) {
+    const threshold = 0.90
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': subSessionId
+        }
+      },
+      {
+        $unwind: '$sessions.confidence_scores'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          date: '$sessions.date',
+          session_id: '$sessions.session_id',
+          language: '$sessions.language',
+          character: '$sessions.confidence_scores.token',
+          score: '$sessions.confidence_scores.confidence_score'
+        }
+      }
+    ]);
+
+    const MissingRecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': subSessionId
+        }
+      },
+      {
+        $unwind: '$sessions.missing_token_scores'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          date: '$sessions.date',
+          session_id: '$sessions.session_id',
+          language: '$sessions.language',
+          character: '$sessions.missing_token_scores.token',
+          score: '$sessions.missing_token_scores.confidence_score'
+        }
+      }
+    ]);
+
+    let charScoreData = [];
+
+    let uniqueChar = new Set();
+
+
+    for (let RecordDataele of RecordData) {
+      if (language != null && RecordDataele.language === language) {
+        uniqueChar.add(RecordDataele.character)
+      } else if (language === null) {
+        uniqueChar.add(RecordDataele.character)
+      }
+    };
+
+    for (let char of uniqueChar) {
+      let score = 0;
+      let count = 0;
+      for (let checkRecordDataele of RecordData) {
+        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
+          score += checkRecordDataele.score;
+          count++;
+        }
+      }
+      let avgScore = score / count;
+      if (avgScore < 0.90 && count > 0) {
+        charScoreData.push({ character: char, score: avgScore });
+      }
+    }
+
+
+    let missingUniqueChar = new Set();
+
+    for (let MissingRecordDataEle of MissingRecordData) {
+      if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+        missingUniqueChar.add(MissingRecordDataEle.character)
+      } else if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character)) {
+        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
+        missingUniqueChar.add(MissingRecordDataEle.character)
+      }
+    }
+
+    return charScoreData.sort((a, b) => a.score - b.score);
+  }
+
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([

@@ -10,6 +10,9 @@ export class Score {
         type: [
             {
                 session_id: { type: String, required: true },
+                sub_session_id: { type: String, required: false },
+                contentType: { type: String, required: true },
+                contentId: { type: String, required: false },
                 createdAt: { type: Date, required: true },
                 original_text: { type: String, required: true },
                 response_text: { type: String, required: true },
@@ -79,6 +82,9 @@ export class Score {
     sessions: {
         session_id: string;
         original_text: string;
+        sub_session_id: string;
+        contentType: string;
+        contentId: string;
         response_text: string;
         construct_text: string;
         confidence_scores: {

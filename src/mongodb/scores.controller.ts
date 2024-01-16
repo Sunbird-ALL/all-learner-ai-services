@@ -836,6 +836,9 @@ export class ScoresController {
         user_id: CreateLearnerProfileDto.user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
+          sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+          contentType: CreateLearnerProfileDto.contentType,
+          contentId: CreateLearnerProfileDto.contentId || "",
           createdAt: createdAt,
           language: language,
           original_text: CreateLearnerProfileDto.original_text,
@@ -888,7 +891,8 @@ export class ScoresController {
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
-        message: "Server error - " + err
+        message: "Server error - " + err,
+        data: CreateLearnerProfileDto.output
       });
     }
   }
@@ -2784,6 +2788,48 @@ export class ScoresController {
     currentLevel = 'm' + currentLevel;
 
     return { currentLevel: currentLevel, targetsCount: totalTargets, validationsCount: totalValidation, targets: targets, validations: validations };
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getSetResult')
+  async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
+    let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id);
+
+    let totalTargets = targets.length;
+    let sessionResult = 'No Result';
+
+    if (getSetResult.contentType === 'char') {
+      if (totalTargets < 5) {
+        sessionResult = 'pass';
+      } else {
+        sessionResult = 'fail';
+      }
+    } else if (getSetResult.contentType === 'word') {
+      if (totalTargets < 10) {
+        sessionResult = 'pass';
+      } else {
+        sessionResult = 'fail';
+      }
+    } else if (getSetResult.contentType === 'sentence') {
+      if (totalTargets < 10) {
+        sessionResult = 'pass';
+      } else {
+        sessionResult = 'fail';
+      }
+    } else if (getSetResult.contentType === 'paragraph') {
+      if (totalTargets < 10) {
+        sessionResult = 'pass';
+      } else {
+        sessionResult = 'fail';
+      }
+    }
+
+    return response.status(HttpStatus.CREATED).send({
+      status: 'success', data: {
+        sessionResult: sessionResult,
+        totalTargets: totalTargets,
+      }
+    })
   }
 
   @ApiExcludeEndpoint(true)
