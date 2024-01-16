@@ -2798,25 +2798,25 @@ export class ScoresController {
     let totalTargets = targets.length;
     let sessionResult = 'No Result';
 
-    if (getSetResult.contentType === 'char') {
+    if (getSetResult.contentType === 'Char') {
       if (totalTargets < 5) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'word') {
+    } else if (getSetResult.contentType === 'Word') {
       if (totalTargets < 10) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'sentence') {
+    } else if (getSetResult.contentType === 'Sentence') {
       if (totalTargets < 10) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'paragraph') {
+    } else if (getSetResult.contentType === 'Paragraph') {
       if (totalTargets < 10) {
         sessionResult = 'pass';
       } else {
