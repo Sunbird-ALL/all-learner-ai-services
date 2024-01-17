@@ -2826,22 +2826,49 @@ export class ScoresController {
       }
     }
 
-    if (sessionResult === 'pass' && getSetResult.pass_exit === "true") {
+    if (previous_level === undefined || getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566") {
+      previous_level = 'm0';
       let addMilestoneResult = await this.scoresService.createMilestoneRecord({
         user_id: getSetResult.user_id,
         session_id: getSetResult.session_id,
         sub_session_id: getSetResult.sub_session_id,
-        milestone_level: getSetResult.milestone_level,
+        milestone_level: previous_level,
         sub_milestone_level: "",
       });
-    }
+    } else {
+      let milestone_level = "m0";
+      if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
+        milestone_level = "m2";
+      } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
+        milestone_level = "m3";
+      } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
+        milestone_level = "m4";
+      } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
+        milestone_level = "m1";
+      } else if (getSetResult.collectionId === "") {
+        let previous_level_id = parseInt(previous_level[1])
+        if (sessionResult === "pass") {
+          if (previous_level_id === 4) {
+            milestone_level = "m4"
+          } else {
+            previous_level_id++;
+            milestone_level = "m" + previous_level_id;
+          }
+        } else if (sessionResult === "fail") {
+          if (previous_level_id === 0) {
+            milestone_level = "m0"
+          } else {
+            previous_level_id--;
+            milestone_level = "m" + previous_level_id;
+          }
+        }
+      }
 
-    if (sessionResult === 'false' && getSetResult.fail_exit === "true") {
       let addMilestoneResult = await this.scoresService.createMilestoneRecord({
         user_id: getSetResult.user_id,
         session_id: getSetResult.session_id,
         sub_session_id: getSetResult.sub_session_id,
-        milestone_level: getSetResult.milestone_level,
+        milestone_level: milestone_level,
         sub_milestone_level: "",
       });
     }
@@ -2849,10 +2876,6 @@ export class ScoresController {
     recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
 
     let currentLevel = recordData[0]?.milestone_level || undefined;
-
-    if (previous_level === undefined) {
-      previous_level = 'm0';
-    }
 
     if (currentLevel === undefined) {
       currentLevel = 'm0';
@@ -2882,8 +2905,9 @@ export class ScoresController {
   @ApiExcludeEndpoint(true)
   @Get('/getMilestone/user/:userId')
   async getMilestone(@Param('userId') id: string) {
-    let recordData = await this.scoresService.getlatestmilestone(id);
-    return { status: 'success', data: recordData };
+    let recordData: any = await this.scoresService.getlatestmilestone(id);
+    let milestone_level = recordData[0]?.milestone_level || "m0";
+    return { status: 'success', data: { milestone_level: milestone_level } };
   }
 
   @ApiExcludeEndpoint(true)
