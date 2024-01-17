@@ -2798,7 +2798,7 @@ export class ScoresController {
     let sessionResult = 'No Result';
 
     let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id);
-    let previous_level = recordData[0].milestone_level || undefined;
+    let previous_level = recordData[0]?.milestone_level || undefined;
 
     if (getSetResult.contentType === 'Char') {
       if (totalTargets < 5) {
@@ -2848,7 +2848,7 @@ export class ScoresController {
 
     recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
 
-    let currentLevel = recordData[0].milestone_level || undefined;
+    let currentLevel = recordData[0]?.milestone_level || undefined;
 
     if (previous_level === undefined) {
       previous_level = 'm0';
