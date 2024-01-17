@@ -2845,7 +2845,7 @@ export class ScoresController {
         milestone_level = "m4";
       } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
         milestone_level = "m1";
-      } else if (getSetResult.collectionId === "") {
+      } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
         let previous_level_id = parseInt(previous_level[1])
         if (sessionResult === "pass") {
           if (previous_level_id === 4) {
@@ -2855,7 +2855,7 @@ export class ScoresController {
             milestone_level = "m" + previous_level_id;
           }
         } else if (sessionResult === "fail") {
-          if (previous_level_id === 0) {
+          if (previous_level_id === 0 || previous_level_id === 1) {
             milestone_level = "m1"
           } else {
             previous_level_id--;
