@@ -39,6 +39,31 @@ export class ScoresService {
     }
   }
 
+  async createMilestoneRecord(createMilestoneRecord: any): Promise<any> {
+    try {
+      let insertData = {
+        "session_id": createMilestoneRecord.session_id,
+        "sub_session_id": createMilestoneRecord.sub_session_id,
+        "milestone_level": createMilestoneRecord.milestone_level,
+        "sub_milestone_level": createMilestoneRecord.sub_milestone_level,
+        "createdAt": new Date().toISOString().replace('Z', '+00:00')
+      }
+
+      const updatedRecordData = await this.scoreModel.updateOne(
+        { 'user_id': createMilestoneRecord.user_id },
+        {
+          $push: {
+            "milestone_progress": insertData
+          }
+        }
+      );
+
+      return updatedRecordData;
+    } catch (err) {
+      return err;
+    }
+  }
+
   async audioFileToAsrOutput(data: any, language: String): Promise<any> {
     let asrOut: any;
 
@@ -579,6 +604,37 @@ export class ScoresService {
       }
     ]
     );
+    return RecordData;
+  }
+
+  async getlatestmilestone(userId: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id': userId
+        }
+      },
+      {
+        $unwind: '$milestone_progress'
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          session_id: '$milestone_progress.session_id',
+          sub_session_id: '$milestone_progress.sub_session_id',
+          milestone_level: '$milestone_progress.milestone_level',
+          sub_milestone_level: '$milestone_progress.sub_milestone_level',
+          createdAt: '$milestone_progress.createdAt',
+        }
+      },
+      {
+        $sort: {
+          createdAt: -1
+        }
+      }
+    ]
+    ).limit(1);
     return RecordData;
   }
 

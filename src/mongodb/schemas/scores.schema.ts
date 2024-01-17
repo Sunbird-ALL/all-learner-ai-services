@@ -137,6 +137,26 @@ export class Score {
         asrOutput: string;
         createdAt: Date;
     }[];
+
+    @Prop({
+        type: [
+            {
+                session_id: { type: String, required: true },
+                sub_session_id: { type: String, required: false },
+                milestone_level: { type: String, required: true },
+                sub_milestone_level: { type: String, required: false },
+                createdAt: { type: Date, required: true },
+            },
+        ],
+        required: false,
+    })
+    milestone_progress: {
+        session_id: string;
+        sub_session_id: string;
+        milestone_level: string;
+        sub_milestone_level: string;
+        createdAt: Date;
+    }[];
 }
 
 export type ScoreDocument = Score & Document;

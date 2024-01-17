@@ -830,7 +830,6 @@ export class ScoresController {
       let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
 
       let createdAt = new Date().toISOString().replace('Z', '+00:00')
-      console.log(createdAt);
 
       let createScoreData = {
         user_id: CreateLearnerProfileDto.user_id,
@@ -2798,6 +2797,9 @@ export class ScoresController {
     let totalTargets = targets.length;
     let sessionResult = 'No Result';
 
+    let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id);
+    let previous_level = recordData[0].milestone_level;
+
     if (getSetResult.contentType === 'Char') {
       if (totalTargets < 5) {
         sessionResult = 'pass';
@@ -2811,25 +2813,77 @@ export class ScoresController {
         sessionResult = 'fail';
       }
     } else if (getSetResult.contentType === 'Sentence') {
-      if (totalTargets < 10) {
+      if (totalTargets < 15) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
     } else if (getSetResult.contentType === 'Paragraph') {
-      if (totalTargets < 10) {
+      if (totalTargets < 15) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
     }
 
+    if (sessionResult === 'pass' && getSetResult.pass_exit === "true") {
+      let addMilestoneResult = await this.scoresService.createMilestoneRecord({
+        user_id: getSetResult.user_id,
+        session_id: getSetResult.session_id,
+        sub_session_id: getSetResult.sub_session_id,
+        milestone_level: getSetResult.milestone_level,
+        sub_milestone_level: "",
+      });
+    }
+
+    if (sessionResult === 'false' && getSetResult.fail_exit === "true") {
+      let addMilestoneResult = await this.scoresService.createMilestoneRecord({
+        user_id: getSetResult.user_id,
+        session_id: getSetResult.session_id,
+        sub_session_id: getSetResult.sub_session_id,
+        milestone_level: getSetResult.milestone_level,
+        sub_milestone_level: "",
+      });
+    }
+
+    recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
+
+    let currentLevel = recordData[0].milestone_level;
+
+    if (previous_level === undefined) {
+      previous_level = 'm0';
+    }
+
+    if (currentLevel === undefined) {
+      currentLevel = 'm0';
+    }
+
+
     return response.status(HttpStatus.CREATED).send({
       status: 'success', data: {
         sessionResult: sessionResult,
         totalTargets: totalTargets,
+        currentLevel: currentLevel,
+        previous_level: previous_level
       }
     })
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/addMilestone')
+  async addMilestone(@Res() response: FastifyReply, @Body() addMilestone: any) {
+    let addMilestoneResult = await this.scoresService.createMilestoneRecord(addMilestone);
+
+    return response.status(HttpStatus.CREATED).send({
+      status: 'success', msg: "Milestone added"
+    })
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Get('/getMilestone/user/:userId')
+  async getMilestone(@Param('userId') id: string) {
+    let recordData = await this.scoresService.getlatestmilestone(id);
+    return { status: 'success', data: recordData };
   }
 
   @ApiExcludeEndpoint(true)
