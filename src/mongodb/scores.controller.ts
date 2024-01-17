@@ -2800,25 +2800,25 @@ export class ScoresController {
     let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id);
     let previous_level = recordData[0]?.milestone_level || undefined;
 
-    if (getSetResult.contentType === 'Char') {
+    if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
       if (totalTargets < 5) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'Word') {
+    } else if (getSetResult.contentType === 'Word' || getSetResult.contentType === 'word') {
       if (totalTargets < 10) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'Sentence') {
+    } else if (getSetResult.contentType === 'Sentence' || getSetResult.contentType === 'sentence') {
       if (totalTargets < 15) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
       }
-    } else if (getSetResult.contentType === 'Paragraph') {
+    } else if (getSetResult.contentType === 'Paragraph' || getSetResult.contentType === 'paragraph') {
       if (totalTargets < 15) {
         sessionResult = 'pass';
       } else {
@@ -2856,7 +2856,7 @@ export class ScoresController {
           }
         } else if (sessionResult === "fail") {
           if (previous_level_id === 0) {
-            milestone_level = "m0"
+            milestone_level = "m1"
           } else {
             previous_level_id--;
             milestone_level = "m" + previous_level_id;
