@@ -418,25 +418,8 @@ export class ScoresController {
   @Post('/updateLearnerProfile/ta')
   async updateLearnerProfileTa(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
-        let audioFile = CreateLearnerProfileDto.audio;
-        const decoded = audioFile.toString('base64');
-        let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-        CreateLearnerProfileDto['output'] = audioOutput.output;
-      }
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-
       let originalText = CreateLearnerProfileDto.original_text;
-      let responseText = CreateLearnerProfileDto.output[0].source;
-      let constructText = '';
-      let originalTextTokensArr = originalText.split("");
-      let responseTextTokensArr = responseText.split("");
-
-      let originalTextArr = originalText.split(" ");
-      let responseTextArr = responseText.split(" ");
+      let createScoreData;
 
       let correctTokens = [];
       let missingTokens = [];
@@ -459,100 +442,9 @@ export class ScoresController {
       ];
 
       let language = "ta";
-
-
       vowelSignArr = taVowelSignArr;
 
-      let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
-      let tokenHexcodeDataArr = [];
-
-      await tokenHexcodeData.then((tokenHexcodedata: any) => {
-        tokenHexcodeDataArr = tokenHexcodedata;
-      });
-
-      // Prepare Constructed Text
-      let compareCharArr = [];
-
-      let constructTextSet = new Set();
-
-      let reptitionCount = 0;
-
-      for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
-        let originalRepCount = 0;
-        for (let sourceEle of responseText.split(" ")) {
-          if (similarity(originalEle, sourceEle) >= 0.40) {
-            compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
-            //break;
-          }
-          if (similarity(originalEle, sourceEle) >= 0.60) {
-            originalRepCount++;
-          }
-        }
-        if (originalRepCount >= 2) {
-          reptitionCount++;
-        }
-      }
-
-      for (let compareCharArrEle of compareCharArr) {
-        let score = 0;
-        let word = '';
-        for (let compareCharArrCmpEle of compareCharArr) {
-          if (compareCharArrEle.original_text === compareCharArrCmpEle.original_text) {
-            if (compareCharArrCmpEle.score > score) {
-              score = compareCharArrCmpEle.score;
-              word = compareCharArrCmpEle.response_text;
-            }
-          }
-        }
-        constructTextSet.add(word);
-      }
-
-      for (let constructTextSetEle of constructTextSet) {
-        constructText += constructTextSetEle + ' ';
-      }
-      constructText = constructText.trim();
-
-      function similarity(s1, s2) {
-        var longer = s1;
-        var shorter = s2;
-        if (s1.length < s2.length) {
-          longer = s2;
-          shorter = s1;
-        }
-        var longerLength = longer.length;
-        if (longerLength == 0) {
-          return 1.0;
-        }
-        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
-      }
-
-      function editDistance(s1, s2) {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
-
-        var costs = new Array();
-        for (var i = 0; i <= s1.length; i++) {
-          var lastValue = i;
-          for (var j = 0; j <= s2.length; j++) {
-            if (i == 0)
-              costs[j] = j;
-            else {
-              if (j > 0) {
-                var newValue = costs[j - 1];
-                if (s1.charAt(i - 1) != s2.charAt(j - 1))
-                  newValue = Math.min(Math.min(newValue, lastValue),
-                    costs[j]) + 1;
-                costs[j - 1] = lastValue;
-                lastValue = newValue;
-              }
-            }
-          }
-          if (i > 0)
-            costs[s2.length] = lastValue;
-        }
-        return costs[s2.length];
-      }
-
+      let responseText = '';
       let prevEle = '';
       let isPrevVowel = false;
 
@@ -582,308 +474,422 @@ export class ScoresController {
         }
       }
 
-      for (let constructTextELE of constructText.split("")) {
-        if (constructTextELE != ' ') {
-          if (vowelSignArr.includes(constructTextELE)) {
-            if (isPrevVowel) {
-              // let prevEleArr = prevEle.split("");
-              // prevEle = prevEleArr[0] + responseTextELE;
-              // responseTokenArr.push(prevEle);
-            } else {
-              prevEle = prevEle + constructTextELE;
-              constructTokenArr.push(prevEle);
-            }
-            isPrevVowel = true;
-          } else {
-            constructTokenArr.push(constructTextELE);
-            prevEle = constructTextELE;
-            isPrevVowel = false;
-          }
+
+      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
+        if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
+          let audioFile = CreateLearnerProfileDto.audio;
+          const decoded = audioFile.toString('base64');
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+          CreateLearnerProfileDto['output'] = audioOutput.output;
         }
-      }
+
+        let confidence_scoresArr = [];
+        let missing_token_scoresArr = [];
+        let anomaly_scoreArr = [];
+
+        responseText = CreateLearnerProfileDto.output[0].source;
+        let constructText = '';
+        let originalTextTokensArr = originalText.split("");
+        let responseTextTokensArr = responseText.split("");
+
+        let originalTextArr = originalText.split(" ");
+        let responseTextArr = responseText.split(" ");
 
 
-      // Comparison Logic
 
-      for (let originalTokenArrEle of originalTokenArr) {
-        if (constructTokenArr.includes(originalTokenArrEle)) {
-          correctTokens.push(originalTokenArrEle);
-        } else {
-          missingTokens.push(originalTokenArrEle);
-        }
-      }
+        let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
+        let tokenHexcodeDataArr = [];
 
-      let missingTokenSet = new Set(missingTokens);
-
-      missingTokens = Array.from(missingTokenSet)
-
-      let filteredTokenArr = [];
-
-      //token list for ai4bharat response
-      let tokenArr = [];
-      let anamolyTokenArr = [];
-
-      // Create Single Array from AI4bharat tokens array
-      CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
-        element.tokens.forEach(token => {
-          let key = Object.keys(token)[0];
-          let value = Object.values(token)[0];
-
-          let insertObj = {};
-          insertObj[key] = value;
-          tokenArr.push(insertObj);
-
-          let key1 = Object.keys(token)[1];
-          let value1 = Object.values(token)[1];
-          insertObj = {}
-          insertObj[key1] = value1;
-          anamolyTokenArr.push(insertObj);
+        await tokenHexcodeData.then((tokenHexcodedata: any) => {
+          tokenHexcodeDataArr = tokenHexcodedata;
         });
-      });
 
-      let uniqueChar = new Set();
-      prevEle = '';
-      isPrevVowel = false;
+        // Prepare Constructed Text
+        let compareCharArr = [];
 
-      // Create Unique token array
-      for (let tokenArrEle of tokenArr) {
-        let tokenString = Object.keys(tokenArrEle)[0];
-        for (let keyEle of tokenString.split("")) {
-          if (vowelSignArr.includes(keyEle)) {
-            if (isPrevVowel) {
-              let prevEleArr = prevEle.split("");
-              prevEle = prevEleArr[0] + keyEle;
-              uniqueChar.add(prevEle);
-            } else {
-              prevEle = prevEle + keyEle;
-              uniqueChar.add(prevEle);
+        let constructTextSet = new Set();
+
+        let reptitionCount = 0;
+
+        for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
+          let originalRepCount = 0;
+          for (let sourceEle of responseText.split(" ")) {
+            if (similarity(originalEle, sourceEle) >= 0.40) {
+              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
+              //break;
             }
-            isPrevVowel = true;
-          } else {
-            uniqueChar.add(keyEle);
-            isPrevVowel = false;
-            prevEle = keyEle
+            if (similarity(originalEle, sourceEle) >= 0.60) {
+              originalRepCount++;
+            }
+          }
+          if (originalRepCount >= 2) {
+            reptitionCount++;
           }
         }
-      }
 
-      //unique token list for ai4bharat response
-      let uniqueCharArr = Array.from(uniqueChar);
+        for (let compareCharArrEle of compareCharArr) {
+          let score = 0;
+          let word = '';
+          for (let compareCharArrCmpEle of compareCharArr) {
+            if (compareCharArrEle.original_text === compareCharArrCmpEle.original_text) {
+              if (compareCharArrCmpEle.score > score) {
+                score = compareCharArrCmpEle.score;
+                word = compareCharArrCmpEle.response_text;
+              }
+            }
+          }
+          constructTextSet.add(word);
+        }
 
-      //console.log(uniqueCharArr);
+        for (let constructTextSetEle of constructTextSet) {
+          constructText += constructTextSetEle + ' ';
+        }
+        constructText = constructText.trim();
 
-      isPrevVowel = false;
+        function similarity(s1, s2) {
+          var longer = s1;
+          var shorter = s2;
+          if (s1.length < s2.length) {
+            longer = s2;
+            shorter = s1;
+          }
+          var longerLength = longer.length;
+          if (longerLength == 0) {
+            return 1.0;
+          }
+          return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+        }
 
-      // Get best score for Each Char
-      for (let char of uniqueCharArr) {
-        let score = 0.0;
-        let prevChar = '';
-        let isPrevVowel = false;
+        function editDistance(s1, s2) {
+          s1 = s1.toLowerCase();
+          s2 = s2.toLowerCase();
 
-        for (let tokenArrEle of tokenArr) {
-          let tokenString = Object.keys(tokenArrEle)[0];
-          let tokenValue = Object.values(tokenArrEle)[0];
+          var costs = new Array();
+          for (var i = 0; i <= s1.length; i++) {
+            var lastValue = i;
+            for (var j = 0; j <= s2.length; j++) {
+              if (i == 0)
+                costs[j] = j;
+              else {
+                if (j > 0) {
+                  var newValue = costs[j - 1];
+                  if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                    newValue = Math.min(Math.min(newValue, lastValue),
+                      costs[j]) + 1;
+                  costs[j - 1] = lastValue;
+                  lastValue = newValue;
+                }
+              }
+            }
+            if (i > 0)
+              costs[s2.length] = lastValue;
+          }
+          return costs[s2.length];
+        }
 
-          for (let keyEle of tokenString.split("")) {
-            let scoreVal: any = tokenValue;
-            let charEle: any = keyEle;
-
-            if (vowelSignArr.includes(charEle)) {
+        for (let constructTextELE of constructText.split("")) {
+          if (constructTextELE != ' ') {
+            if (vowelSignArr.includes(constructTextELE)) {
               if (isPrevVowel) {
-                let prevCharArr = prevChar.split("");
-                prevChar = prevCharArr[0] + charEle;
-                charEle = prevChar;
+                // let prevEleArr = prevEle.split("");
+                // prevEle = prevEleArr[0] + responseTextELE;
+                // responseTokenArr.push(prevEle);
               } else {
-                prevChar = prevChar + charEle;
-                charEle = prevChar;
+                prevEle = prevEle + constructTextELE;
+                constructTokenArr.push(prevEle);
               }
               isPrevVowel = true;
             } else {
-              prevChar = charEle;
+              constructTokenArr.push(constructTextELE);
+              prevEle = constructTextELE;
               isPrevVowel = false;
             }
+          }
+        }
+
+
+        // Comparison Logic
+
+        for (let originalTokenArrEle of originalTokenArr) {
+          if (constructTokenArr.includes(originalTokenArrEle)) {
+            correctTokens.push(originalTokenArrEle);
+          } else {
+            missingTokens.push(originalTokenArrEle);
+          }
+        }
+
+        let missingTokenSet = new Set(missingTokens);
+
+        missingTokens = Array.from(missingTokenSet)
+
+        let filteredTokenArr = [];
+
+        //token list for ai4bharat response
+        let tokenArr = [];
+        let anamolyTokenArr = [];
+
+        // Create Single Array from AI4bharat tokens array
+        CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
+          element.tokens.forEach(token => {
+            let key = Object.keys(token)[0];
+            let value = Object.values(token)[0];
+
+            let insertObj = {};
+            insertObj[key] = value;
+            tokenArr.push(insertObj);
+
+            let key1 = Object.keys(token)[1];
+            let value1 = Object.values(token)[1];
+            insertObj = {}
+            insertObj[key1] = value1;
+            anamolyTokenArr.push(insertObj);
+          });
+        });
+
+        let uniqueChar = new Set();
+        prevEle = '';
+        isPrevVowel = false;
+
+        // Create Unique token array
+        for (let tokenArrEle of tokenArr) {
+          let tokenString = Object.keys(tokenArrEle)[0];
+          for (let keyEle of tokenString.split("")) {
+            if (vowelSignArr.includes(keyEle)) {
+              if (isPrevVowel) {
+                let prevEleArr = prevEle.split("");
+                prevEle = prevEleArr[0] + keyEle;
+                uniqueChar.add(prevEle);
+              } else {
+                prevEle = prevEle + keyEle;
+                uniqueChar.add(prevEle);
+              }
+              isPrevVowel = true;
+            } else {
+              uniqueChar.add(keyEle);
+              isPrevVowel = false;
+              prevEle = keyEle
+            }
+          }
+        }
+
+        //unique token list for ai4bharat response
+        let uniqueCharArr = Array.from(uniqueChar);
+
+        //console.log(uniqueCharArr);
+
+        isPrevVowel = false;
+
+        // Get best score for Each Char
+        for (let char of uniqueCharArr) {
+          let score = 0.0;
+          let prevChar = '';
+          let isPrevVowel = false;
+
+          for (let tokenArrEle of tokenArr) {
+            let tokenString = Object.keys(tokenArrEle)[0];
+            let tokenValue = Object.values(tokenArrEle)[0];
+
+            for (let keyEle of tokenString.split("")) {
+              let scoreVal: any = tokenValue;
+              let charEle: any = keyEle;
+
+              if (vowelSignArr.includes(charEle)) {
+                if (isPrevVowel) {
+                  let prevCharArr = prevChar.split("");
+                  prevChar = prevCharArr[0] + charEle;
+                  charEle = prevChar;
+                } else {
+                  prevChar = prevChar + charEle;
+                  charEle = prevChar;
+                }
+                isPrevVowel = true;
+              } else {
+                prevChar = charEle;
+                isPrevVowel = false;
+              }
 
 
 
-            if (char === charEle) {
-              if (scoreVal > score) {
-                score = scoreVal;
+              if (char === charEle) {
+                if (scoreVal > score) {
+                  score = scoreVal;
+                }
+              }
+            }
+          }
+
+          filteredTokenArr.push({ charkey: char, charvalue: score });
+        }
+
+        // Create confidence score array and anomoly array
+        for (let value of filteredTokenArr) {
+          let score: any = value.charvalue
+
+          let identification_status = 0;
+          if (score >= 0.90) {
+            identification_status = 1;
+          } else if (score >= 0.40) {
+            identification_status = -1;
+          } else {
+            identification_status = 0;
+          }
+
+          if (value.charkey !== "" && value.charkey !== "▁") {
+            if (correctTokens.includes(value.charkey)) {
+              let hexcode = getTokenHexcode(value.charkey);
+
+              if (hexcode !== '') {
+                confidence_scoresArr.push(
+                  {
+                    token: value.charkey,
+                    hexcode: hexcode,
+                    confidence_score: value.charvalue,
+                    identification_status: identification_status
+                  }
+                );
+              } else {
+                if (!missingTokens.includes(value.charkey) && !constructTokenArr.includes(value.charkey)) {
+                  anomaly_scoreArr.push(
+                    {
+                      token: value.charkey.replaceAll("_", ""),
+                      hexcode: hexcode,
+                      confidence_score: value.charvalue,
+                      identification_status: identification_status
+                    }
+                  );
+                }
               }
             }
           }
         }
 
-        filteredTokenArr.push({ charkey: char, charvalue: score });
-      }
+        for (let missingTokensEle of missingTokenSet) {
+          let hexcode = getTokenHexcode(missingTokensEle);
 
-      // Create confidence score array and anomoly array
-      for (let value of filteredTokenArr) {
-        let score: any = value.charvalue
-
-        let identification_status = 0;
-        if (score >= 0.90) {
-          identification_status = 1;
-        } else if (score >= 0.40) {
-          identification_status = -1;
-        } else {
-          identification_status = 0;
-        }
-
-        if (value.charkey !== "" && value.charkey !== "▁") {
-          if (correctTokens.includes(value.charkey)) {
-            let hexcode = getTokenHexcode(value.charkey);
-
-            if (hexcode !== '') {
-              confidence_scoresArr.push(
-                {
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: value.charvalue,
-                  identification_status: identification_status
-                }
-              );
-            } else {
-              if (!missingTokens.includes(value.charkey) && !constructTokenArr.includes(value.charkey)) {
-                anomaly_scoreArr.push(
+          if (hexcode !== '') {
+            if (taVowelSignArr.includes(missingTokensEle)) { } else {
+              if (!uniqueChar.has(missingTokensEle)) {
+                missing_token_scoresArr.push(
                   {
-                    token: value.charkey.replaceAll("_", ""),
+                    token: missingTokensEle,
                     hexcode: hexcode,
-                    confidence_score: value.charvalue,
-                    identification_status: identification_status
+                    confidence_score: 0.10,
+                    identification_status: 0
                   }
                 );
               }
             }
           }
         }
-      }
 
-      for (let missingTokensEle of missingTokenSet) {
-        let hexcode = getTokenHexcode(missingTokensEle);
+        for (let anamolyTokenArrEle of anamolyTokenArr) {
+          let tokenString = Object.keys(anamolyTokenArrEle)[0];
+          let tokenValue = Object.values(anamolyTokenArrEle)[0];
 
-        if (hexcode !== '') {
-          if (taVowelSignArr.includes(missingTokensEle)) { } else {
-            if (!uniqueChar.has(missingTokensEle)) {
-              missing_token_scoresArr.push(
-                {
-                  token: missingTokensEle,
-                  hexcode: hexcode,
-                  confidence_score: 0.10,
-                  identification_status: 0
-                }
-              );
+          if (tokenString != '') {
+            let hexcode = getTokenHexcode(tokenString);
+            if (hexcode !== '') {
+              if (taVowelSignArr.includes(tokenString)) { } else {
+                anomaly_scoreArr.push(
+                  {
+                    token: tokenString.replaceAll("_", ""),
+                    hexcode: hexcode,
+                    confidence_score: tokenValue,
+                    identification_status: 0
+                  }
+                );
+              }
             }
-          }
-        }
-      }
 
-      for (let anamolyTokenArrEle of anamolyTokenArr) {
-        let tokenString = Object.keys(anamolyTokenArrEle)[0];
-        let tokenValue = Object.values(anamolyTokenArrEle)[0];
-
-        if (tokenString != '') {
-          let hexcode = getTokenHexcode(tokenString);
-          if (hexcode !== '') {
-            if (taVowelSignArr.includes(tokenString)) { } else {
-              anomaly_scoreArr.push(
-                {
-                  token: tokenString.replaceAll("_", ""),
-                  hexcode: hexcode,
-                  confidence_score: tokenValue,
-                  identification_status: 0
-                }
-              );
-            }
           }
 
         }
 
-      }
+        const url = process.env.ALL_TEXT_EVAL_API;
 
-      const url = process.env.ALL_TEXT_EVAL_API;
+        const textData = {
+          "reference": CreateLearnerProfileDto.original_text,
+          "hypothesis": CreateLearnerProfileDto.output[0].source
+        };
 
-      const textData = {
-        "reference": CreateLearnerProfileDto.original_text,
-        "hypothesis": CreateLearnerProfileDto.output[0].source
-      };
+        const textEvalMatrices = await lastValueFrom(
+          this.httpService.post(url, JSON.stringify(textData), {
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }).pipe(
+            map((resp) => resp.data)
+          )
+        );
 
-      const textEvalMatrices = await lastValueFrom(
-        this.httpService.post(url, JSON.stringify(textData), {
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }).pipe(
-          map((resp) => resp.data)
-        )
-      );
+        let wer = textEvalMatrices.wer;
+        let cercal = textEvalMatrices.cer * 2;
+        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
+        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
+        let repetitions = reptitionCount;
+        let pauseCount = 0;
+        let ins = textEvalMatrices.insertion.length;
+        let del = textEvalMatrices.deletion.length;
+        let sub = textEvalMatrices.substitution.length;
 
-      let wer = textEvalMatrices.wer;
-      let cercal = textEvalMatrices.cer * 2;
-      let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
-      let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
-      let repetitions = reptitionCount;
-      let pauseCount = 0;
-      let ins = textEvalMatrices.insertion.length;
-      let del = textEvalMatrices.deletion.length;
-      let sub = textEvalMatrices.substitution.length;
+        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
 
-      let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+        let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
-      let createdAt = new Date().toISOString().replace('Z', '+00:00')
-
-      let createScoreData = {
-        user_id: CreateLearnerProfileDto.user_id,
-        session: {
-          session_id: CreateLearnerProfileDto.session_id,
-          sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-          contentType: CreateLearnerProfileDto.contentType,
-          contentId: CreateLearnerProfileDto.contentId || "",
-          createdAt: createdAt,
-          language: language,
-          original_text: CreateLearnerProfileDto.original_text,
-          response_text: responseText,
-          construct_text: constructText,
-          confidence_scores: confidence_scoresArr,
-          anamolydata_scores: anomaly_scoreArr,
-          missing_token_scores: missing_token_scoresArr,
-          error_rate: {
-            character: textEvalMatrices.cer,
-            word: textEvalMatrices.wer
-          },
-          count_diff: {
-            character: Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length),
-            word: Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length)
-          },
-          eucledian_distance: {
-            insertions: {
-              chars: textEvalMatrices.insertion,
-              count: textEvalMatrices.insertion.length
+        createScoreData = {
+          user_id: CreateLearnerProfileDto.user_id,
+          session: {
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            createdAt: createdAt,
+            language: language,
+            original_text: CreateLearnerProfileDto.original_text,
+            response_text: responseText,
+            construct_text: constructText,
+            confidence_scores: confidence_scoresArr,
+            anamolydata_scores: anomaly_scoreArr,
+            missing_token_scores: missing_token_scoresArr,
+            error_rate: {
+              character: textEvalMatrices.cer,
+              word: textEvalMatrices.wer
             },
-            deletions: {
-              chars: textEvalMatrices.deletion,
-              count: textEvalMatrices.deletion.length
+            count_diff: {
+              character: Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length),
+              word: Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length)
             },
-            substitutions: {
-              chars: textEvalMatrices.substitution,
-              count: textEvalMatrices.substitution.length
-            }
-          },
-          fluencyScore: fluencyScore.toFixed(3),
-          silence_Pause: {
-            total_duration: 0,
-            count: 0,
-          },
-          reptitionsCount: reptitionCount,
-          asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
+            eucledian_distance: {
+              insertions: {
+                chars: textEvalMatrices.insertion,
+                count: textEvalMatrices.insertion.length
+              },
+              deletions: {
+                chars: textEvalMatrices.deletion,
+                count: textEvalMatrices.deletion.length
+              },
+              substitutions: {
+                chars: textEvalMatrices.substitution,
+                count: textEvalMatrices.substitution.length
+              }
+            },
+            fluencyScore: fluencyScore.toFixed(3),
+            silence_Pause: {
+              total_duration: 0,
+              count: 0,
+            },
+            reptitionsCount: reptitionCount,
+            asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
+          }
+        };
+
+        // Store Array to DB
+        //let data = this.scoresService.create(createScoreData);
+
+        function getTokenHexcode(token: string) {
+          let result = tokenHexcodeDataArr.find(item => item.token === token);
+          return result?.hexcode || '';
         }
-      };
-
-      // Store Array to DB
-      let data = this.scoresService.create(createScoreData);
-
-      function getTokenHexcode(token: string) {
-        let result = tokenHexcodeDataArr.find(item => item.token === token);
-        return result?.hexcode || '';
       }
 
       return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
