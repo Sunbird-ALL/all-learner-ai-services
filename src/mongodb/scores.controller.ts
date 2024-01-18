@@ -2839,9 +2839,9 @@ export class ScoresController {
       let milestone_level = "m0";
       if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
         milestone_level = "m2";
-      } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
-        milestone_level = "m3";
       } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
+        milestone_level = "m3";
+      } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
         milestone_level = "m4";
       } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
         milestone_level = "m1";
@@ -2854,14 +2854,15 @@ export class ScoresController {
             previous_level_id++;
             milestone_level = "m" + previous_level_id;
           }
-        } else if (sessionResult === "fail") {
-          if (previous_level_id === 0 || previous_level_id === 1) {
-            milestone_level = "m1"
-          } else {
-            previous_level_id--;
-            milestone_level = "m" + previous_level_id;
-          }
         }
+        // else if (sessionResult === "fail") {
+        //   if (previous_level_id === 0 || previous_level_id === 1) {
+        //     milestone_level = "m1"
+        //   } else {
+        //     previous_level_id--;
+        //     milestone_level = "m" + previous_level_id;
+        //   }
+        // }
       }
 
       let addMilestoneResult = await this.scoresService.createMilestoneRecord({
