@@ -330,9 +330,9 @@ export class ScoresService {
       {
         $group: {
           _id: {
+            token: "$token",
             userId: "$user_id",
-            sessionId: "$sessionId",
-            token: "$token"
+            sessionId: "$sessionId"
           },
           meanScore: { $avg: "$score" }
         }
