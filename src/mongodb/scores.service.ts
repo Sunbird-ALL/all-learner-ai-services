@@ -243,8 +243,13 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getTargetsBysubSession(subSessionId: string, language: string = null) {
-    const threshold = 0.90
+  async getTargetsBysubSession(subSessionId: string, contentType: string) {
+    let threshold = 0.90;
+
+    if (contentType != null && contentType.toLowerCase() === 'word') {
+      threshold = 0.75
+    }
+
     const RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
@@ -348,7 +353,7 @@ export class ScoresService {
       },
       {
         $match: {
-          'score': { $lt: 0.9 }
+          'score': { $lt: threshold }
         }
       },
       {

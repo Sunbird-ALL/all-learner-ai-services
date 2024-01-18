@@ -2858,7 +2858,8 @@ export class ScoresController {
   @ApiExcludeEndpoint(true)
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
-    let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id);
+
+    let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType);
 
     let totalTargets = targets.length;
     let sessionResult = 'No Result';
