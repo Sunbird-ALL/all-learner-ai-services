@@ -884,7 +884,7 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        //let data = this.scoresService.create(createScoreData);
+        let data = this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
