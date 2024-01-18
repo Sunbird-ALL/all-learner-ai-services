@@ -2848,8 +2848,8 @@ export class ScoresController {
       } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
         let previous_level_id = parseInt(previous_level[1])
         if (sessionResult === "pass") {
-          if (previous_level_id === 4) {
-            milestone_level = "m4"
+          if (previous_level_id === 5) {
+            milestone_level = "m5"
           } else {
             previous_level_id++;
             milestone_level = "m" + previous_level_id;
