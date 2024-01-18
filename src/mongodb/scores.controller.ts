@@ -2874,7 +2874,7 @@ export class ScoresController {
         sessionResult = 'fail';
       }
     } else if (getSetResult.contentType === 'Word' || getSetResult.contentType === 'word') {
-      if (totalTargets < 10) {
+      if (totalTargets < 15) {
         sessionResult = 'pass';
       } else {
         sessionResult = 'fail';
