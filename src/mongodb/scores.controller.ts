@@ -2896,7 +2896,7 @@ export class ScoresController {
         sub_milestone_level: "",
       });
     } else {
-      let milestone_level = "m0";
+      let milestone_level = previous_level;
       if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
         milestone_level = "m2";
       } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
@@ -2939,7 +2939,7 @@ export class ScoresController {
     let currentLevel = recordData[0]?.milestone_level || undefined;
 
     if (currentLevel === undefined) {
-      currentLevel = 'm0';
+      currentLevel = previous_level;
     }
 
 
