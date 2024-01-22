@@ -4,6 +4,7 @@ import { MongodbModule } from './mongodb/mongodb.module';
 import { MysqlModule } from './mysql/mysql.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HttpModule } from '@nestjs/axios';
 
 export class AppModule {
   static forRoot(databaseType: string): DynamicModule {
@@ -22,6 +23,9 @@ export class AppModule {
     return {
       module: AppModule,
       imports: [
+        HttpModule.register({
+          timeout: 5000
+        }),
         ConfigModule.forRoot({
           isGlobal: true,
         }),
