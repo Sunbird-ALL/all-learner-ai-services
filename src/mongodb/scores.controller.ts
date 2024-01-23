@@ -1764,11 +1764,11 @@ export class ScoresController {
       contentLevel = 'L2';
       complexityLevel = ["C1"]
     } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
+      contentLevel = 'L2';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
       contentLevel = 'L3';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C1", "C2"]
     } else if (currentLevel === 'm5') {
       contentLevel = 'L3';
       complexityLevel = ["C2", "C3"]
@@ -1904,11 +1904,11 @@ export class ScoresController {
       contentLevel = 'L2';
       complexityLevel = ["C1"]
     } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
+      contentLevel = 'L2';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
       contentLevel = 'L3';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C1", "C2"]
     } else if (currentLevel === 'm5') {
       contentLevel = 'L3';
       complexityLevel = ["C2", "C3"]
@@ -2037,19 +2037,19 @@ export class ScoresController {
     let contentLevel = '';
     let complexityLevel = [];
 
-    if (currentLevel === 'm1') {
+    if (currentLevel === 'm0') {
       contentLevel = 'L1';
-    } else if (currentLevel === 'm0') {
+    } else if (currentLevel === 'm1') {
       contentLevel = 'L1';
     } else if (currentLevel === 'm2') {
       contentLevel = 'L2';
       complexityLevel = ["C1"]
     } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
+      contentLevel = 'L2';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
       contentLevel = 'L3';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C1", "C2"]
     } else if (currentLevel === 'm5') {
       contentLevel = 'L3';
       complexityLevel = ["C2", "C3"]
@@ -2184,16 +2184,15 @@ export class ScoresController {
       contentLevel = 'L1';
     } else if (currentLevel === 'm1') {
       contentLevel = 'L1';
-    }
-    else if (currentLevel === 'm2') {
+    } else if (currentLevel === 'm2') {
       contentLevel = 'L2';
       complexityLevel = ["C1"]
     } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
+      contentLevel = 'L2';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
       contentLevel = 'L3';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C1", "C2"]
     } else if (currentLevel === 'm5') {
       contentLevel = 'L3';
       complexityLevel = ["C2", "C3"]
