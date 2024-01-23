@@ -1767,11 +1767,23 @@ export class ScoresController {
       contentLevel = 'L3';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
+      contentLevel = 'L3';
       complexityLevel = ["C1", "C2", "C3"]
     } else if (currentLevel === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm6') {
       contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ["C2", "C3", "C4"]
+    } else if (currentLevel === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ["C3", "C4"]
+    } else if (currentLevel === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ["C3", "C4"]
     }
 
     const url = process.env.ALL_CONTENT_SERVICE_API;
@@ -1785,10 +1797,6 @@ export class ScoresController {
       "cLevel": contentLevel,
       "complexityLevel": complexityLevel
     };
-
-    console.log(currentLevel);
-
-    console.log(textData);
 
     const newContent = await lastValueFrom(
       this.httpService.post(url, JSON.stringify(textData), {
@@ -1899,13 +1907,24 @@ export class ScoresController {
       contentLevel = 'L3';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
+      contentLevel = 'L3';
       complexityLevel = ["C1", "C2", "C3"]
     } else if (currentLevel === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm6') {
       contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ["C2", "C3", "C4"]
+    } else if (currentLevel === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ["C3", "C4"]
+    } else if (currentLevel === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ["C3", "C4"]
     }
-
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
 
@@ -1919,10 +1938,6 @@ export class ScoresController {
       "cLevel": contentLevel,
       "complexityLevel": complexityLevel
     };
-
-    console.log(currentLevel);
-
-    console.log(textData);
 
     const newContent = await lastValueFrom(
       this.httpService.post(url, JSON.stringify(textData), {
@@ -2033,12 +2048,25 @@ export class ScoresController {
       contentLevel = 'L3';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
+      contentLevel = 'L3';
       complexityLevel = ["C1", "C2", "C3"]
     } else if (currentLevel === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm6') {
       contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ["C2", "C3", "C4"]
+    } else if (currentLevel === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ["C3", "C4"]
+    } else if (currentLevel === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ["C3", "C4"]
     }
+
 
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
@@ -2061,10 +2089,6 @@ export class ScoresController {
         map((resp) => resp.data)
       )
     );
-
-    console.log(currentLevel);
-
-    console.log(textData);
 
     let contentArr;
     let contentForTokenArr;
@@ -2168,13 +2192,24 @@ export class ScoresController {
       contentLevel = 'L3';
       complexityLevel = ["C1", "C2"];
     } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
+      contentLevel = 'L3';
       complexityLevel = ["C1", "C2", "C3"]
     } else if (currentLevel === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm6') {
       contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
+      complexityLevel = ["C2", "C3"]
+    } else if (currentLevel === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ["C2", "C3", "C4"]
+    } else if (currentLevel === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ["C3", "C4"]
+    } else if (currentLevel === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ["C3", "C4"]
     }
-
     const url = process.env.ALL_CONTENT_SERVICE_API;
 
     const textData = {
@@ -2186,10 +2221,6 @@ export class ScoresController {
       "cLevel": contentLevel,
       "complexityLevel": complexityLevel
     };
-
-    console.log(currentLevel);
-
-    console.log(textData);
 
     const newContent = await lastValueFrom(
       this.httpService.post(url, JSON.stringify(textData), {
@@ -2915,8 +2946,8 @@ export class ScoresController {
       } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
         let previous_level_id = parseInt(previous_level[1])
         if (sessionResult === "pass") {
-          if (previous_level_id === 5) {
-            milestone_level = "m5"
+          if (previous_level_id === 9) {
+            milestone_level = "m9"
           } else {
             previous_level_id++;
             milestone_level = "m" + previous_level_id;
