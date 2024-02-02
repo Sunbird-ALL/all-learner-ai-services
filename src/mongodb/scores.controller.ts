@@ -2888,7 +2888,7 @@ export class ScoresController {
   @ApiExcludeEndpoint(true)
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
-
+    let milestoneEntry = true;
     let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType);
 
     let totalTargets = targets.length;
@@ -2935,9 +2935,19 @@ export class ScoresController {
     } else {
       let milestone_level = previous_level;
       if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
-        milestone_level = "m2";
+        if(sessionResult === "pass"){
+          milestone_level = "m2";
+        }
+        else{
+          milestoneEntry = false;
+        }
       } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
-        milestone_level = "m3";
+        if(sessionResult === "fail"){
+          milestone_level = "m3";
+        }
+        else{
+          milestoneEntry = false;
+        }  
       } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
         milestone_level = "m4";
       } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
@@ -2961,16 +2971,16 @@ export class ScoresController {
         //   }
         // }
       }
-
-      let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-        user_id: getSetResult.user_id,
-        session_id: getSetResult.session_id,
-        sub_session_id: getSetResult.sub_session_id,
-        milestone_level: milestone_level,
-        sub_milestone_level: "",
-      });
+      if(milestoneEntry){
+        let addMilestoneResult = await this.scoresService.createMilestoneRecord({
+          user_id: getSetResult.user_id,
+          session_id: getSetResult.session_id,
+          sub_session_id: getSetResult.sub_session_id,
+          milestone_level: milestone_level,
+          sub_milestone_level: "",
+        });
+      }
     }
-
     recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
 
     let currentLevel = recordData[0]?.milestone_level || undefined;
@@ -2978,7 +2988,6 @@ export class ScoresController {
     if (currentLevel === undefined) {
       currentLevel = previous_level;
     }
-
 
     return response.status(HttpStatus.CREATED).send({
       status: 'success', data: {
