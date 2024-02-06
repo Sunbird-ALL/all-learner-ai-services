@@ -4,7 +4,7 @@ import { Document, Mixed } from 'mongoose';
 @Schema({ timestamps: true })
 export class Score {
     @Prop({ required: true, unique: true })
-    user_id: string;
+    user_id: string; // userid sent by client
 
     @Prop({
         type: [
@@ -80,31 +80,32 @@ export class Score {
         required: true,
     })
     sessions: {
-        session_id: string;
-        original_text: string;
-        sub_session_id: string;
-        contentType: string;
-        contentId: string;
-        response_text: string;
-        construct_text: string;
+        session_id: string; // working logged in session id
+        original_text: string; // content text shown to speak
+        sub_session_id: string; // used to club set recorded data within session
+        contentType: string; // contentType could be Char, Word, Sentence and Paragraph
+        contentId: string; // contentId of original text content shown to user to speak
+        response_text: string; // text return by ai after converting audio to text
+        construct_text: string; // this will be constructed by matching response text with original text.
+        language: string; // content language
         confidence_scores: {
             token: string;
             hexcode: string;
             confidence_score: number;
             identification_status: number
-        }[];
+        }[]; // confidence score array will include char's has identified by ai and has score
         missing_token_scores: {
             token: string;
             hexcode: string;
             confidence_score: number;
             identification_status: number
-        }[];
+        }[]; // this char's missed to spoke or recognise by ai
         anamolydata_scores: {
             token: string;
             hexcode: string;
             confidence_score: number;
             identification_status: number
-        }[];
+        }[]; // this char's recognise as noise in audio
         error_rate: {
             word: number;
             character: number;
@@ -156,7 +157,7 @@ export class Score {
         milestone_level: string;
         sub_milestone_level: string;
         createdAt: Date;
-    }[];
+    }[]; // This array includes milestone progress and we take latest entry in array as current milestone for user
 }
 
 export type ScoreDocument = Score & Document;
