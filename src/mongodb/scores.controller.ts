@@ -167,11 +167,12 @@ export class ScoresController {
         for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
           let originalRepCount = 0;
           for (let sourceEle of responseText.split(" ")) {
-            if (similarity(originalEle, sourceEle) >= 0.40) {
+            let similarityScore = similarity(originalEle, sourceEle)
+            if (similarityScore >= 0.40) {
               compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
               //break;
             }
-            if (similarity(originalEle, sourceEle) >= 0.60) {
+            if (similarityScore >= 0.60) {
               originalRepCount++;
             }
           }
