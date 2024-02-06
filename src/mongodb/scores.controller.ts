@@ -4,8 +4,9 @@ import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
 import { FastifyReply } from 'fastify';
 import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { lastValueFrom, map } from 'rxjs';
+import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
+import { AxiosError } from 'axios';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -15,379 +16,21 @@ export class ScoresController {
     private readonly httpService: HttpService
   ) { }
 
-  @ApiExcludeEndpoint(true)
-  @Post()
-  async create(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
-    try {
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-
-      let originalText = CreateLearnerProfileDto.original_text;
-      let responseText = CreateLearnerProfileDto.output[0].source;
-      let originalTextTokensArr = originalText.split("");
-      let responseTextTokensArr = responseText.split("");
-
-      let originalTextArr = originalText.split(" ");
-      let responseTextArr = responseText.split(" ");
-
-      let originalTextWordCount = [];
-
-      for (let originalTextSetEle of new Set(originalTextArr)) {
-        let wordCount = 0;
-        for (let originalTextArrEle of originalTextArr) {
-          if (originalTextSetEle === originalTextArrEle) {
-            wordCount++;
-          }
-        }
-        originalTextWordCount.push({ word: originalTextSetEle, count: wordCount });
-      }
-
-      for (let originalTextWordCountEle of originalTextWordCount) {
-        let count = 0;
-        for (let responseTextArrEle of responseTextArr) {
-          if (originalTextWordCountEle.word === responseTextArrEle) {
-            count++;
-          }
-        }
-        if (count != 0 && originalTextWordCountEle.count < count) {
-          return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-            status: "error",
-            message: "Avoid repetitions and record again"
-          });
-        }
-      }
-
-      let correctTokens = [];
-      let missingTokens = [];
-
-      let hindiVowelSignArr = ["ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ", "ं", "ः", "ँ", "ॉ", "ों", "्", "़", "़ा"];
-
-      let vowelSignArr = [];
-
-      let taVowelSignArr = [
-        "ா",
-        "ி",
-        "ீ",
-        "ு",
-        "ூ",
-        "ெ",
-        "ே",
-        "ை",
-        "ொ",
-        "ோ",
-        "ௌ",
-        "்",
-      ];
-
-      let language = CreateLearnerProfileDto?.language || "ta";
-
-      if (language === "hi") {
-        vowelSignArr = hindiVowelSignArr;
-      } else if (language === "ta") {
-        vowelSignArr = taVowelSignArr;
-      }
-
-      let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
-      let tokenHexcodeDataArr = [];
-
-      await tokenHexcodeData.then((tokenHexcodedata: any) => {
-        tokenHexcodeDataArr = tokenHexcodedata;
-      });
-
-      let prevEle = '';
-      let isPrevVowel = false;
-
-
-      let originalTokenArr = [];
-      let responseTokenArr = [];
-
-
-      for (let originalTextELE of originalText.split("")) {
-        if (originalTextELE != ' ') {
-          if (vowelSignArr.includes(originalTextELE)) {
-            if (isPrevVowel) {
-            } else {
-              prevEle = prevEle + originalTextELE;
-              originalTokenArr[originalTokenArr.length - 1] = prevEle;
-            }
-            isPrevVowel = true;
-          } else {
-            originalTokenArr.push(originalTextELE);
-            prevEle = originalTextELE;
-            isPrevVowel = false;
-          }
-        }
-      }
-
-      for (let responseTextELE of responseText.split("")) {
-        if (responseTextELE != ' ') {
-          if (vowelSignArr.includes(responseTextELE)) {
-            if (isPrevVowel) {
-              // let prevEleArr = prevEle.split("");
-              // prevEle = prevEleArr[0] + responseTextELE;
-              // responseTokenArr.push(prevEle);
-            } else {
-              prevEle = prevEle + responseTextELE;
-              responseTokenArr[responseTokenArr.length - 1] = prevEle;
-            }
-            isPrevVowel = true;
-          } else {
-            responseTokenArr.push(responseTextELE);
-            prevEle = responseTextELE;
-            isPrevVowel = false;
-          }
-        }
-      }
-
-
-      // Comparison Logic
-
-      for (let originalTokenArrEle of originalTokenArr) {
-        if (responseTokenArr.includes(originalTokenArrEle)) {
-          correctTokens.push(originalTokenArrEle);
-        } else {
-          missingTokens.push(originalTokenArrEle);
-        }
-      }
-
-      let filteredTokenArr = [];
-
-      //token list for ai4bharat response
-      let tokenArr = [];
-      let anamolyTokenArr = [];
-
-      // Create Single Array from AI4bharat tokens array
-      CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
-        element.tokens.forEach(token => {
-          let key = Object.keys(token)[0];
-          let value = Object.values(token)[0];
-
-          let insertObj = {};
-          insertObj[key] = value;
-          tokenArr.push(insertObj);
-
-          let key1 = Object.keys(token)[1];
-          let value1 = Object.values(token)[1];
-          insertObj = {}
-          insertObj[key1] = value1;
-          anamolyTokenArr.push(insertObj);
-        });
-      });
-
-      let uniqueChar = new Set();
-      prevEle = '';
-      isPrevVowel = false;
-
-      // Create Unique token array
-      for (let tokenArrEle of tokenArr) {
-        let tokenString = Object.keys(tokenArrEle)[0];
-        for (let keyEle of tokenString.split("")) {
-          if (vowelSignArr.includes(keyEle)) {
-            if (isPrevVowel) {
-              if (language !== 'hi') {
-                let prevEleArr = prevEle.split("");
-                prevEle = prevEleArr[0] + keyEle;
-                uniqueChar.add(prevEle);
-              } else {
-                //console.log(prevEle + keyEle);
-                prevEle = prevEle + keyEle;
-                uniqueChar.add(prevEle);
-              }
-            } else {
-              prevEle = prevEle + keyEle;
-              uniqueChar.add(prevEle);
-            }
-            isPrevVowel = true;
-          } else {
-            uniqueChar.add(keyEle);
-            isPrevVowel = false;
-            prevEle = keyEle
-          }
-        }
-      }
-
-      //unique token list for ai4bharat response
-      let uniqueCharArr = Array.from(uniqueChar);
-
-      //console.log(uniqueCharArr);
-
-      isPrevVowel = false;
-
-      // Get best score for Each Char
-      for (let char of uniqueCharArr) {
-        let score = 0.0;
-        let prevChar = '';
-        let isPrevVowel = false;
-
-        for (let tokenArrEle of tokenArr) {
-          let tokenString = Object.keys(tokenArrEle)[0];
-          let tokenValue = Object.values(tokenArrEle)[0];
-
-          for (let keyEle of tokenString.split("")) {
-            let scoreVal: any = tokenValue;
-            let charEle: any = keyEle;
-
-            if (vowelSignArr.includes(charEle)) {
-              if (isPrevVowel) {
-                if (language !== 'hi') {
-                  let prevCharArr = prevChar.split("");
-                  prevChar = prevCharArr[0] + charEle;
-                  charEle = prevChar;
-                } else {
-                  prevChar = prevChar + charEle;
-                  charEle = prevChar;
-                }
-              } else {
-                prevChar = prevChar + charEle;
-                charEle = prevChar;
-              }
-              isPrevVowel = true;
-            } else {
-              prevChar = charEle;
-              isPrevVowel = false;
-            }
-
-
-
-            if (char === charEle) {
-              if (scoreVal > score) {
-                score = scoreVal;
-              }
-            }
-          }
-        }
-
-        filteredTokenArr.push({ charkey: char, charvalue: score });
-      }
-
-      //console.log(filteredTokenArr);
-
-      // Create confidence score array and anomoly array
-      for (let value of filteredTokenArr) {
-        let score: any = value.charvalue
-
-        let identification_status = 0;
-        if (score >= 0.90) {
-          identification_status = 1;
-        } else if (score >= 0.40) {
-          identification_status = -1;
-        }
-
-        if (value.charkey !== "" && value.charkey !== "▁") {
-          if (correctTokens.includes(value.charkey)) {
-            let hexcode = getTokenHexcode(value.charkey);
-
-            if (hexcode !== '') {
-              confidence_scoresArr.push(
-                {
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: value.charvalue,
-                  identification_status: identification_status
-                }
-              );
-            } else {
-              if (!missingTokens.includes(value.charkey) && !responseTokenArr.includes(value.charkey)) {
-                anomaly_scoreArr.push(
-                  {
-                    token: value.charkey.replaceAll("_", ""),
-                    hexcode: hexcode,
-                    confidence_score: value.charvalue,
-                    identification_status: identification_status
-                  }
-                );
-              }
-            }
-          }
-        }
-      }
-
-      for (let missingTokensEle of missingTokens) {
-        let hexcode = getTokenHexcode(missingTokensEle);
-
-        if (hexcode !== '') {
-          if (hindiVowelSignArr.includes(missingTokensEle) || taVowelSignArr.includes(missingTokensEle)) { } else {
-            missing_token_scoresArr.push(
-              {
-                token: missingTokensEle,
-                hexcode: hexcode,
-                confidence_score: 0.10,
-                identification_status: 0
-              }
-            );
-          }
-        }
-      }
-
-      for (let anamolyTokenArrEle of anamolyTokenArr) {
-        let tokenString = Object.keys(anamolyTokenArrEle)[0];
-        let tokenValue = Object.values(anamolyTokenArrEle)[0];
-
-        if (tokenString != '') {
-          let hexcode = getTokenHexcode(tokenString);
-          if (hexcode !== '') {
-            if (hindiVowelSignArr.includes(tokenString) || taVowelSignArr.includes(tokenString)) { } else {
-              anomaly_scoreArr.push(
-                {
-                  token: tokenString.replaceAll("_", ""),
-                  hexcode: hexcode,
-                  confidence_score: tokenValue,
-                  identification_status: 0
-                }
-              );
-            }
-          }
-
-        }
-
-      }
-
-      let createScoreData = {
-        user_id: CreateLearnerProfileDto.user_id,
-        session: {
-          session_id: CreateLearnerProfileDto.session_id,
-          language: language,
-          original_text: CreateLearnerProfileDto.original_text,
-          response_text: responseText,
-          confidence_scores: confidence_scoresArr,
-          anamolydata_scores: anomaly_scoreArr,
-          missing_token_scores: missing_token_scoresArr,
-          asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
-        }
-      };
-
-      // Store Array to DB
-      let data = this.scoresService.create(createScoreData);
-
-      function getTokenHexcode(token: string) {
-        let result = tokenHexcodeDataArr.find(item => item.token === token);
-        return result?.hexcode || '';
-      }
-
-
-      return response.status(HttpStatus.CREATED).send({ status: 'success', missingTokens: missingTokens, correctTokens: correctTokens, confidence_scoresArr: confidence_scoresArr, anomaly_scoreArr: anomaly_scoreArr, tokenArr: tokenArr, anamolyTokenArr: anamolyTokenArr, missing_token_scoresArr: missing_token_scoresArr })
-    } catch (err) {
-      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        status: "error",
-        message: "Server error - " + err
-      });
-    }
-  }
-
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        original_text: { type: 'string', example: 'விமானம் வானில் பறக்கின்றது' },
-        audio: { type: 'string', example: 'Add tamil Wav file base64 string here' },
-        user_id: { type: 'string', example: '8635444062' },
-        session_id: { type: 'string', example: '86354440621701972584385' },
-        language: { type: 'string', example: 'ta' },
+        original_text: { type: 'string', example: 'விமானம் வானில் பறக்கின்றது', description: "This will content text shown to user record" },
+        audio: { type: 'string', example: 'Add tamil Wav file base64 string here', description: 'You can send .wav file or plain base64 string of wav file' },
+        user_id: { type: 'string', example: '8635444062', description: 'This will generate from virtual service id service when user do login' },
+        session_id: { type: 'string', example: '86354440621701972584385', description: 'This will generate from telemetry frontend lib when you do new login' },
+        sub_session_id: { type: 'string', example: '86354440621701972584385', description: 'Use this sub session id if you want club recorded content within session' },
+        language: { type: 'string', example: 'ta', description: 'This need to be send as per language. For this api, send ta for tamil' },
         date: {
           type: 'date', example: "2023-12-07T17:52:23.753Z"
-        }
+        },
+        contentId: { type: 'string', example: '5221f84c-8abb-4601-a9d0-f8d8dd496566', description: 'This content id will need to which is associated with original text' },
+        contentType: { type: 'string', example: 'Sentence', description: 'Content type will be Char, Sentence, Word and Paragraph' }
       }
     }
   })
@@ -453,7 +96,7 @@ export class ScoresController {
       let responseTokenArr = [];
       let constructTokenArr = [];
 
-
+      // This code block used to create tamil compound consonents from text strings
       for (let originalTextELE of originalText.split("")) {
         if (originalTextELE != ' ') {
           if (vowelSignArr.includes(originalTextELE)) {
@@ -474,13 +117,24 @@ export class ScoresController {
         }
       }
 
-
+      /* Condition to check whether content type is char or not. If content type is char
+      dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
+      */
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
         if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
           let audioFile = CreateLearnerProfileDto.audio;
           const decoded = audioFile.toString('base64');
+
+          // Send Audio file to ASR to process and provide vector with char and score
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
           CreateLearnerProfileDto['output'] = audioOutput.output;
+
+          if (CreateLearnerProfileDto.output[0].source === "") {
+            return response.status(HttpStatus.BAD_REQUEST).send({
+              status: "error",
+              message: "Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly"
+            });
+          }
         }
 
         let confidence_scoresArr = [];
@@ -495,8 +149,7 @@ export class ScoresController {
         let originalTextArr = originalText.split(" ");
         let responseTextArr = responseText.split(" ");
 
-
-
+        // Get All hexcode for this selected language
         let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
         let tokenHexcodeDataArr = [];
 
@@ -607,6 +260,8 @@ export class ScoresController {
           }
         }
 
+        // End Constructed Text Logic
+
 
         // Comparison Logic
 
@@ -674,9 +329,6 @@ export class ScoresController {
 
         //unique token list for ai4bharat response
         let uniqueCharArr = Array.from(uniqueChar);
-
-        //console.log(uniqueCharArr);
-
         isPrevVowel = false;
 
         // Get best score for Each Char
@@ -818,7 +470,10 @@ export class ScoresController {
               'Content-Type': 'application/json',
             }
           }).pipe(
-            map((resp) => resp.data)
+            map((resp) => resp.data),
+            catchError((error: AxiosError) => {
+              throw 'Error from text Eval service' + error;
+            }),
           )
         );
 
@@ -837,20 +492,20 @@ export class ScoresController {
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id,
+          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
           session: {
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
+            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "", // used to club set recorded data within session
+            contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
+            contentId: CreateLearnerProfileDto.contentId || "", // contentId of original text content shown to user to speak
             createdAt: createdAt,
-            language: language,
-            original_text: CreateLearnerProfileDto.original_text,
-            response_text: responseText,
-            construct_text: constructText,
-            confidence_scores: confidence_scoresArr,
-            anamolydata_scores: anomaly_scoreArr,
-            missing_token_scores: missing_token_scoresArr,
+            language: language, // content language
+            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
+            response_text: responseText, // text return by ai after converting audio to text
+            construct_text: constructText, // this will be constructed by matching response text with original text.
+            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
+            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
+            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer
@@ -896,8 +551,7 @@ export class ScoresController {
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
-        message: "Server error - " + err,
-        data: CreateLearnerProfileDto.output
+        message: "Server error - " + err
       });
     }
   }
@@ -906,11 +560,11 @@ export class ScoresController {
     schema: {
       type: 'object',
       properties: {
-        original_text: { type: 'string', example: 'आपसे मिलकर अच्छा लगा' },
-        audio: { type: 'string', example: 'Add hindi Wav file base64 string here' },
-        user_id: { type: 'string', example: '1390074473' },
-        session_id: { type: 'string', example: '13900744731701973109305' },
-        language: { type: 'string', example: 'hi' },
+        original_text: { type: 'string', example: 'आपसे मिलकर अच्छा लगा', description: "This will content text shown to user record" },
+        audio: { type: 'string', example: 'Add hindi Wav file base64 string here', description: 'You can send .wav file or plain base64 string of wav file' },
+        user_id: { type: 'string', example: '1390074473', description: 'This will generate from virtual service id service when user do login' },
+        session_id: { type: 'string', example: '13900744731701973109305', description: 'This will generate from telemetry frontend lib when you do new login' },
+        language: { type: 'string', example: 'hi', description: 'This need to be send as per language. For this api, send hi for hindi' },
         date: {
           type: 'date', example: "2023-12-07T17:52:23.753Z"
         }
@@ -949,6 +603,14 @@ export class ScoresController {
         const decoded = audioFile.toString('base64');
         let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "hi");
         CreateLearnerProfileDto['output'] = audioOutput.output;
+
+        if (CreateLearnerProfileDto.output[0].source === "") {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            status: "error",
+            message: "Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly"
+          });
+        }
+
       }
 
       let confidence_scoresArr = [];
@@ -1257,11 +919,11 @@ export class ScoresController {
     schema: {
       type: 'object',
       properties: {
-        original_text: { type: 'string', example: 'ಆಕಾಶನ ಮನೆಯು ಅಂಗಡಿಯ ಹತ್ತಿರ ಇದೆ' },
-        audio: { type: 'string', example: 'Add kannada Wav file base64 string here' },
-        user_id: { type: 'string', example: '8550552703' },
-        session_id: { type: 'string', example: '85505527031701973332940' },
-        language: { type: 'string', example: 'kn' },
+        original_text: { type: 'string', example: 'ಆಕಾಶನ ಮನೆಯು ಅಂಗಡಿಯ ಹತ್ತಿರ ಇದೆ', description: "This will content text shown to user record" },
+        audio: { type: 'string', example: 'Add kannada Wav file base64 string here', description: 'You can send .wav file or plain base64 string of wav file' },
+        user_id: { type: 'string', example: '8550552703', description: 'This will generate from virtual service id service when user do login' },
+        session_id: { type: 'string', example: '85505527031701973332940', description: 'This will generate from telemetry frontend lib when you do new login' },
+        language: { type: 'string', example: 'kn', description: 'This need to be send as per language. For this api, send kn for kannada' },
         date: {
           type: 'date', example: "2023-12-07T17:52:23.753Z"
         }
@@ -1301,6 +963,13 @@ export class ScoresController {
         const decoded = audioFile.toString('base64');
         let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "kn");
         CreateLearnerProfileDto['output'] = audioOutput.output;
+
+        if (CreateLearnerProfileDto.output[0].source === "") {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            status: "error",
+            message: "Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly"
+          });
+        }
       }
 
       let confidence_scoresArr = [];
@@ -1622,8 +1291,16 @@ export class ScoresController {
     },
   })
   @ApiOperation({ summary: 'Get Targets character by session id' })
-  GetTargetsbySession(@Param('sessionId') id: string) {
-    return this.scoresService.getTargetsBySession(id);
+  async GetTargetsbySession(@Param('sessionId') id: string, @Res() response: FastifyReply) {
+    try {
+      let targetResult = await this.scoresService.getTargetsBySession(id)
+      return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiParam({
@@ -1642,8 +1319,16 @@ export class ScoresController {
       }
     },
   })
-  GetTargetsbyUser(@Param('userId') id: string) {
-    return this.scoresService.getTargetsByUser(id);
+  async GetTargetsbyUser(@Param('userId') id: string, @Res() response: FastifyReply) {
+    try {
+      let targetResult = await this.scoresService.getTargetsByUser(id);
+      return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiParam({
@@ -1662,8 +1347,16 @@ export class ScoresController {
       }
     },
   })
-  GetFamiliarityBysession(@Param('sessionId') id: string) {
-    return this.scoresService.getFamiliarityBySession(id);
+  async GetFamiliarityBysession(@Param('sessionId') id: string, @Res() response: FastifyReply) {
+    try {
+      let familiarityResult = await this.scoresService.getFamiliarityBySession(id)
+      return response.status(HttpStatus.OK).send(familiarityResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiParam({
@@ -1682,8 +1375,16 @@ export class ScoresController {
       }
     },
   })
-  GetFamiliarityByUser(@Param('userId') id: string) {
-    return this.scoresService.getFamiliarityByUser(id);
+  async GetFamiliarityByUser(@Param('userId') id: string, @Res() response: FastifyReply) {
+    try {
+      let familiarityResult = await this.scoresService.getFamiliarityByUser(id);
+      return response.status(HttpStatus.OK).send(familiarityResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiParam({
@@ -1702,129 +1403,138 @@ export class ScoresController {
       }
     },
   })
-  async GetContentCharbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+  async GetContentCharbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+    try {
+      let currentLevel = 'm0';
+      let recordData: any = await this.scoresService.getlatestmilestone(id);
+      currentLevel = recordData[0]?.milestone_level || "m0";
 
-    let currentLevel = 'm0';
-    let recordData: any = await this.scoresService.getlatestmilestone(id);
-    currentLevel = recordData[0]?.milestone_level || "m0";
+      let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+      let validations = await this.scoresService.getAssessmentRecordsUserid(id);
 
-    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
-    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit > 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    // let sessions = await this.scoresService.getAllSessions(id, 5);
-    // let totalSession = sessions.length;
-    // let currentLevel = 'm0';
-    // if (totalSession === 0) {
-    //   currentLevel = 'm1';
-    // } else {
-
-    //   if (totalTargets >= 30) {
-    //     currentLevel = 'm1';
-    //   } else if (totalTargets < 30 && totalTargets >= 16) {
-    //     if (totalValidation > 5) {
-    //       currentLevel = 'm1';
-    //     } else {
-    //       currentLevel = 'm2';
-    //     }
-    //   } else if (totalTargets < 16 && totalTargets > 2) {
-    //     if (totalValidation > 2) {
-    //       currentLevel = 'm2';
-    //     } else {
-    //       currentLevel = 'm3';
-    //     }
-    //   } else if (totalTargets <= 2) {
-    //     if (totalValidation > 0) {
-    //       currentLevel = 'm3';
-    //     } else {
-    //       currentLevel = 'm4';
-    //     }
-    //   }
-    // }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm0') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"]
-    } else if (currentLevel === 'm5') {
-      contentLevel = 'L3';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm6') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm7') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3", "C4"]
-    } else if (currentLevel === 'm8') {
-      contentLevel = 'L5';
-      complexityLevel = ["C3", "C4"]
-    } else if (currentLevel === 'm9') {
-      contentLevel = 'L6';
-      complexityLevel = ["C3", "C4"]
-    }
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "char",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
+      let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+        if (gettargetlimit > 0 && index >= gettargetlimit) {
+          return false;
         }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
+        return true;
+      }).map(charData => {
+        return charData.character
+      });
 
-    let contentArr;
-    let contentForTokenArr;
+      let totalTargets = getGetTarget.length;
+      let totalValidation = validations.length;
 
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
+      // let sessions = await this.scoresService.getAllSessions(id, 5);
+      // let totalSession = sessions.length;
+      // let currentLevel = 'm0';
+      // if (totalSession === 0) {
+      //   currentLevel = 'm1';
+      // } else {
+
+      //   if (totalTargets >= 30) {
+      //     currentLevel = 'm1';
+      //   } else if (totalTargets < 30 && totalTargets >= 16) {
+      //     if (totalValidation > 5) {
+      //       currentLevel = 'm1';
+      //     } else {
+      //       currentLevel = 'm2';
+      //     }
+      //   } else if (totalTargets < 16 && totalTargets > 2) {
+      //     if (totalValidation > 2) {
+      //       currentLevel = 'm2';
+      //     } else {
+      //       currentLevel = 'm3';
+      //     }
+      //   } else if (totalTargets <= 2) {
+      //     if (totalValidation > 0) {
+      //       currentLevel = 'm3';
+      //     } else {
+      //       currentLevel = 'm4';
+      //     }
+      //   }
+      // }
+
+      let contentLevel = '';
+      let complexityLevel = [];
+
+      if (currentLevel === 'm0') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm1') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm2') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1"]
+      } else if (currentLevel === 'm3') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1", "C2"];
+      } else if (currentLevel === 'm4') {
+        contentLevel = 'L3';
+        complexityLevel = ["C1", "C2"]
+      } else if (currentLevel === 'm5') {
+        contentLevel = 'L3';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm6') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm7') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3", "C4"]
+      } else if (currentLevel === 'm8') {
+        contentLevel = 'L5';
+        complexityLevel = ["C3", "C4"]
+      } else if (currentLevel === 'm9') {
+        contentLevel = 'L6';
+        complexityLevel = ["C3", "C4"]
+      }
+
+      const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      const textData = {
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "char",
+        "limit": contentlimit || 5,
+        "tags": tags,
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel
+      };
+
+      const newContent = await lastValueFrom(
+        this.httpService.post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).pipe(
+          map((resp) => resp.data),
+          catchError((error: AxiosError) => {
+            throw 'Error at Content service API Call -' + error;
+          }),
+        )
+      );
+
+      let contentArr;
+      let contentForTokenArr;
+
+      if (newContent.data.hasOwnProperty('wordsArr')) {
+        contentArr = newContent.data.wordsArr;
+      } else {
+        contentArr = [];
+      }
+
+      if (newContent.data.hasOwnProperty('contentForToken')) {
+        contentForTokenArr = newContent.data.contentForToken;
+      } else {
+        contentForTokenArr = [];
+      }
+
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
     }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -1843,129 +1553,138 @@ export class ScoresController {
       }
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+    try {
+      let currentLevel = 'm0';
+      let recordData: any = await this.scoresService.getlatestmilestone(id);
+      currentLevel = recordData[0]?.milestone_level || "m0";
 
-    let currentLevel = 'm0';
-    let recordData: any = await this.scoresService.getlatestmilestone(id);
-    currentLevel = recordData[0]?.milestone_level || "m0";
-
-    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
-    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit > 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    let totalTargets = getGetTarget.length;
-    // let totalValidation = validations.length;
-
-    // let sessions = await this.scoresService.getAllSessions(id, 5);
-    // let totalSession = sessions.length;
-    // let currentLevel = 'm0';
-    // if (totalSession === 0) {
-    //   currentLevel = 'm1';
-    // } else {
-
-    //   if (totalTargets >= 30) {
-    //     currentLevel = 'm1';
-    //   } else if (totalTargets < 30 && totalTargets >= 16) {
-    //     if (totalValidation > 5) {
-    //       currentLevel = 'm1';
-    //     } else {
-    //       currentLevel = 'm2';
-    //     }
-    //   } else if (totalTargets < 16 && totalTargets > 2) {
-    //     if (totalValidation > 2) {
-    //       currentLevel = 'm2';
-    //     } else {
-    //       currentLevel = 'm3';
-    //     }
-    //   } else if (totalTargets <= 2) {
-    //     if (totalValidation > 0) {
-    //       currentLevel = 'm3';
-    //     } else {
-    //       currentLevel = 'm4';
-    //     }
-    //   }
-    // }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm0') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"]
-    } else if (currentLevel === 'm5') {
-      contentLevel = 'L3';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm6') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm7') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3", "C4"]
-    } else if (currentLevel === 'm8') {
-      contentLevel = 'L5';
-      complexityLevel = ["C3", "C4"]
-    } else if (currentLevel === 'm9') {
-      contentLevel = 'L6';
-      complexityLevel = ["C3", "C4"]
-    }
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Word",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
+      let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+      let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+        if (gettargetlimit > 0 && index >= gettargetlimit) {
+          return false;
         }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
+        return true;
+      }).map(charData => {
+        return charData.character
+      });
 
-    let contentArr;
-    let contentForTokenArr;
+      let totalTargets = getGetTarget.length;
+      // let totalValidation = validations.length;
 
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
+      // let sessions = await this.scoresService.getAllSessions(id, 5);
+      // let totalSession = sessions.length;
+      // let currentLevel = 'm0';
+      // if (totalSession === 0) {
+      //   currentLevel = 'm1';
+      // } else {
+
+      //   if (totalTargets >= 30) {
+      //     currentLevel = 'm1';
+      //   } else if (totalTargets < 30 && totalTargets >= 16) {
+      //     if (totalValidation > 5) {
+      //       currentLevel = 'm1';
+      //     } else {
+      //       currentLevel = 'm2';
+      //     }
+      //   } else if (totalTargets < 16 && totalTargets > 2) {
+      //     if (totalValidation > 2) {
+      //       currentLevel = 'm2';
+      //     } else {
+      //       currentLevel = 'm3';
+      //     }
+      //   } else if (totalTargets <= 2) {
+      //     if (totalValidation > 0) {
+      //       currentLevel = 'm3';
+      //     } else {
+      //       currentLevel = 'm4';
+      //     }
+      //   }
+      // }
+
+      let contentLevel = '';
+      let complexityLevel = [];
+
+      if (currentLevel === 'm0') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm1') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm2') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1"]
+      } else if (currentLevel === 'm3') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1", "C2"];
+      } else if (currentLevel === 'm4') {
+        contentLevel = 'L3';
+        complexityLevel = ["C1", "C2"]
+      } else if (currentLevel === 'm5') {
+        contentLevel = 'L3';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm6') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm7') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3", "C4"]
+      } else if (currentLevel === 'm8') {
+        contentLevel = 'L5';
+        complexityLevel = ["C3", "C4"]
+      } else if (currentLevel === 'm9') {
+        contentLevel = 'L6';
+        complexityLevel = ["C3", "C4"]
+      }
+      const url = process.env.ALL_CONTENT_SERVICE_API;
+
+
+
+      const textData = {
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Word",
+        "limit": contentlimit || 5,
+        "tags": tags,
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel
+      };
+
+      const newContent = await lastValueFrom(
+        this.httpService.post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).pipe(
+          map((resp) => resp.data),
+          catchError((error: AxiosError) => {
+            throw 'Error at Content service API Call -' + error;
+          })
+        )
+      );
+
+      let contentArr;
+      let contentForTokenArr;
+
+      if (newContent.data.hasOwnProperty('wordsArr')) {
+        contentArr = newContent.data.wordsArr;
+      } else {
+        contentArr = [];
+      }
+
+      if (newContent.data.hasOwnProperty('contentForToken')) {
+        contentForTokenArr = newContent.data.contentForToken;
+      } else {
+        contentForTokenArr = [];
+      }
+
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
     }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -1984,129 +1703,139 @@ export class ScoresController {
       }
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+    try {
+      let currentLevel = 'm0';
+      let recordData: any = await this.scoresService.getlatestmilestone(id);
+      currentLevel = recordData[0]?.milestone_level || "m0";
 
-    let currentLevel = 'm0';
-    let recordData: any = await this.scoresService.getlatestmilestone(id);
-    currentLevel = recordData[0]?.milestone_level || "m0";
-
-    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
-    let validations = await this.scoresService.getAssessmentRecordsUserid(id);
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit > 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    // let sessions = await this.scoresService.getAllSessions(id, 5);
-    // let totalSession = sessions.length;
-    // let currentLevel = 'm0';
-    // if (totalSession === 0) {
-    //   currentLevel = 'm1';
-    // } else {
-
-    //   if (totalTargets >= 30) {
-    //     currentLevel = 'm1';
-    //   } else if (totalTargets < 30 && totalTargets >= 16) {
-    //     if (totalValidation > 5) {
-    //       currentLevel = 'm1';
-    //     } else {
-    //       currentLevel = 'm2';
-    //     }
-    //   } else if (totalTargets < 16 && totalTargets > 2) {
-    //     if (totalValidation > 2) {
-    //       currentLevel = 'm2';
-    //     } else {
-    //       currentLevel = 'm3';
-    //     }
-    //   } else if (totalTargets <= 2) {
-    //     if (totalValidation > 0) {
-    //       currentLevel = 'm3';
-    //     } else {
-    //       currentLevel = 'm4';
-    //     }
-    //   }
-    // }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm0') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"]
-    } else if (currentLevel === 'm5') {
-      contentLevel = 'L3';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm6') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm7') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3", "C4"]
-    } else if (currentLevel === 'm8') {
-      contentLevel = 'L5';
-      complexityLevel = ["C3", "C4"]
-    } else if (currentLevel === 'm9') {
-      contentLevel = 'L6';
-      complexityLevel = ["C3", "C4"]
-    }
-
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Sentence",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
+      let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+      let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+        if (gettargetlimit > 0 && index >= gettargetlimit) {
+          return false;
         }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
+        return true;
+      }).map(charData => {
+        return charData.character
+      });
 
-    let contentArr;
-    let contentForTokenArr;
+      let totalTargets = getGetTarget.length;
+      let totalValidation = validations.length;
 
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
+      // let sessions = await this.scoresService.getAllSessions(id, 5);
+      // let totalSession = sessions.length;
+      // let currentLevel = 'm0';
+      // if (totalSession === 0) {
+      //   currentLevel = 'm1';
+      // } else {
+
+      //   if (totalTargets >= 30) {
+      //     currentLevel = 'm1';
+      //   } else if (totalTargets < 30 && totalTargets >= 16) {
+      //     if (totalValidation > 5) {
+      //       currentLevel = 'm1';
+      //     } else {
+      //       currentLevel = 'm2';
+      //     }
+      //   } else if (totalTargets < 16 && totalTargets > 2) {
+      //     if (totalValidation > 2) {
+      //       currentLevel = 'm2';
+      //     } else {
+      //       currentLevel = 'm3';
+      //     }
+      //   } else if (totalTargets <= 2) {
+      //     if (totalValidation > 0) {
+      //       currentLevel = 'm3';
+      //     } else {
+      //       currentLevel = 'm4';
+      //     }
+      //   }
+      // }
+
+      let contentLevel = '';
+      let complexityLevel = [];
+
+      if (currentLevel === 'm0') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm1') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm2') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1"]
+      } else if (currentLevel === 'm3') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1", "C2"];
+      } else if (currentLevel === 'm4') {
+        contentLevel = 'L3';
+        complexityLevel = ["C1", "C2"]
+      } else if (currentLevel === 'm5') {
+        contentLevel = 'L3';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm6') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm7') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3", "C4"]
+      } else if (currentLevel === 'm8') {
+        contentLevel = 'L5';
+        complexityLevel = ["C3", "C4"]
+      } else if (currentLevel === 'm9') {
+        contentLevel = 'L6';
+        complexityLevel = ["C3", "C4"]
+      }
+
+
+      const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      const textData = {
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Sentence",
+        "limit": contentlimit || 5,
+        "tags": tags,
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel
+      };
+
+      const newContent = await lastValueFrom(
+        this.httpService.post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).pipe(
+          map((resp) => resp.data),
+          catchError((error: AxiosError) => {
+            throw 'Error at Content service API Call -' + error;
+          }),
+        )
+      );
+
+      let contentArr;
+      let contentForTokenArr;
+
+      if (newContent.data.hasOwnProperty('wordsArr')) {
+        contentArr = newContent.data.wordsArr;
+      } else {
+        contentArr = [];
+      }
+
+      if (newContent.data.hasOwnProperty('contentForToken')) {
+        contentForTokenArr = newContent.data.contentForToken;
+      } else {
+        contentForTokenArr = [];
+      }
+
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
     }
 
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
   }
 
   @ApiParam({
@@ -2125,964 +1854,332 @@ export class ScoresController {
       }
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+    try {
+      let currentLevel = 'm0';
 
-    let currentLevel = 'm0';
+      let recordData: any = await this.scoresService.getlatestmilestone(id);
+      currentLevel = recordData[0]?.milestone_level || "m0";
 
-    let recordData: any = await this.scoresService.getlatestmilestone(id);
-    currentLevel = recordData[0]?.milestone_level || "m0";
+      let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
 
-    let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
-    // let validations = await this.scoresService.getAssessmentRecordsUserid(id);
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit > 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    let totalTargets = getGetTarget.length;
-    // let totalValidation = validations.length;
-
-    // let sessions = await this.scoresService.getAllSessions(id, 5);
-    // let totalSession = sessions.length;
-    // let currentLevel = 'm0';
-    // if (totalSession === 0) {
-    //   currentLevel = 'm1';
-    // } else {
-
-    //   if (totalTargets >= 30) {
-    //     currentLevel = 'm1';
-    //   } else if (totalTargets < 30 && totalTargets >= 16) {
-    //     if (totalValidation > 5) {
-    //       currentLevel = 'm1';
-    //     } else {
-    //       currentLevel = 'm2';
-    //     }
-    //   } else if (totalTargets < 16 && totalTargets > 2) {
-    //     if (totalValidation > 2) {
-    //       currentLevel = 'm2';
-    //     } else {
-    //       currentLevel = 'm3';
-    //     }
-    //   } else if (totalTargets <= 2) {
-    //     if (totalValidation > 0) {
-    //       currentLevel = 'm3';
-    //     } else {
-    //       currentLevel = 'm4';
-    //     }
-    //   }
-    // }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm0') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"]
-    } else if (currentLevel === 'm5') {
-      contentLevel = 'L3';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm6') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3"]
-    } else if (currentLevel === 'm7') {
-      contentLevel = 'L4';
-      complexityLevel = ["C2", "C3", "C4"]
-    } else if (currentLevel === 'm8') {
-      contentLevel = 'L5';
-      complexityLevel = ["C3", "C4"]
-    } else if (currentLevel === 'm9') {
-      contentLevel = 'L6';
-      complexityLevel = ["C3", "C4"]
-    }
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Paragraph",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
+      let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
+        if (gettargetlimit > 0 && index >= gettargetlimit) {
+          return false;
         }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
+        return true;
+      }).map(charData => {
+        return charData.character
+      });
 
-    let contentArr;
-    let contentForTokenArr;
+      let totalTargets = getGetTarget.length;
+      // let totalValidation = validations.length;
 
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
-    }
+      // let sessions = await this.scoresService.getAllSessions(id, 5);
+      // let totalSession = sessions.length;
+      // let currentLevel = 'm0';
+      // if (totalSession === 0) {
+      //   currentLevel = 'm1';
+      // } else {
 
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
+      //   if (totalTargets >= 30) {
+      //     currentLevel = 'm1';
+      //   } else if (totalTargets < 30 && totalTargets >= 16) {
+      //     if (totalValidation > 5) {
+      //       currentLevel = 'm1';
+      //     } else {
+      //       currentLevel = 'm2';
+      //     }
+      //   } else if (totalTargets < 16 && totalTargets > 2) {
+      //     if (totalValidation > 2) {
+      //       currentLevel = 'm2';
+      //     } else {
+      //       currentLevel = 'm3';
+      //     }
+      //   } else if (totalTargets <= 2) {
+      //     if (totalValidation > 0) {
+      //       currentLevel = 'm3';
+      //     } else {
+      //       currentLevel = 'm4';
+      //     }
+      //   }
+      // }
 
+      let contentLevel = '';
+      let complexityLevel = [];
 
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets };
-  }
-
-
-  @ApiParam({
-    name: "userId",
-    example: "2020076506"
-  })
-  @Get('GetContent/char/session/:sessionId')
-  @ApiOperation({ summary: 'Get a set of chars for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get content and GetTarget chars for user id',
-    schema: {
-      properties: {
-        content: { type: 'string' },
-        getTargetChar: { type: 'string' }
+      if (currentLevel === 'm0') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm1') {
+        contentLevel = 'L1';
+      } else if (currentLevel === 'm2') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1"]
+      } else if (currentLevel === 'm3') {
+        contentLevel = 'L2';
+        complexityLevel = ["C1", "C2"];
+      } else if (currentLevel === 'm4') {
+        contentLevel = 'L3';
+        complexityLevel = ["C1", "C2"]
+      } else if (currentLevel === 'm5') {
+        contentLevel = 'L3';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm6') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3"]
+      } else if (currentLevel === 'm7') {
+        contentLevel = 'L4';
+        complexityLevel = ["C2", "C3", "C4"]
+      } else if (currentLevel === 'm8') {
+        contentLevel = 'L5';
+        complexityLevel = ["C3", "C4"]
+      } else if (currentLevel === 'm9') {
+        contentLevel = 'L6';
+        complexityLevel = ["C3", "C4"]
       }
-    },
-  })
-  async GetContentCharbySession(@Param('sessionId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-
-    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
-      currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
-      }
-    }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
-    }
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit > 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    console.log(gettargetlimit);
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "char",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
-
-    let contentArr;
-    let contentForTokenArr;
-
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
-    }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel, totalTargets: totalTargets };
-  }
-
-  @ApiParam({
-    name: "userId",
-    example: "2020076506"
-  })
-  @Get('GetContent/word/session/:sessionId')
-  @ApiOperation({ summary: 'Get a set of words for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get content and GetTarget chars for user id',
-    schema: {
-      properties: {
-        content: { type: 'string' },
-        getTargetChar: { type: 'string' }
-      }
-    },
-  })
-  async GetContentWordbySession(@Param('sessionId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-
-    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
-      currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
-      }
-    }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
-    }
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit !== 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Word",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
-
-    let contentArr;
-    let contentForTokenArr;
-
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
-    }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
-  }
-
-  @ApiParam({
-    name: "userId",
-    example: "2020076506"
-  })
-  @Get('GetContent/sentence/session/:sessionId')
-  @ApiOperation({ summary: 'Get a set of sentences for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get content and GetTarget chars for user id',
-    schema: {
-      properties: {
-        content: { type: 'string' },
-        getTargetChar: { type: 'string' }
-      }
-    },
-  })
-  async GetContentSentencebySession(@Param('sessionId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-
-    // if (!Array.isArray(tags)) {
-    //   tags = Array.of(tags);
-    // }
-
-    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
-      currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
-      }
-    }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
-    }
-
-
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit !== 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Sentence",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
-
-    let contentArr;
-    let contentForTokenArr;
-
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
-    }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
-  }
-
-  @ApiParam({
-    name: "userId",
-    example: "2020076506"
-  })
-  @Get('GetContent/paragraph/session/:sessionId')
-  @ApiOperation({ summary: 'Get a set of paragraphs for the session to practice, upon feeding the Get Target Chars to Content Algorithm by user id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get content and GetTarget chars for user id',
-    schema: {
-      properties: {
-        content: { type: 'string' },
-        getTargetChar: { type: 'string' }
-      }
-    },
-  })
-  async GetContentParagraphbySession(@Param('sessionId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }) {
-    // if (!Array.isArray(tags)) {
-    //   tags = Array.of(tags);
-    // }
-
-    let getGetTarget = await this.scoresService.getTargetsBySession(id, language);
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = getGetTarget.length;
-    let totalValidation = validations.length;
-
-    let currentLevel = 'No Level Matched';
-
-    if (totalTargets >= 30) {
-      currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
-      }
-    }
-
-    let contentLevel = '';
-    let complexityLevel = [];
-
-    if (currentLevel === 'm1') {
-      contentLevel = 'L1';
-    } else if (currentLevel === 'm2') {
-      contentLevel = 'L2';
-      complexityLevel = ["C1"]
-    } else if (currentLevel === 'm3') {
-      contentLevel = 'L3';
-      complexityLevel = ["C1", "C2"];
-    } else if (currentLevel === 'm4') {
-      contentLevel = 'L4';
-      complexityLevel = ["C1", "C2", "C3"]
-    }
-
-    let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
-      if (gettargetlimit !== 0 && index >= gettargetlimit) {
-        return false;
-      }
-      return true;
-    }).map(charData => {
-      return charData.character
-    });
-
-    const url = process.env.ALL_CONTENT_SERVICE_API;
-
-    const textData = {
-      "tokenArr": getGetTargetCharArr,
-      "language": language || "ta",
-      "contentType": "Paragraph",
-      "limit": contentlimit || 5,
-      "tags": tags,
-      "cLevel": contentLevel,
-      "complexityLevel": complexityLevel
-    };
-
-    const newContent = await lastValueFrom(
-      this.httpService.post(url, JSON.stringify(textData), {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }).pipe(
-        map((resp) => resp.data)
-      )
-    );
-
-    let contentArr;
-    let contentForTokenArr;
-
-    if (newContent.data.hasOwnProperty('wordsArr')) {
-      contentArr = newContent.data.wordsArr;
-    } else {
-      contentArr = [];
-    }
-
-    if (newContent.data.hasOwnProperty('contentForToken')) {
-      contentForTokenArr = newContent.data.contentForToken;
-    } else {
-      contentForTokenArr = [];
-    }
-
-
-    return { content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, currentLevel: currentLevel };
-  }
-
-  @ApiParam({
-    name: "sessionId",
-    example: "27519278861697549531193"
-  })
-  @Get('/getMilestoneProgress/session/:sessionId')
-  @ApiOperation({ summary: 'Get Milstone Progress by session id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get Targets character and score for user id',
-    schema: {
-      properties: {
-        currentLevel: { type: 'string' },
-        targetsCount: { type: 'number', format: 'float' },
-        validationsCount: { type: 'number', format: 'float' },
-
-      }
-    },
-  })
-  async getMilestoneForSession(@Param('sessionId') id: string) {
-    let targets = await this.scoresService.getTargetsBySession(id);
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = targets.length;
-    let totalValidation = validations.length;
-
-    let currentLevel = 'm1';
-
-    if (totalTargets >= 30) {
-      currentLevel = 'm1';
-    } else if (totalTargets < 30 && totalTargets >= 16) {
-      if (totalValidation > 5) {
-        currentLevel = 'm1';
-      } else {
-        currentLevel = 'm2';
-      }
-    } else if (totalTargets < 16 && totalTargets > 2) {
-      if (totalValidation > 2) {
-        currentLevel = 'm2';
-      } else {
-        currentLevel = 'm3';
-      }
-    } else if (totalTargets <= 2) {
-      if (totalValidation > 0) {
-        currentLevel = 'm3';
-      } else {
-        currentLevel = 'm4';
-      }
-    }
-
-    return { currentLevel: currentLevel, targetsCount: targets.length, validationsCount: validations.length, targets: targets, validations: validations };
-  }
-
-  @ApiParam({
-    name: "userId",
-    example: "27519278861697549531193"
-  })
-  @Get('/getMilestoneProgress/user/:userId')
-  @ApiOperation({ summary: 'Get Milstone Progress by session id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get Targets character and score for user id',
-    schema: {
-      properties: {
-        currentLevel: { type: 'string' },
-        targetsCount: { type: 'number', format: 'float' },
-        validationsCount: { type: 'number', format: 'float' },
-
-      }
-    },
-  })
-  async getMilestoneForUser(@Param('userId') id: string) {
-    let targets = await this.scoresService.getTargetsByUser(id, 'ta');
-    let validations = await this.scoresService.getAssessmentRecords(id);
-
-    let totalTargets = targets.length;
-    let totalValidation = validations.length;
-
-    let sessions = await this.scoresService.getAllSessions(id, 100, true);
-    let totalSession = sessions.length;
-    let currentLevel: any = 0;
-
-    if (totalSession === 0) {
-      currentLevel = 0;
-    } else {
-      if (totalTargets >= 30) {
-        currentLevel = 1;
-      } else if (totalTargets < 30 && totalTargets >= 16) {
-        if (totalValidation > 5) {
-          currentLevel = 1;
-        } else {
-          currentLevel = 2;
-        }
-      } else if (totalTargets < 16 && totalTargets > 2) {
-        if (totalValidation > 2) {
-          currentLevel = 2;
-        } else {
-          currentLevel = 3;
-        }
-      } else if (totalTargets <= 2) {
-        if (totalValidation > 0) {
-          currentLevel = 3;
-        } else {
-          currentLevel = 4;
-        }
-      }
-    }
-
-    let sessionHighestLevel: any = 0;
-    let sessionHighestTargets = 0;
-    let sessionHighestValidations = 0;
-
-    for (let sessionEle of sessions) {
-
-      let sessionLevel = 0;
-      let sessionTargets: any = await this.scoresService.getTargetsBySession(sessionEle);
-      let sessionValidations: any = await this.scoresService.getAssessmentRecords(sessionEle);
-
-      let totalSessionTargets = sessionTargets.length;
-      let totalSessionValidations = sessionValidations.length;
-
-      if (totalSession === 0) {
-        sessionLevel = 0;
-      } else {
-        if (totalSessionTargets >= 30) {
-          sessionLevel = 1;
-        } else if (totalSessionTargets < 30 && totalSessionTargets >= 16) {
-          console.log(totalSessionTargets);
-          console.log(totalSessionValidations);
-          if (totalSessionValidations > 5) {
-            sessionLevel = 1;
-          } else {
-            sessionLevel = 2;
+      const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      const textData = {
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Paragraph",
+        "limit": contentlimit || 5,
+        "tags": tags,
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel
+      };
+
+      const newContent = await lastValueFrom(
+        this.httpService.post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
           }
-        } else if (totalSessionTargets < 16 && totalSessionTargets > 2) {
-          if (totalSessionValidations > 2) {
-            sessionLevel = 2;
-          } else {
-            sessionLevel = 3;
-          }
-        } else if (totalSessionTargets <= 2) {
-          if (totalSessionValidations > 0) {
-            sessionLevel = 3;
-          } else {
-            sessionLevel = 4;
-          }
-        }
+        }).pipe(
+          map((resp) => resp.data),
+          catchError((error: AxiosError) => {
+            throw 'Error at Content service API Call -' + error;
+          })
+        )
+      );
+
+      let contentArr;
+      let contentForTokenArr;
+
+      if (newContent.data.hasOwnProperty('wordsArr')) {
+        contentArr = newContent.data.wordsArr;
+      } else {
+        contentArr = [];
       }
 
-      if (sessionHighestLevel < sessionLevel) {
-        sessionHighestLevel = sessionLevel;
-        sessionHighestTargets = totalSessionTargets;
-        sessionHighestValidations = totalSessionValidations;
+      if (newContent.data.hasOwnProperty('contentForToken')) {
+        contentForTokenArr = newContent.data.contentForToken;
+      } else {
+        contentForTokenArr = [];
       }
+
+
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
     }
-
-    console.log(sessionHighestLevel);
-
-    if (currentLevel < sessionHighestLevel) {
-      currentLevel = sessionHighestLevel;
-      totalTargets = sessionHighestTargets;
-      totalValidation = sessionHighestValidations;
-    }
-
-    currentLevel = 'm' + currentLevel;
-
-    return { currentLevel: currentLevel, targetsCount: totalTargets, validationsCount: totalValidation, targets: targets, validations: validations };
   }
 
   @ApiExcludeEndpoint(true)
-  @Post('/getSetResult')
-  async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
-    let milestoneEntry = true;
-    let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType);
-
-    let totalTargets = targets.length;
-    let sessionResult = 'No Result';
-
-    let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id);
-    let previous_level = recordData[0]?.milestone_level || undefined;
-
-    if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
-      if (totalTargets < 5) {
-        sessionResult = 'pass';
-      } else {
-        sessionResult = 'fail';
-      }
-    } else if (getSetResult.contentType === 'Word' || getSetResult.contentType === 'word') {
-      if (totalTargets < 15) {
-        sessionResult = 'pass';
-      } else {
-        sessionResult = 'fail';
-      }
-    } else if (getSetResult.contentType === 'Sentence' || getSetResult.contentType === 'sentence') {
-      if (totalTargets < 15) {
-        sessionResult = 'pass';
-      } else {
-        sessionResult = 'fail';
-      }
-    } else if (getSetResult.contentType === 'Paragraph' || getSetResult.contentType === 'paragraph') {
-      if (totalTargets < 15) {
-        sessionResult = 'pass';
-      } else {
-        sessionResult = 'fail';
+  @ApiBody({
+    description: `Api request body include these schema properties.
+    Based on sub session id we will calculate targets and contenttype will prepare result.
+    Collection id will only used for to identify discovery set.Based on discovery set will update level`,
+    schema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'string', example: '8635444062' },
+        session_id: { type: 'string', example: '86354440621701972584385' },
+        sub_session_id: { type: 'string', example: '86354440621701972584385', description: 'This required as result is calculated based on sub session records targets' },
+        contentType: { type: 'string', example: 'Sentence' },
+        collectionId: { type: 'string', example: "5221f84c-8abb-4601-a9d0-f8d8dd496566", description: 'Send collectionid only when you are doing discovery', }
       }
     }
+  })
+  @ApiResponse({
+    status: 201,
+    description: `This will provide you session result with targets
+    and also update level if level updation criteria matched`,
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'success' },
+        sessionResult: { type: 'string', example: 'pass' },
+        totalTargets: { type: 'number', example: 14 },
+        currentLevel: { type: 'string', example: 'm3' },
+        previous_level: { type: 'string', example: 'm0' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: `Error while data is being calculate sub-session result and
+    milestone level updation`,
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({ summary: 'This API will give pass or fail result with gettarget count for records performed in the subsession. Also this API perform milestone update for discovery and showcase.' })
+  @Post('/getSetResult')
+  async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
+    try {
+      let milestoneEntry = true;
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType);
 
-    if (previous_level === undefined || getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566") {
-      previous_level = 'm0';
-      let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-        user_id: getSetResult.user_id,
-        session_id: getSetResult.session_id,
-        sub_session_id: getSetResult.sub_session_id,
-        milestone_level: previous_level,
-        sub_milestone_level: "",
-      });
-    } else {
-      let milestone_level = previous_level;
-      if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
-        if(sessionResult === "pass"){
-          milestone_level = "m2";
+      let totalTargets = targets.length;
+      let sessionResult = 'No Result';
+
+      let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id);
+      let previous_level = recordData[0]?.milestone_level || undefined;
+
+      if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
+        if (totalTargets < 5) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
         }
-        else{
-          milestoneEntry = false;
+      } else if (getSetResult.contentType === 'Word' || getSetResult.contentType === 'word') {
+        if (totalTargets < 15) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
         }
-      } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
-        if(sessionResult === "fail"){
-          milestone_level = "m3";
+      } else if (getSetResult.contentType === 'Sentence' || getSetResult.contentType === 'sentence') {
+        if (totalTargets < 15) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
         }
-        else{
-          milestoneEntry = false;
-        }  
-      } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
-        milestone_level = "m4";
-      } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
-        milestone_level = "m1";
-      } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
-        let previous_level_id = parseInt(previous_level[1])
-        if (sessionResult === "pass") {
-          if (previous_level_id === 9) {
-            milestone_level = "m9"
-          } else {
-            previous_level_id++;
-            milestone_level = "m" + previous_level_id;
-          }
+      } else if (getSetResult.contentType === 'Paragraph' || getSetResult.contentType === 'paragraph') {
+        if (totalTargets < 15) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
         }
-        // else if (sessionResult === "fail") {
-        //   if (previous_level_id === 0 || previous_level_id === 1) {
-        //     milestone_level = "m1"
-        //   } else {
-        //     previous_level_id--;
-        //     milestone_level = "m" + previous_level_id;
-        //   }
-        // }
       }
-      if(milestoneEntry){
+
+      if (previous_level === undefined || getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566") {
+        previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
           session_id: getSetResult.session_id,
           sub_session_id: getSetResult.sub_session_id,
-          milestone_level: milestone_level,
+          milestone_level: previous_level,
           sub_milestone_level: "",
         });
+      } else {
+        let milestone_level = previous_level;
+        if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
+          if (sessionResult === "pass") {
+            milestone_level = "m2";
+          }
+          else {
+            milestoneEntry = false;
+          }
+        } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
+          if (sessionResult === "fail") {
+            milestone_level = "m3";
+          }
+          else {
+            milestoneEntry = false;
+          }
+        } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e") {
+          milestone_level = "m4";
+        } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
+          milestone_level = "m1";
+        } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
+          let previous_level_id = parseInt(previous_level[1])
+          if (sessionResult === "pass") {
+            if (previous_level_id === 9) {
+              milestone_level = "m9"
+            } else {
+              previous_level_id++;
+              milestone_level = "m" + previous_level_id;
+            }
+          }
+          // else if (sessionResult === "fail") {
+          //   if (previous_level_id === 0 || previous_level_id === 1) {
+          //     milestone_level = "m1"
+          //   } else {
+          //     previous_level_id--;
+          //     milestone_level = "m" + previous_level_id;
+          //   }
+          // }
+        }
+        if (milestoneEntry) {
+          let addMilestoneResult = await this.scoresService.createMilestoneRecord({
+            user_id: getSetResult.user_id,
+            session_id: getSetResult.session_id,
+            sub_session_id: getSetResult.sub_session_id,
+            milestone_level: milestone_level,
+            sub_milestone_level: "",
+          });
+        }
       }
-    }
-    recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
+      recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id);
 
-    let currentLevel = recordData[0]?.milestone_level || undefined;
+      let currentLevel = recordData[0]?.milestone_level || undefined;
 
-    if (currentLevel === undefined) {
-      currentLevel = previous_level;
-    }
-
-    return response.status(HttpStatus.CREATED).send({
-      status: 'success', data: {
-        sessionResult: sessionResult,
-        totalTargets: totalTargets,
-        currentLevel: currentLevel,
-        previous_level: previous_level
+      if (currentLevel === undefined) {
+        currentLevel = previous_level;
       }
-    })
+
+      return response.status(HttpStatus.CREATED).send({
+        status: 'success', data: {
+          sessionResult: sessionResult,
+          totalTargets: totalTargets,
+          currentLevel: currentLevel,
+          previous_level: previous_level
+        }
+      })
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiExcludeEndpoint(true)
-  @Post('/addMilestone')
-  async addMilestone(@Res() response: FastifyReply, @Body() addMilestone: any) {
-    let addMilestoneResult = await this.scoresService.createMilestoneRecord(addMilestone);
-
-    return response.status(HttpStatus.CREATED).send({
-      status: 'success', msg: "Milestone added"
-    })
-  }
-
-  @ApiExcludeEndpoint(true)
+  @ApiParam({
+    name: "userId",
+    example: "27519278861697549531193"
+  })
+  @ApiOperation({ summary: 'This API will give you current milestone level of user.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with current milestone level of user',
+    schema: {
+      properties: {
+        milestone_level: { type: 'string', example: 'm0' },
+      }
+    },
+  })
   @Get('/getMilestone/user/:userId')
-  async getMilestone(@Param('userId') id: string) {
-    let recordData: any = await this.scoresService.getlatestmilestone(id);
-    let milestone_level = recordData[0]?.milestone_level || "m0";
-    return { status: 'success', data: { milestone_level: milestone_level } };
-  }
-
-  @ApiExcludeEndpoint(true)
-  @Get('/GetMeanScore/user/:userId')
-  @ApiOperation({ summary: 'Mean score of each character by user id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get Mean score of each character by user id across the learning sessions',
-    schema: {
-      properties: {
-        token: { type: 'string' },
-        mean: { type: 'number', format: 'float' },
-      }
-    },
-  })
-  GetMeanScoreLearnerByUser(@Param('userId') id: string) {
-    return this.scoresService.getMeanLearnerByUser(id);
-  }
-
-  @ApiExcludeEndpoint(true)
-  @Get('/GetMeanScore/session/:sessionId')
-  @ApiOperation({ summary: 'Mean score of each character by session id' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Get Mean score of each character by session id across the learning sessions',
-    schema: {
-      properties: {
-        token: { type: 'string' },
-        mean: { type: 'number', format: 'float' },
-      }
-    },
-  })
-  GetMeanScoreLearnerBySession(@Param('sessionId') id: string) {
-    return this.scoresService.getMeanLearnerBySession(id);
-  }
-
-  @ApiExcludeEndpoint(true)
-  @Get('/GetConfidentVector/user/:userId')
-  @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI' })
-  @ApiResponse({
-    status: 200,
-    description: 'Confident Vector of Learner Profile, that provides a score against each character by given user id evaluated by the Learner AI',
-    schema: {
-      properties: {
-        token: { type: 'string' },
-        median: { type: 'number', format: 'float' },
-      }
-    },
-  })
-  GetConfidentVectorLearnerByUser(@Param('userId') id: string) {
-    return this.scoresService.getConfidentVectorByUser(id);
-  }
-
-  @ApiExcludeEndpoint(true)
-  @Get('/GetConfidentVector/session/:sessionId')
-  @ApiOperation({ summary: 'Confident Vector of Learner Profile, that provides a score against each character by given session id evaluated by the Learner AI' })
-  @ApiResponse({
-    status: 200,
-    description: 'Success response with Confident Vector of Learner Profile for each character by session id',
-    schema: {
-      properties: {
-        token: { type: 'string' },
-        median: { type: 'number', format: 'float' },
-      }
-    },
-  })
-  GetConfidentVectorLearnerBySession(@Param('sessionId') id: string) {
-    return this.scoresService.getConfidentVectorBySession(id);
+  async getMilestone(@Param('userId') id: string, @Res() response: FastifyReply,) {
+    try {
+      let recordData: any = await this.scoresService.getlatestmilestone(id);
+      let milestone_level = recordData[0]?.milestone_level || "m0";
+      return { status: 'success', data: { milestone_level: milestone_level } };
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 
   @ApiExcludeEndpoint(true)
@@ -3170,5 +2267,4 @@ export class ScoresController {
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
   }
-
 }
