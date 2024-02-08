@@ -243,7 +243,7 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
-  async getTargetsBysubSession(subSessionId: string, contentType: string) {
+  async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.90;
 
     if (contentType != null && contentType.toLowerCase() === 'word') {
@@ -256,7 +256,8 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.sub_session_id': subSessionId
+          'sessions.sub_session_id': subSessionId,
+          'sessions.language': language
         }
       },
       {
@@ -456,6 +457,11 @@ export class ScoresService {
           character: '$sessions.confidence_scores.token',
           score: '$sessions.confidence_scores.confidence_score'
         }
+      },
+      {
+        $match: {
+          'language': language
+        }
       }
     ]);
 
@@ -480,6 +486,11 @@ export class ScoresService {
           language: '$sessions.language',
           character: '$sessions.missing_token_scores.token',
           score: '$sessions.missing_token_scores.confidence_score'
+        }
+      },
+      {
+        $match: {
+          'language': language
         }
       }
     ]);
