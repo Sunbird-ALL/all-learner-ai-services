@@ -2207,7 +2207,7 @@ export class ScoresController {
     try {
       let recordData: any = await this.scoresService.getlatestmilestone(id);
       let milestone_level = recordData[0]?.milestone_level || "m0";
-      return { status: 'success', data: { milestone_level: milestone_level } };
+      return response.status(HttpStatus.CREATED).send({ status: 'success', data: { milestone_level: milestone_level } });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
