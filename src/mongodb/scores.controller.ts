@@ -976,6 +976,8 @@ export class ScoresController {
       let kannadaVowelSignArr = ["ಾ", "ಿ", "ೀ", "ು", "ೂ", "ೃ", "ೆ", "ೇ", "ೈ", "ೊ", "ೋ", "ೌ", "ಂ", "ಃ", "ೄ", "್", "ಀ", "ಁ", "಼"];
       vowelSignArr = kannadaVowelSignArr;
 
+      let responseText = "";
+
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
 
         if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
@@ -992,7 +994,7 @@ export class ScoresController {
           }
         }
 
-        let responseText = CreateLearnerProfileDto.output[0].source;
+        responseText = CreateLearnerProfileDto.output[0].source;
         let responseTextTokensArr = responseText.split("");
 
         let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
@@ -1265,7 +1267,7 @@ export class ScoresController {
         }
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile" })
+      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
