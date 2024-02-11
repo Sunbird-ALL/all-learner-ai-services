@@ -85,7 +85,7 @@ export class ScoresService {
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
 
-    let options = JSON.stringify({
+    let optionsObj = {
       "config": {
         "serviceId": serviceId,
         "language": {
@@ -102,7 +102,13 @@ export class ScoresService {
           "audioContent": data
         }
       ]
-    });
+    }
+
+    if (language === "en") {
+      delete optionsObj.config.bestTokenCount
+    }
+
+    let options = JSON.stringify(optionsObj);
 
     let config = {
       method: 'post',
@@ -711,7 +717,7 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getlatestmilestone(userId: string) {
+  async getlatestmilestone(userId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -730,6 +736,49 @@ export class ScoresService {
           milestone_level: '$milestone_progress.milestone_level',
           sub_milestone_level: '$milestone_progress.sub_milestone_level',
           createdAt: '$milestone_progress.createdAt',
+          sessions: 1
+        }
+      },
+      {
+        $addFields: {
+          language: {
+            $let: {
+              vars: {
+                matchedSession: {
+                  $arrayElemAt: [
+                    {
+                      $filter: {
+                        input: '$sessions',
+                        as: 'session',
+                        cond: {
+                          $eq: ['$$session.sub_session_id', '$sub_session_id']
+                        }
+                      }
+                    },
+                    0
+                  ]
+                }
+              },
+              in: '$$matchedSession.language'
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: 1,
+          session_id: 1,
+          sub_session_id: 1,
+          milestone_level: 1,
+          sub_milestone_level: 1,
+          createdAt: 1,
+          language: 1
+        }
+      },
+      {
+        $match: {
+          'language': language
         }
       },
       {
