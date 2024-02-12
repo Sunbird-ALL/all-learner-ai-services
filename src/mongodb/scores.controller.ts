@@ -121,8 +121,10 @@ export class ScoresController {
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
+        let audioFile;
+
         if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
-          let audioFile = CreateLearnerProfileDto.audio;
+          audioFile = CreateLearnerProfileDto.audio;
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
@@ -462,7 +464,9 @@ export class ScoresController {
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
-          "hypothesis": CreateLearnerProfileDto.output[0].source
+          "hypothesis": CreateLearnerProfileDto.output[0].source,
+          "language": "ta",
+          "base64_string": audioFile.toString('base64')
         };
 
         const textEvalMatrices = await lastValueFrom(
@@ -483,7 +487,7 @@ export class ScoresController {
         let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
         let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
         let repetitions = reptitionCount;
-        let pauseCount = 0;
+        let pauseCount = textEvalMatrices.pause_count;
         let ins = textEvalMatrices.insertion.length;
         let del = textEvalMatrices.deletion.length;
         let sub = textEvalMatrices.substitution.length;
@@ -983,9 +987,9 @@ export class ScoresController {
       let isPrevVowel = false;
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
-
+        let audioFile;
         if (CreateLearnerProfileDto['output'] === undefined && CreateLearnerProfileDto.audio !== undefined) {
-          let audioFile = CreateLearnerProfileDto.audio;
+          audioFile = CreateLearnerProfileDto.audio;
           const decoded = audioFile.toString('base64');
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, "kn");
           CreateLearnerProfileDto['output'] = audioOutput.output;
@@ -1275,10 +1279,12 @@ export class ScoresController {
             identification_status = 1;
           } else if (score >= 0.40) {
             identification_status = -1;
+          } else {
+            identification_status = 0;
           }
 
           if (value.charkey !== "" && value.charkey !== "▁") {
-            if (correctTokens.includes(value.charkey) || originalTokenArr.includes(value.charkey)) {
+            if (correctTokens.includes(value.charkey)) {
               let hexcode = getTokenHexcode(value.charkey);
 
               if (hexcode !== '') {
@@ -1291,20 +1297,22 @@ export class ScoresController {
                   }
                 );
               } else {
-                anomaly_scoreArr.push(
-                  {
-                    token: value.charkey.replaceAll("_", ""),
-                    hexcode: hexcode,
-                    confidence_score: value.charvalue,
-                    identification_status: identification_status
-                  }
-                );
+                if (!missingTokens.includes(value.charkey) && !constructTokenArr.includes(value.charkey)) {
+                  anomaly_scoreArr.push(
+                    {
+                      token: value.charkey.replaceAll("_", ""),
+                      hexcode: hexcode,
+                      confidence_score: value.charvalue,
+                      identification_status: identification_status
+                    }
+                  );
+                }
               }
             }
           }
         }
 
-        for (let missingTokensEle of missingTokens) {
+        for (let missingTokensEle of missingTokenSet) {
           let hexcode = getTokenHexcode(missingTokensEle);
 
           if (hexcode !== '') {
@@ -1346,22 +1354,85 @@ export class ScoresController {
 
         }
 
+        const url = process.env.ALL_TEXT_EVAL_API;
+
+        const textData = {
+          "reference": CreateLearnerProfileDto.original_text,
+          "hypothesis": CreateLearnerProfileDto.output[0].source,
+          "language": "kn",
+          "base64_string": audioFile.toString('base64')
+        };
+
+        const textEvalMatrices = await lastValueFrom(
+          this.httpService.post(url, JSON.stringify(textData), {
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          }).pipe(
+            map((resp) => resp.data),
+            catchError((error: AxiosError) => {
+              throw 'Error from text Eval service' + error;
+            }),
+          )
+        );
+
+        let wer = textEvalMatrices.wer;
+        let cercal = textEvalMatrices.cer * 2;
+        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
+        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
+        let repetitions = reptitionCount;
+        let pauseCount = textEvalMatrices.pause_count;
+        let ins = textEvalMatrices.insertion.length;
+        let del = textEvalMatrices.deletion.length;
+        let sub = textEvalMatrices.substitution.length;
+
+        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+
         let createdAt = new Date().toISOString().replace('Z', '+00:00');
 
         let createScoreData = {
           user_id: CreateLearnerProfileDto.user_id,
           session: {
-            session_id: CreateLearnerProfileDto.session_id,
+            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "", // used to club set recorded data within session
             contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
             contentId: CreateLearnerProfileDto.contentId || "", // contentId of original text content shown to user to speak
             createdAt: createdAt,
-            language: language,
-            original_text: CreateLearnerProfileDto.original_text,
-            response_text: responseText,
-            confidence_scores: confidence_scoresArr,
-            missing_token_scores: missing_token_scoresArr,
-            anamolydata_scores: anomaly_scoreArr,
+            language: language, // content language
+            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
+            response_text: responseText, // text return by ai after converting audio to text
+            construct_text: constructText, // this will be constructed by matching response text with original text.
+            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
+            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
+            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            error_rate: {
+              character: textEvalMatrices.cer,
+              word: textEvalMatrices.wer
+            },
+            count_diff: {
+              character: Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length),
+              word: Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length)
+            },
+            eucledian_distance: {
+              insertions: {
+                chars: textEvalMatrices.insertion,
+                count: textEvalMatrices.insertion.length
+              },
+              deletions: {
+                chars: textEvalMatrices.deletion,
+                count: textEvalMatrices.deletion.length
+              },
+              substitutions: {
+                chars: textEvalMatrices.substitution,
+                count: textEvalMatrices.substitution.length
+              }
+            },
+            fluencyScore: fluencyScore.toFixed(3),
+            silence_Pause: {
+              total_duration: 0,
+              count: 0,
+            },
+            reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
           }
         };
