@@ -2503,7 +2503,7 @@ export class ScoresController {
         });
       } else {
         let milestone_level = previous_level;
-        if (getSetResult.language === "ta" && getSetResult.collectionId !== "") {
+        if (getSetResult.language === "ta" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
             if (sessionResult === "pass") {
               milestone_level = "m2";
@@ -2523,7 +2523,7 @@ export class ScoresController {
           } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
             milestone_level = "m1";
           }
-        } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "") {
+        } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "b755df98-198b-440a-90e0-391579ef4bfb") {
             if (sessionResult === "pass") {
               milestone_level = "m2";
