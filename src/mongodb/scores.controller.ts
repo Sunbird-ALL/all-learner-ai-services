@@ -2540,7 +2540,7 @@ export class ScoresController {
             }
           } else if (getSetResult.collectionId === "a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c") {
             milestone_level = "m4";
-          } else if (getSetResult.collectionId === "562cd1a4-79b9-43d9-91cf-826e466764d2") {
+          } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993") {
             milestone_level = "m1";
           }
         } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
