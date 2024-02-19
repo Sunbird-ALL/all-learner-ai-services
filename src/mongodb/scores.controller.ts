@@ -2519,7 +2519,7 @@ export class ScoresController {
               milestone_level = "m2";
             }
             else {
-              milestoneEntry = false;
+              milestone_level = "m1";
             }
           } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da") {
             if (sessionResult === "fail") {
@@ -2532,6 +2532,7 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
             milestone_level = "m1";
+            milestoneEntry = false;
           }
         } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "b755df98-198b-440a-90e0-391579ef4bfb") {
@@ -2539,7 +2540,7 @@ export class ScoresController {
               milestone_level = "m2";
             }
             else {
-              milestoneEntry = false;
+              milestone_level = "m1";
             }
           } else if (getSetResult.collectionId === "29bb9cff-9510-4693-bec5-9436a686b836") {
             if (sessionResult === "fail") {
@@ -2552,6 +2553,7 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993") {
             milestone_level = "m1";
+            milestoneEntry = false;
           }
         } else if (getSetResult.language === "en" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995") {
@@ -2559,7 +2561,7 @@ export class ScoresController {
               milestone_level = "m2";
             }
             else {
-              milestoneEntry = false;
+              milestone_level = "m1";
             }
           } else if (getSetResult.collectionId === "f9eb8c70-524f-46a1-a737-1eec64a42e6f") {
             if (sessionResult === "fail") {
@@ -2572,6 +2574,7 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "5b69052e-f609-4004-adce-cf0fcfdac98b") {
             milestone_level = "m1";
+            milestoneEntry = false;
           }
         }
         else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
