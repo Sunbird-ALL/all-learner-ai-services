@@ -2483,7 +2483,9 @@ export class ScoresController {
         }
       }
 
-      if (previous_level === undefined || getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" && getSetResult.language === "ta") {
+      let milestone_level = previous_level;
+
+      if (previous_level === undefined && getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" && getSetResult.language === "ta") {
         previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
@@ -2492,7 +2494,16 @@ export class ScoresController {
           milestone_level: previous_level,
           sub_milestone_level: "",
         });
-      } else if (previous_level === undefined || getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" && getSetResult.language === "kn") {
+      } else if (previous_level === undefined && getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" && getSetResult.language === "kn") {
+        previous_level = 'm0';
+        let addMilestoneResult = await this.scoresService.createMilestoneRecord({
+          user_id: getSetResult.user_id,
+          session_id: getSetResult.session_id,
+          sub_session_id: getSetResult.sub_session_id,
+          milestone_level: previous_level,
+          sub_milestone_level: "",
+        });
+      } else if (previous_level === undefined && getSetResult.collectionId === "36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1" && getSetResult.language === "en") {
         previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
@@ -2502,7 +2513,6 @@ export class ScoresController {
           sub_milestone_level: "",
         });
       } else {
-        let milestone_level = previous_level;
         if (getSetResult.language === "ta" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff") {
             if (sessionResult === "pass") {
@@ -2543,7 +2553,28 @@ export class ScoresController {
           } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993") {
             milestone_level = "m1";
           }
-        } else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
+        } else if (getSetResult.language === "en" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
+          if (getSetResult.collectionId === "91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995") {
+            if (sessionResult === "pass") {
+              milestone_level = "m2";
+            }
+            else {
+              milestoneEntry = false;
+            }
+          } else if (getSetResult.collectionId === "f9eb8c70-524f-46a1-a737-1eec64a42e6f") {
+            if (sessionResult === "fail") {
+              milestone_level = "m3";
+            }
+            else {
+              milestoneEntry = false;
+            }
+          } else if (getSetResult.collectionId === "e62061ea-4195-4460-b8e3-c0433bf8624e") {
+            milestone_level = "m4";
+          } else if (getSetResult.collectionId === "5b69052e-f609-4004-adce-cf0fcfdac98b") {
+            milestone_level = "m1";
+          }
+        }
+        else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
           let previous_level_id = parseInt(previous_level[1])
           if (sessionResult === "pass") {
             if (previous_level_id === 9) {
@@ -2580,6 +2611,11 @@ export class ScoresController {
 
       if (currentLevel === undefined) {
         currentLevel = previous_level;
+      }
+
+      if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
+        currentLevel = 'm1';
+        previous_level = 'm0';
       }
 
       return response.status(HttpStatus.CREATED).send({
