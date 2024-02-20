@@ -536,7 +536,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: 0,
+              count: textEvalMatrices.pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
@@ -1430,7 +1430,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: 0,
+              count: textEvalMatrices.pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
@@ -1662,7 +1662,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: 0,
+              count: textEvalMatrices.pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
