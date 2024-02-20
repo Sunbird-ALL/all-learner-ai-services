@@ -2450,37 +2450,41 @@ export class ScoresController {
     try {
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
 
       let totalTargets = targets.length;
+      let totalFamiliarity = familiarity.length;
+      let totalSyllables = totalTargets + totalFamiliarity;
+      let passingPercentage = (totalFamiliarity / totalSyllables) * 100;
+
       let sessionResult = 'No Result';
 
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
-        if (totalTargets < 5) {
-          sessionResult = 'pass';
-        } else {
-          sessionResult = 'fail';
+      if (passingPercentage > 30) {
+        if (getSetResult.contentType.toLowerCase() === 'word') {
+          if (fluency < 2) {
+            sessionResult = 'pass';
+          } else {
+            sessionResult = 'fail';
+          }
+        } else if (getSetResult.contentType.toLowerCase() === 'sentence') {
+          if (fluency < 6) {
+            sessionResult = 'pass';
+          } else {
+            sessionResult = 'fail';
+          }
+        } else if (getSetResult.contentType.toLowerCase() === 'paragraph') {
+          if (fluency < 10) {
+            sessionResult = 'pass';
+          } else {
+            sessionResult = 'fail';
+          }
         }
-      } else if (getSetResult.contentType === 'Word' || getSetResult.contentType === 'word') {
-        if (totalTargets < 15) {
-          sessionResult = 'pass';
-        } else {
-          sessionResult = 'fail';
-        }
-      } else if (getSetResult.contentType === 'Sentence' || getSetResult.contentType === 'sentence') {
-        if (totalTargets < 15) {
-          sessionResult = 'pass';
-        } else {
-          sessionResult = 'fail';
-        }
-      } else if (getSetResult.contentType === 'Paragraph' || getSetResult.contentType === 'paragraph') {
-        if (totalTargets < 15) {
-          sessionResult = 'pass';
-        } else {
-          sessionResult = 'fail';
-        }
+      } else {
+        sessionResult = 'fail';
       }
 
       let milestone_level = previous_level;
@@ -2626,7 +2630,14 @@ export class ScoresController {
           sessionResult: sessionResult,
           totalTargets: totalTargets,
           currentLevel: currentLevel,
-          previous_level: previous_level
+          previous_level: previous_level,
+          familiarity: familiarity,
+          familiarityCount: totalFamiliarity,
+          targets: targets,
+          targetsCount: totalTargets,
+          totalSyllables: totalSyllables,
+          fluency: fluency,
+          percentage: passingPercentage,
         }
       })
     } catch (err) {

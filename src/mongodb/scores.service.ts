@@ -607,6 +607,130 @@ export class ScoresService {
     return charScoreData.sort((a, b) => a.score - b.score);
   }
 
+  async getFamiliarityBysubSession(subSessionId: string, contentType: string, language: string) {
+    let threshold = 0.90;
+
+    if (contentType != null && contentType.toLowerCase() === 'word') {
+      threshold = 0.75
+    }
+
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions'
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': subSessionId,
+          'sessions.language': language
+        }
+      },
+      {
+        $facet: {
+          confidenceScores: [
+            {
+              $unwind: '$sessions.confidence_scores'
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                date: '$sessions.createdAt',
+                session_id: '$sessions.session_id',
+                character: '$sessions.confidence_scores.token',
+                score: '$sessions.confidence_scores.confidence_score',
+              }
+            },
+            {
+              $sort: {
+                date: -1
+              }
+            }
+          ],
+          missingTokenScores: [
+            {
+              $unwind: '$sessions.missing_token_scores'
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                session_id: '$sessions.session_id',
+                date: '$sessions.createdAt',
+                character: '$sessions.missing_token_scores.token',
+                score: '$sessions.missing_token_scores.confidence_score'
+              }
+            },
+            {
+              $sort: {
+                date: -1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $project: {
+          combinedResults: {
+            $concatArrays: ['$confidenceScores', '$missingTokenScores']
+          }
+        }
+      },
+      {
+        $unwind: '$combinedResults'
+      },
+      {
+        $replaceRoot: {
+          newRoot: '$combinedResults'
+        }
+      },
+      {
+        $project: {
+          user_id: "$user_id",
+          sessionId: '$session_id',
+          date: '$date',
+          token: '$character',
+          score: '$score'
+        }
+      },
+      {
+        $sort: {
+          date: -1
+        }
+      },
+      {
+        $group: {
+          _id: {
+            token: "$token",
+            userId: "$user_id",
+            sessionId: "$sessionId"
+          },
+          meanScore: { $avg: "$score" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          user_id: "$_id.userId",
+          session_id: "$_id.sessionId",
+          character: "$_id.token",
+          score: "$meanScore"
+        }
+      },
+      {
+        $match: {
+          'score': { $gte: threshold }
+        }
+      },
+      {
+        $sort: {
+          score: 1
+        }
+      }
+    ]);
+
+    return RecordData.sort((a, b) => a.score - b.score);
+  }
+
   async getFamiliarityByUser(userId: string) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
@@ -656,6 +780,37 @@ export class ScoresService {
     }
 
     return charScoreData.sort((a, b) => a.score - b.score);
+  }
+
+  async getFluencyBysubSession(subSessionId: string, language: string) {
+
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: "$sessions"
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': subSessionId,
+          'sessions.language': language
+        }
+      },
+      {
+        $group: {
+          _id: {
+            subSessionId: "$sessions.sub_session_id",
+          },
+          fluencyScore: { $avg: "$sessions.fluencyScore" }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          fluencyScore: "$fluencyScore"
+        }
+      }
+    ]);
+
+    return RecordData[0].fluencyScore;
   }
 
   async findbyUser(id: string) {
