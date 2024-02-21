@@ -2464,7 +2464,7 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (passingPercentage > 30) {
+      if (targetsPercentage <= 30) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
@@ -2639,6 +2639,7 @@ export class ScoresController {
           totalSyllables: totalSyllables,
           fluency: fluency,
           percentage: passingPercentage,
+          targetsPercentage: targetsPercentage
         }
       })
     } catch (err) {
