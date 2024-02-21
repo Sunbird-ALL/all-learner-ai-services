@@ -2456,7 +2456,8 @@ export class ScoresController {
       let totalTargets = targets.length;
       let totalFamiliarity = familiarity.length;
       let totalSyllables = totalTargets + totalFamiliarity;
-      let passingPercentage = (totalFamiliarity / totalSyllables) * 100;
+      let targetsPercentage = (totalTargets / totalSyllables) * 100;
+      let passingPercentage = 100 - targetsPercentage;
 
       let sessionResult = 'No Result';
 
