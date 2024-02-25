@@ -985,6 +985,7 @@ export class ScoresController {
 
       let prevEle = '';
       let isPrevVowel = false;
+      let createScoreData: any;
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== "char") {
         let audioFile;
@@ -1390,7 +1391,7 @@ export class ScoresController {
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00');
 
-        let createScoreData = {
+        createScoreData = {
           user_id: CreateLearnerProfileDto.user_id,
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
@@ -1446,7 +1447,7 @@ export class ScoresController {
         }
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, })
+      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -1500,7 +1501,7 @@ export class ScoresController {
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let originalText = CreateLearnerProfileDto.original_text;
+      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/gi, '');
       let createScoreData;
       let language = "en";
       let reptitionCount = 0;
@@ -1541,13 +1542,13 @@ export class ScoresController {
           tokenHexcodeDataArr = tokenHexcodedata;
         });
 
-        responseText = CreateLearnerProfileDto.output[0].source;
+        responseText = CreateLearnerProfileDto.output[0].source.replace(/[^\w\s]/gi, '');
 
         const url = process.env.ALL_TEXT_EVAL_API;
 
         const textData = {
-          "reference": CreateLearnerProfileDto.original_text,
-          "hypothesis": CreateLearnerProfileDto.output[0].source,
+          "reference": originalText,
+          "hypothesis": responseText,
           "language": "en",
           "base64_string": audioFile.toString('base64')
         };
@@ -1631,9 +1632,9 @@ export class ScoresController {
             contentId: CreateLearnerProfileDto.contentId || "", // contentId of original text content shown to user to speak
             createdAt: createdAt,
             language: language, // content language
-            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
+            original_text: originalText, // content text shown to speak
             response_text: responseText, // text return by ai after converting audio to text
-            construct_text: textEvalMatrices.construct_text, // this will be constructed by matching response text with original text.
+            construct_text: textEvalMatrices.construct_text.trim(), // this will be constructed by matching response text with original text.
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
@@ -1642,8 +1643,8 @@ export class ScoresController {
               word: textEvalMatrices.wer
             },
             count_diff: {
-              character: Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length),
-              word: Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length)
+              character: Math.abs(originalText.length - responseText.length),
+              word: Math.abs(originalText.split(' ').length - responseText.split(' ').length)
             },
             eucledian_distance: {
               insertions: {
