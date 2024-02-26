@@ -1940,6 +1940,20 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
+      if (language === "en") {
+        let graphemesMappedArr = [];
+        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
+        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
+          return getTokenGraphemes(getGetTargetCharArrEle);
+        });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+          return result?.graphemes.toString() || '';
+        }
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
     } catch (err) {
@@ -2088,6 +2102,21 @@ export class ScoresController {
         contentForTokenArr = newContent.data.contentForToken;
       } else {
         contentForTokenArr = [];
+      }
+
+      if (language === "en") {
+        let graphemesMappedArr = [];
+        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
+        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
+          return getTokenGraphemes(getGetTargetCharArrEle);
+        });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+          return result?.graphemes.toString() || '';
+        }
       }
 
 
@@ -2240,6 +2269,21 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
+      if (language === "en") {
+        let graphemesMappedArr = [];
+        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
+        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
+          return getTokenGraphemes(getGetTargetCharArrEle);
+        });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+          return result?.graphemes.toString() || '';
+        }
+      }
+
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
     } catch (err) {
@@ -2390,6 +2434,20 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
+      if (language === "en") {
+        let graphemesMappedArr = [];
+        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
+        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
+          return getTokenGraphemes(getGetTargetCharArrEle);
+        });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+          return result?.graphemes.toString() || '';
+        }
+      }
 
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
@@ -2538,7 +2596,6 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8") {
             milestone_level = "m1";
-            milestoneEntry = false;
           }
         } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "b755df98-198b-440a-90e0-391579ef4bfb") {
@@ -2559,7 +2616,6 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993") {
             milestone_level = "m1";
-            milestoneEntry = false;
           }
         } else if (getSetResult.language === "en" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
           if (getSetResult.collectionId === "91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995") {
@@ -2580,11 +2636,10 @@ export class ScoresController {
             milestone_level = "m4";
           } else if (getSetResult.collectionId === "5b69052e-f609-4004-adce-cf0fcfdac98b") {
             milestone_level = "m1";
-            milestoneEntry = false;
           }
         }
         else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
-          let previous_level_id = parseInt(previous_level[1])
+          let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level[1])
           if (sessionResult === "pass") {
             if (previous_level_id === 9) {
               milestone_level = "m9"
@@ -2593,14 +2648,6 @@ export class ScoresController {
               milestone_level = "m" + previous_level_id;
             }
           }
-          // else if (sessionResult === "fail") {
-          //   if (previous_level_id === 0 || previous_level_id === 1) {
-          //     milestone_level = "m1"
-          //   } else {
-          //     previous_level_id--;
-          //     milestone_level = "m" + previous_level_id;
-          //   }
-          // }
         }
 
         if (milestoneEntry) {
@@ -2622,11 +2669,6 @@ export class ScoresController {
         currentLevel = previous_level;
       }
 
-      if (getSetResult.contentType === 'Char' || getSetResult.contentType === 'char') {
-        currentLevel = 'm1';
-        previous_level = 'm0';
-      }
-
       return response.status(HttpStatus.CREATED).send({
         status: 'success', data: {
           sessionResult: sessionResult,
@@ -2639,8 +2681,8 @@ export class ScoresController {
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
-          percentage: passingPercentage,
-          targetsPercentage: targetsPercentage
+          percentage: passingPercentage || 0,
+          targetsPercentage: targetsPercentage || 0
         }
       })
     } catch (err) {

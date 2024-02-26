@@ -810,7 +810,7 @@ export class ScoresService {
       }
     ]);
 
-    return RecordData[0].fluencyScore;
+    return RecordData[0]?.fluencyScore;
   }
 
   async findbyUser(id: string) {

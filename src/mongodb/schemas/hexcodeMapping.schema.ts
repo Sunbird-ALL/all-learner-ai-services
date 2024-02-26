@@ -11,6 +11,9 @@ export class hexcodeMapping extends Document {
 
     @Prop({ required: true })
     language: string;
+
+    @Prop({ required: false })
+    graphemes: [string]
 }
 
 export type hexcodeMappingDocument = hexcodeMapping & Document;
