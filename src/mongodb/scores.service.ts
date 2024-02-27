@@ -370,77 +370,12 @@ export class ScoresService {
       }
     ]);
 
-    // const MissingRecordData = await this.scoreModel.aggregate([
-    //   {
-    //     $unwind: '$sessions'
-    //   },
-    //   {
-    //     $match: {
-    //       'sessions.sub_session_id': subSessionId
-    //     }
-    //   },
-    //   {
-    //     $unwind: '$sessions.missing_token_scores'
-    //   },
-    //   {
-    //     $project: {
-    //       _id: 0,
-    //       user_id: 1,
-    //       date: '$sessions.date',
-    //       session_id: '$sessions.session_id',
-    //       language: '$sessions.language',
-    //       character: '$sessions.missing_token_scores.token',
-    //       score: '$sessions.missing_token_scores.confidence_score'
-    //     }
-    //   }
-    // ]);
-
-    // let charScoreData = [];
-
-    // let uniqueChar = new Set();
-
-
-    // for (let RecordDataele of RecordData) {
-    //   if (language != null && RecordDataele.language === language) {
-    //     uniqueChar.add(RecordDataele.character)
-    //   } else if (language === null) {
-    //     uniqueChar.add(RecordDataele.character)
-    //   }
-    // };
-
-    // for (let char of uniqueChar) {
-    //   let score = 0;
-    //   let count = 0;
-    //   for (let checkRecordDataele of RecordData) {
-    //     if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-    //       score += checkRecordDataele.score;
-    //       count++;
-    //     }
-    //   }
-    //   let avgScore = score / count;
-    //   if (avgScore < 0.90 && count > 0) {
-    //     charScoreData.push({ character: char, score: avgScore });
-    //   }
-    // }
-
-
-    // let missingUniqueChar = new Set();
-
-    // for (let MissingRecordDataEle of MissingRecordData) {
-    //   if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
-    //     charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-    //     missingUniqueChar.add(MissingRecordDataEle.character)
-    //   } else if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character)) {
-    //     charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-    //     missingUniqueChar.add(MissingRecordDataEle.character)
-    //   }
-    // }
-
     return RecordData.sort((a, b) => a.score - b.score);
   }
 
   async getTargetsByUser(userId: string, language: string = null) {
-    const threshold = 0.90
+    const threshold = 0.90;
+
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -451,97 +386,112 @@ export class ScoresService {
         $unwind: '$sessions'
       },
       {
-        $unwind: '$sessions.confidence_scores'
+        $match: {
+          'sessions.language': language
+        }
+      },
+      {
+        $facet: {
+          confidenceScores: [
+            {
+              $unwind: '$sessions.confidence_scores'
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                date: '$sessions.createdAt',
+                character: '$sessions.confidence_scores.token',
+                score: '$sessions.confidence_scores.confidence_score',
+              }
+            },
+            {
+              $sort: {
+                date: -1
+              }
+            }
+          ],
+          missingTokenScores: [
+            {
+              $unwind: '$sessions.missing_token_scores'
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                date: '$sessions.createdAt',
+                character: '$sessions.missing_token_scores.token',
+                score: '$sessions.missing_token_scores.confidence_score'
+              }
+            },
+            {
+              $sort: {
+                date: -1
+              }
+            }
+          ]
+        }
+      },
+      {
+        $project: {
+          combinedResults: {
+            $concatArrays: ['$confidenceScores', '$missingTokenScores']
+          }
+        }
+      },
+      {
+        $unwind: '$combinedResults'
+      },
+      {
+        $replaceRoot: {
+          newRoot: '$combinedResults'
+        }
+      },
+      {
+        $project: {
+          user_id: "$user_id",
+          sessionId: '$session_id',
+          date: '$date',
+          token: '$character',
+          score: '$score'
+        }
+      },
+      {
+        $sort: {
+          date: -1
+        }
+      },
+      {
+        $group: {
+          _id: {
+            token: "$token",
+            userId: "$user_id"
+          },
+          meanScore: { $avg: "$score" }
+        }
       },
       {
         $project: {
           _id: 0,
-          user_id: 1,
-          date: '$sessions.date',
-          session_id: '$sessions.session_id',
-          language: '$sessions.language',
-          character: '$sessions.confidence_scores.token',
-          score: '$sessions.confidence_scores.confidence_score'
+          user_id: "$_id.userId",
+          session_id: "$_id.sessionId",
+          character: "$_id.token",
+          score: "$meanScore"
         }
       },
       {
         $match: {
-          'language': language
+          'score': { $lt: threshold }
+        }
+      },
+      {
+        $sort: {
+          score: 1
         }
       }
     ]);
 
-    const MissingRecordData = await this.scoreModel.aggregate([
-      {
-        $match: {
-          'user_id': userId
-        }
-      },
-      {
-        $unwind: '$sessions'
-      },
-      {
-        $unwind: '$sessions.missing_token_scores'
-      },
-      {
-        $project: {
-          _id: 0,
-          user_id: 1,
-          date: '$sessions.date',
-          session_id: '$sessions.session_id',
-          language: '$sessions.language',
-          character: '$sessions.missing_token_scores.token',
-          score: '$sessions.missing_token_scores.confidence_score'
-        }
-      },
-      {
-        $match: {
-          'language': language
-        }
-      }
-    ]);
-
-    let charScoreData = [];
-
-    let uniqueChar = new Set();
-
-
-    for (let RecordDataele of RecordData) {
-      if (language != null && RecordDataele.language === language) {
-        uniqueChar.add(RecordDataele.character)
-      } else if (language === null) {
-        uniqueChar.add(RecordDataele.character)
-      }
-    };
-
-    for (let char of uniqueChar) {
-      let score = 0;
-      let count = 0;
-      for (let checkRecordDataele of RecordData) {
-        if (char === checkRecordDataele.character && checkRecordDataele.score >= score) {
-          score += checkRecordDataele.score;
-          count++;
-        }
-      }
-      let avgScore = score / count;
-      if (avgScore < 0.90) {
-        charScoreData.push({ character: char, score: avgScore });
-      }
-    }
-
-    let missingUniqueChar = new Set();
-
-    for (let MissingRecordDataEle of MissingRecordData) {
-      if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character) && language != null && MissingRecordDataEle.language === language) {
-        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-        missingUniqueChar.add(MissingRecordDataEle.character)
-      } else if (!uniqueChar.has(MissingRecordDataEle.character) && !missingUniqueChar.has(MissingRecordDataEle.character)) {
-        charScoreData.push({ character: MissingRecordDataEle.character, score: MissingRecordDataEle.score });
-        missingUniqueChar.add(MissingRecordDataEle.character)
-      }
-    }
-
-    return charScoreData.sort((a, b) => a.score - b.score);
+    return RecordData.sort((a, b) => a.score - b.score);
   }
 
   async getFamiliarityBySession(sessionId: string) {
