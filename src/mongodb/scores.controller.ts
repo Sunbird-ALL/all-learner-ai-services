@@ -1824,6 +1824,7 @@ export class ScoresController {
 
       let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
       let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
 
       let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
         if (gettargetlimit > 0 && index >= gettargetlimit) {
@@ -1900,6 +1901,17 @@ export class ScoresController {
         complexityLevel = ["C3", "C4"]
       }
 
+      let graphemesMappedObj = {}
+      let graphemesMappedArr = [];
+
+      if (language === "en") {
+        getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
+          let tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
+          graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
+          graphemesMappedArr.push(...tokenGraphemes);
+        });
+      }
+
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
@@ -1909,7 +1921,8 @@ export class ScoresController {
         "limit": contentlimit || 5,
         "tags": tags,
         "cLevel": contentLevel,
-        "complexityLevel": complexityLevel
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj
       };
 
       const newContent = await lastValueFrom(
@@ -1941,18 +1954,12 @@ export class ScoresController {
       }
 
       if (language === "en") {
-        let graphemesMappedArr = [];
-        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
-        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
-          return getTokenGraphemes(getGetTargetCharArrEle);
-        });
-
         getGetTargetCharArr = graphemesMappedArr;
+      }
 
-        function getTokenGraphemes(token: string) {
-          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
-          return result?.graphemes.toString() || '';
-        }
+      function getTokenGraphemes(token: string) {
+        let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+        return result?.graphemes || '';
       }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
@@ -1982,12 +1989,16 @@ export class ScoresController {
   })
   async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
     try {
-      let currentLevel = 'm0';
-      let recordData: any = await this.scoresService.getlatestmilestone(id, language);
-      currentLevel = recordData[0]?.milestone_level || "m0";
 
+      let recordData: any = await this.scoresService.getlatestmilestone(id, language);
       let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
       let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
+
+      let currentLevel = 'm0';
+      currentLevel = recordData[0]?.milestone_level || "m0";
+      let totalTargets = getGetTarget.length;
+
       let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
         if (gettargetlimit > 0 && index >= gettargetlimit) {
           return false;
@@ -1996,39 +2007,6 @@ export class ScoresController {
       }).map(charData => {
         return charData.character
       });
-
-      let totalTargets = getGetTarget.length;
-      // let totalValidation = validations.length;
-
-      // let sessions = await this.scoresService.getAllSessions(id, 5);
-      // let totalSession = sessions.length;
-      // let currentLevel = 'm0';
-      // if (totalSession === 0) {
-      //   currentLevel = 'm1';
-      // } else {
-
-      //   if (totalTargets >= 30) {
-      //     currentLevel = 'm1';
-      //   } else if (totalTargets < 30 && totalTargets >= 16) {
-      //     if (totalValidation > 5) {
-      //       currentLevel = 'm1';
-      //     } else {
-      //       currentLevel = 'm2';
-      //     }
-      //   } else if (totalTargets < 16 && totalTargets > 2) {
-      //     if (totalValidation > 2) {
-      //       currentLevel = 'm2';
-      //     } else {
-      //       currentLevel = 'm3';
-      //     }
-      //   } else if (totalTargets <= 2) {
-      //     if (totalValidation > 0) {
-      //       currentLevel = 'm3';
-      //     } else {
-      //       currentLevel = 'm4';
-      //     }
-      //   }
-      // }
 
       let contentLevel = '';
       let complexityLevel = [];
@@ -2062,9 +2040,19 @@ export class ScoresController {
         contentLevel = 'L6';
         complexityLevel = ["C3", "C4"]
       }
+
+      let graphemesMappedObj = {}
+      let graphemesMappedArr = [];
+
+      if (language === "en") {
+        getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
+          let tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
+          graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
+          graphemesMappedArr.push(...tokenGraphemes);
+        });
+      }
+
       const url = process.env.ALL_CONTENT_SERVICE_API;
-
-
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -2073,7 +2061,8 @@ export class ScoresController {
         "limit": contentlimit || 5,
         "tags": tags,
         "cLevel": contentLevel,
-        "complexityLevel": complexityLevel
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -2105,20 +2094,13 @@ export class ScoresController {
       }
 
       if (language === "en") {
-        let graphemesMappedArr = [];
-        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
-        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
-          return getTokenGraphemes(getGetTargetCharArrEle);
-        });
-
         getGetTargetCharArr = graphemesMappedArr;
-
-        function getTokenGraphemes(token: string) {
-          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
-          return result?.graphemes.toString() || '';
-        }
       }
 
+      function getTokenGraphemes(token: string) {
+        let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+        return result?.graphemes || '';
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
     } catch (err) {
@@ -2153,6 +2135,7 @@ export class ScoresController {
 
       let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
       let validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
       let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
         if (gettargetlimit > 0 && index >= gettargetlimit) {
           return false;
@@ -2164,36 +2147,6 @@ export class ScoresController {
 
       let totalTargets = getGetTarget.length;
       let totalValidation = validations.length;
-
-      // let sessions = await this.scoresService.getAllSessions(id, 5);
-      // let totalSession = sessions.length;
-      // let currentLevel = 'm0';
-      // if (totalSession === 0) {
-      //   currentLevel = 'm1';
-      // } else {
-
-      //   if (totalTargets >= 30) {
-      //     currentLevel = 'm1';
-      //   } else if (totalTargets < 30 && totalTargets >= 16) {
-      //     if (totalValidation > 5) {
-      //       currentLevel = 'm1';
-      //     } else {
-      //       currentLevel = 'm2';
-      //     }
-      //   } else if (totalTargets < 16 && totalTargets > 2) {
-      //     if (totalValidation > 2) {
-      //       currentLevel = 'm2';
-      //     } else {
-      //       currentLevel = 'm3';
-      //     }
-      //   } else if (totalTargets <= 2) {
-      //     if (totalValidation > 0) {
-      //       currentLevel = 'm3';
-      //     } else {
-      //       currentLevel = 'm4';
-      //     }
-      //   }
-      // }
 
       let contentLevel = '';
       let complexityLevel = [];
@@ -2228,6 +2181,17 @@ export class ScoresController {
         complexityLevel = ["C3", "C4"]
       }
 
+      let graphemesMappedObj = {}
+      let graphemesMappedArr = [];
+
+      if (language === "en") {
+        getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
+          let tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
+          graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
+          graphemesMappedArr.push(...tokenGraphemes);
+        });
+      }
+
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
@@ -2238,7 +2202,8 @@ export class ScoresController {
         "limit": contentlimit || 5,
         "tags": tags,
         "cLevel": contentLevel,
-        "complexityLevel": complexityLevel
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj
       };
 
       const newContent = await lastValueFrom(
@@ -2270,20 +2235,13 @@ export class ScoresController {
       }
 
       if (language === "en") {
-        let graphemesMappedArr = [];
-        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
-        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
-          return getTokenGraphemes(getGetTargetCharArrEle);
-        });
-
         getGetTargetCharArr = graphemesMappedArr;
-
-        function getTokenGraphemes(token: string) {
-          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
-          return result?.graphemes.toString() || '';
-        }
       }
 
+      function getTokenGraphemes(token: string) {
+        let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+        return result?.graphemes || '';
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
     } catch (err) {
@@ -2319,6 +2277,7 @@ export class ScoresController {
       currentLevel = recordData[0]?.milestone_level || "m0";
 
       let getGetTarget = await this.scoresService.getTargetsByUser(id, language);
+      let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
 
       let getGetTargetCharArr = getGetTarget.filter((getGetTargetEle, index) => {
         if (gettargetlimit > 0 && index >= gettargetlimit) {
@@ -2330,37 +2289,17 @@ export class ScoresController {
       });
 
       let totalTargets = getGetTarget.length;
-      // let totalValidation = validations.length;
 
-      // let sessions = await this.scoresService.getAllSessions(id, 5);
-      // let totalSession = sessions.length;
-      // let currentLevel = 'm0';
-      // if (totalSession === 0) {
-      //   currentLevel = 'm1';
-      // } else {
+      let graphemesMappedObj = {}
+      let graphemesMappedArr = [];
 
-      //   if (totalTargets >= 30) {
-      //     currentLevel = 'm1';
-      //   } else if (totalTargets < 30 && totalTargets >= 16) {
-      //     if (totalValidation > 5) {
-      //       currentLevel = 'm1';
-      //     } else {
-      //       currentLevel = 'm2';
-      //     }
-      //   } else if (totalTargets < 16 && totalTargets > 2) {
-      //     if (totalValidation > 2) {
-      //       currentLevel = 'm2';
-      //     } else {
-      //       currentLevel = 'm3';
-      //     }
-      //   } else if (totalTargets <= 2) {
-      //     if (totalValidation > 0) {
-      //       currentLevel = 'm3';
-      //     } else {
-      //       currentLevel = 'm4';
-      //     }
-      //   }
-      // }
+      if (language === "en") {
+        getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
+          let tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
+          graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
+          graphemesMappedArr.push(...tokenGraphemes);
+        });
+      }
 
       let contentLevel = '';
       let complexityLevel = [];
@@ -2403,7 +2342,8 @@ export class ScoresController {
         "limit": contentlimit || 5,
         "tags": tags,
         "cLevel": contentLevel,
-        "complexityLevel": complexityLevel
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj
       };
 
       const newContent = await lastValueFrom(
@@ -2435,18 +2375,12 @@ export class ScoresController {
       }
 
       if (language === "en") {
-        let graphemesMappedArr = [];
-        let tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
-        graphemesMappedArr = getGetTargetCharArr.map((getGetTargetCharArrEle) => {
-          return getTokenGraphemes(getGetTargetCharArrEle);
-        });
-
         getGetTargetCharArr = graphemesMappedArr;
+      }
 
-        function getTokenGraphemes(token: string) {
-          let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
-          return result?.graphemes.toString() || '';
-        }
+      function getTokenGraphemes(token: string) {
+        let result = tokenHexcodeData.find(item => item.token.trim() === token.trim());
+        return result?.graphemes || '';
       }
 
 
@@ -2515,8 +2449,8 @@ export class ScoresController {
       let totalTargets = targets.length;
       let totalFamiliarity = familiarity.length;
       let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = (totalTargets / totalSyllables) * 100;
-      let passingPercentage = 100 - targetsPercentage;
+      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+      let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
 
