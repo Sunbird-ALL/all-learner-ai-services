@@ -2483,7 +2483,7 @@ export class ScoresController {
 
       let milestone_level = previous_level;
 
-      if (previous_level === undefined && getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" && getSetResult.language === "ta") {
+      if (getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" && getSetResult.language === "ta") {
         previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
@@ -2492,7 +2492,7 @@ export class ScoresController {
           milestone_level: previous_level,
           sub_milestone_level: "",
         });
-      } else if (previous_level === undefined && getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" && getSetResult.language === "kn") {
+      } else if (getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" && getSetResult.language === "kn") {
         previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
@@ -2501,7 +2501,7 @@ export class ScoresController {
           milestone_level: previous_level,
           sub_milestone_level: "",
         });
-      } else if (previous_level === undefined && getSetResult.collectionId === "36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1" && getSetResult.language === "en") {
+      } else if (getSetResult.collectionId === "36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1" && getSetResult.language === "en") {
         previous_level = 'm0';
         let addMilestoneResult = await this.scoresService.createMilestoneRecord({
           user_id: getSetResult.user_id,
