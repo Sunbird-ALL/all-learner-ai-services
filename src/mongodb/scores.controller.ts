@@ -1883,7 +1883,7 @@ export class ScoresController {
         complexityLevel = ["C1", "C2"];
       } else if (currentLevel === 'm4') {
         contentLevel = 'L3';
-        complexityLevel = ["C1", "C2"]
+        complexityLevel = ["C1", "C2", "C3"]
       } else if (currentLevel === 'm5') {
         contentLevel = 'L3';
         complexityLevel = ["C2", "C3"]
@@ -2023,7 +2023,7 @@ export class ScoresController {
         complexityLevel = ["C1", "C2"];
       } else if (currentLevel === 'm4') {
         contentLevel = 'L3';
-        complexityLevel = ["C1", "C2"]
+        complexityLevel = ["C1", "C2", "C3"]
       } else if (currentLevel === 'm5') {
         contentLevel = 'L3';
         complexityLevel = ["C2", "C3"]
@@ -2163,7 +2163,7 @@ export class ScoresController {
         complexityLevel = ["C1", "C2"];
       } else if (currentLevel === 'm4') {
         contentLevel = 'L3';
-        complexityLevel = ["C1", "C2"]
+        complexityLevel = ["C1", "C2", "C3"]
       } else if (currentLevel === 'm5') {
         contentLevel = 'L3';
         complexityLevel = ["C2", "C3"]
@@ -2316,7 +2316,7 @@ export class ScoresController {
         complexityLevel = ["C1", "C2"];
       } else if (currentLevel === 'm4') {
         contentLevel = 'L3';
-        complexityLevel = ["C1", "C2"]
+        complexityLevel = ["C1", "C2", "C3"]
       } else if (currentLevel === 'm5') {
         contentLevel = 'L3';
         complexityLevel = ["C2", "C3"]
