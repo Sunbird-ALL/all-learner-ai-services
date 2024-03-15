@@ -12,6 +12,7 @@ RUN npm install
 
 # Copy the rest of the application code to the container
 COPY . .
+COPY .env ./
 
 # Set environment variables
 ENV DATABASE=mongodb
