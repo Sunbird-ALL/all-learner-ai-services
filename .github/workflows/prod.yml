@@ -48,14 +48,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
           port: ${{ secrets.PORT }}
           script: |
-
               
               docker login
               
-         #     docker container stop ${{ secrets.CONTAINER_NAME }}
+              // docker container stop ${{ secrets.CONTAINER_NAME }}
               
-          #    docker rm ${{ secrets.CONTAINER_NAME }}
-           #   docker rmi ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
+              // docker rm ${{ secrets.CONTAINER_NAME }}
+              // docker rmi ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
          
               docker run -d --name ${{ secrets.CONTAINER_NAME }} --network ${{ secrets.NETWORK }} -p ${{ secrets.CONTAINER_PORT }} -t ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
