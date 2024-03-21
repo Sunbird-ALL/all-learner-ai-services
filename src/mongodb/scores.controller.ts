@@ -2121,9 +2121,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-      console.log("Total syllable count:", totalSyllableCount);
-
-
+    
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2270,9 +2268,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-      console.log("Total syllable count:", totalSyllableCount);
-
-
+  
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2418,9 +2414,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-      console.log("Total syllable count:", totalSyllableCount);
-
-
+     
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
