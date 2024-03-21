@@ -1692,8 +1692,21 @@ export class ScoresController {
           return result?.hexcode || '';
         }
       }
+      let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
+      let totalTargets = targets.length;
+      let fluencyScore = Math.trunc(fluency * 100) / 100;
+
+      return response.status(HttpStatus.CREATED).send({
+         status: 'success',
+         msg: "Successfully stored data to learner profile",
+         responseText: responseText,
+         createScoreData: createScoreData,
+         subSessionTarget: totalTargets,
+         subFluencyCount: fluencyScore
+        });
+        
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
