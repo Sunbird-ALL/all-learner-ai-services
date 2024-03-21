@@ -552,7 +552,21 @@ export class ScoresController {
         }
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
+      let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
+      let totalTargets = targets.length;
+      let fluencyScore = Math.trunc(fluency * 100) / 100;
+
+      return response.status(HttpStatus.CREATED).send({
+        status: 'success',
+        msg: "Successfully stored data to learner profile",
+        responseText: responseText,
+        createScoreData: createScoreData,
+        subSessionTarget: totalTargets,
+        subFluencyCount: fluencyScore
+      })
+
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2102,7 +2116,13 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      // Total syllablul count added
+      let totalSyllableCount = 0;
+      contentArr.forEach((contentObject) => {
+        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+      });
+    
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2243,7 +2263,13 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      // Total syllablul count added
+      let totalSyllableCount = 0;
+      contentArr.forEach((contentObject) => {
+        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+      });
+  
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2383,8 +2409,13 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      // Total syllablul count added
+      let totalSyllableCount = 0;
+      contentArr.forEach((contentObject) => {
+        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+      });
+     
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
