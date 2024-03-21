@@ -553,18 +553,23 @@ export class ScoresController {
       }
 
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
-
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      
       let totalTargets = targets.length;
-      let fluencyScore = Math.trunc(fluency * 100) / 100;
+      let totalFamiliarity = familiarity.length;
+      let totalSyllables = totalTargets + totalFamiliarity;
+      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        subSessionTarget: totalTargets,
-        subFluencyCount: fluencyScore
+        totalTargets: totalTargets,
+        totalFamiliarity: totalFamiliarity,
+        totalSyllables: totalSyllables,
+        targetsPercentage: targetsPercentage,
       })
 
     } catch (err) {
@@ -1693,20 +1698,25 @@ export class ScoresController {
         }
       }
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
-
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      
       let totalTargets = targets.length;
-      let fluencyScore = Math.trunc(fluency * 100) / 100;
+      let totalFamiliarity = familiarity.length;
+      let totalSyllables = totalTargets + totalFamiliarity;
+      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
 
       return response.status(HttpStatus.CREATED).send({
          status: 'success',
          msg: "Successfully stored data to learner profile",
          responseText: responseText,
          createScoreData: createScoreData,
-         subSessionTarget: totalTargets,
-         subFluencyCount: fluencyScore
+         totalTargets: totalTargets,
+         totalFamiliarity: totalFamiliarity,
+         totalSyllables: totalSyllables,
+         targetsPercentage: targetsPercentage,
+
         });
-        
+
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
