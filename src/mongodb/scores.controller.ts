@@ -1566,6 +1566,81 @@ export class ScoresController {
           )
         );
 
+        let constructText = '';
+        let compareCharArr = [];
+        let constructTextSet = new Set();
+
+        for (let originalEle of originalText.split(" ")) {
+          let originalRepCount = 0;
+          for (let sourceEle of responseText.split(" ")) {
+            let similarityScore = similarity(originalEle, sourceEle)
+            if (similarityScore >= 0.40) {
+              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
+              //break;
+            }
+          }
+        }
+
+        for (let compareCharArrEle of compareCharArr) {
+          let score = 0;
+          let word = '';
+          for (let compareCharArrCmpEle of compareCharArr) {
+            if (compareCharArrEle.original_text === compareCharArrCmpEle.original_text) {
+              if (compareCharArrCmpEle.score > score) {
+                score = compareCharArrCmpEle.score;
+                word = compareCharArrCmpEle.original_text;
+              }
+            }
+          }
+          constructTextSet.add(word);
+        }
+
+        for (let constructTextSetEle of constructTextSet) {
+          constructText += constructTextSetEle + ' ';
+        }
+        constructText = constructText.trim();
+
+        function similarity(s1, s2) {
+          var longer = s1;
+          var shorter = s2;
+          if (s1.length < s2.length) {
+            longer = s2;
+            shorter = s1;
+          }
+          var longerLength = longer.length;
+          if (longerLength == 0) {
+            return 1.0;
+          }
+          return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+        }
+
+        function editDistance(s1, s2) {
+          s1 = s1.toLowerCase();
+          s2 = s2.toLowerCase();
+
+          var costs = new Array();
+          for (var i = 0; i <= s1.length; i++) {
+            var lastValue = i;
+            for (var j = 0; j <= s2.length; j++) {
+              if (i == 0)
+                costs[j] = j;
+              else {
+                if (j > 0) {
+                  var newValue = costs[j - 1];
+                  if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                    newValue = Math.min(Math.min(newValue, lastValue),
+                      costs[j]) + 1;
+                  costs[j - 1] = lastValue;
+                  lastValue = newValue;
+                }
+              }
+            }
+            if (i > 0)
+              costs[s2.length] = lastValue;
+          }
+          return costs[s2.length];
+        }
+
         for (let confidence_char of textEvalMatrices.confidence_char_list) {
           let hexcode = getTokenHexcode(confidence_char);
 
@@ -1634,7 +1709,7 @@ export class ScoresController {
             language: language, // content language
             original_text: originalText, // content text shown to speak
             response_text: responseText, // text return by ai after converting audio to text
-            construct_text: textEvalMatrices.construct_text.trim(), // this will be constructed by matching response text with original text.
+            construct_text: constructText.trim(), // this will be constructed by matching response text with original text.
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
@@ -2457,7 +2532,15 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (targetsPercentage <= 30) {
+      let targetsPercentageLimit = 30;
+
+      if (getSetResult.language === "en") {
+        targetsPercentageLimit = 35;
+      } else {
+        targetsPercentageLimit = 30;
+      }
+
+      if (targetsPercentage <= targetsPercentageLimit) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
