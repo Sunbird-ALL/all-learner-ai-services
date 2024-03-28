@@ -544,7 +544,7 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        let data = await this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
@@ -1519,8 +1519,9 @@ export class ScoresController {
   @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for English' })
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
-    try {
-      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/gi, '');
+    try { 
+      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/g, ' ').trim();
+      
       let createScoreData;
       let language = "en";
       let reptitionCount = 0;
@@ -1689,9 +1690,7 @@ export class ScoresController {
           }
         };
 
-        // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
-
+        
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
           return result?.hexcode || '';
@@ -1704,6 +1703,9 @@ export class ScoresController {
       let totalFamiliarity = familiarity.length;
       let totalSyllables = totalTargets + totalFamiliarity;
       let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+
+      // Store Array to DB
+      let data = await this.scoresService.create(createScoreData);
 
       return response.status(HttpStatus.CREATED).send({
          status: 'success',
