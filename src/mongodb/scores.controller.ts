@@ -544,7 +544,7 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        let data = await this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
@@ -554,7 +554,7 @@ export class ScoresController {
 
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
       let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      
+
       let totalTargets = targets.length;
       let totalFamiliarity = familiarity.length;
       let totalSyllables = totalTargets + totalFamiliarity;
@@ -1520,7 +1520,8 @@ export class ScoresController {
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/gi, '');
+      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/g, ' ').trim();
+
       let createScoreData;
       let language = "en";
       let reptitionCount = 0;
@@ -1690,32 +1691,34 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        let data = await this.scoresService.create(createScoreData);
+
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
           return result?.hexcode || '';
         }
       }
+
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
       let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      
+
       let totalTargets = targets.length;
       let totalFamiliarity = familiarity.length;
       let totalSyllables = totalTargets + totalFamiliarity;
       let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
 
       return response.status(HttpStatus.CREATED).send({
-         status: 'success',
-         msg: "Successfully stored data to learner profile",
-         responseText: responseText,
-         createScoreData: createScoreData,
-         totalTargets: totalTargets,
-         totalFamiliarity: totalFamiliarity,
-         totalSyllables: totalSyllables,
-         targetsPercentage: targetsPercentage,
+        status: 'success',
+        msg: "Successfully stored data to learner profile",
+        responseText: responseText,
+        createScoreData: createScoreData,
+        totalTargets: totalTargets,
+        totalFamiliarity: totalFamiliarity,
+        totalSyllables: totalSyllables,
+        targetsPercentage: targetsPercentage,
 
-        });
+      });
 
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2144,7 +2147,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-    
+
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2291,7 +2294,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-  
+
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2437,7 +2440,7 @@ export class ScoresController {
       contentArr.forEach((contentObject) => {
         totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
       });
-     
+
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
