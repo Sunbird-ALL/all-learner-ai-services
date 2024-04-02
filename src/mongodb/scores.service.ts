@@ -340,50 +340,28 @@ export class ScoresService {
         $sort: {
           date: 1
         }
-      }
-    ]);
-
-    let charSet = new Set();
-    let getTargetsArr = [];
-
-    for (let RecordDataEle of RecordData) {
-      charSet.add(RecordDataEle.token);
-    }
-
-    for (let char of charSet) {
-      let charScore = 0;
-      let prevScore = 0;
-      let scoreCount = 0;
-
-      for (let recordDataEle of RecordData) {
-        if (recordDataEle.token === char) {
-          if (prevScore === 0.1 && recordDataEle.score >= 0.90) {
-            charScore = charScore - 0.1;
-            scoreCount--;
-
-            charScore = charScore + recordDataEle.score;
-            prevScore = recordDataEle.score;
-            scoreCount++;
-          } else {
-            if (scoreCount <= 5) {
-              charScore = charScore + recordDataEle.score;
-              scoreCount++;
-              prevScore = recordDataEle.score;
-
-            } else {
-              break;
-            }
-          }
+      },
+      {
+        $group: {
+          _id: {
+            token: "$token"
+          },
+          scores: { $push: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          character: "$_id.token",
+          score: { $max: { $slice: ['$scores', -5] } }
+        }
+      },
+      {
+        $match: {
+          'score': { $lt: threshold }
         }
       }
-
-      let avgCharScore = charScore / scoreCount;
-      if (avgCharScore < threshold) {
-        getTargetsArr.push({ token: char, score: avgCharScore })
-      }
-    }
-
-    RecordData = getTargetsArr;
+    ]);
 
     return RecordData.sort((a, b) => a.score - b.score);
   }
@@ -663,50 +641,28 @@ export class ScoresService {
         $sort: {
           date: 1
         }
-      }
-    ]);
-
-    let charSet = new Set();
-    let getTargetsArr = [];
-
-    for (let RecordDataEle of RecordData) {
-      charSet.add(RecordDataEle.token);
-    }
-
-    for (let char of charSet) {
-      let charScore = 0;
-      let prevScore = 0;
-      let scoreCount = 0;
-
-      for (let recordDataEle of RecordData) {
-        if (recordDataEle.token === char) {
-          if (prevScore === 0.1 && recordDataEle.score >= 0.90) {
-            charScore = charScore - 0.1;
-            scoreCount--;
-
-            charScore = charScore + recordDataEle.score;
-            prevScore = recordDataEle.score;
-            scoreCount++;
-          } else {
-            if (scoreCount <= 5) {
-              charScore = charScore + recordDataEle.score;
-              scoreCount++;
-              prevScore = recordDataEle.score;
-
-            } else {
-              break;
-            }
-          }
+      },
+      {
+        $group: {
+          _id: {
+            token: "$token"
+          },
+          scores: { $push: '$score' }
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          character: "$_id.token",
+          score: { $max: { $slice: ['$scores', -5] } }
+        }
+      },
+      {
+        $match: {
+          'score': { $gte: threshold }
         }
       }
-
-      let avgCharScore = charScore / scoreCount;
-      if (avgCharScore >= threshold) {
-        getTargetsArr.push({ token: char, score: avgCharScore })
-      }
-    }
-
-    RecordData = getTargetsArr;
+    ]);
 
     return RecordData.sort((a, b) => a.score - b.score);
   }
