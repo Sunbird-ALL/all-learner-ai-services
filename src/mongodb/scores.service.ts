@@ -251,12 +251,14 @@ export class ScoresService {
 
   async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.90;
+    let RecordData = [];
 
     if (contentType != null && contentType.toLowerCase() === 'word') {
       threshold = 0.75
     }
 
-    const RecordData = await this.scoreModel.aggregate([
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
       },
@@ -336,36 +338,27 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: -1
+          date: 1
         }
       },
       {
         $group: {
           _id: {
-            token: "$token",
-            userId: "$user_id",
-            sessionId: "$sessionId"
+            token: "$token"
           },
-          meanScore: { $avg: "$score" }
+          scores: { $push: '$score' }
         }
       },
       {
         $project: {
           _id: 0,
-          user_id: "$_id.userId",
-          session_id: "$_id.sessionId",
           character: "$_id.token",
-          score: "$meanScore"
+          score: { $max: { $slice: ['$scores', -5] } }
         }
       },
       {
         $match: {
           'score': { $lt: threshold }
-        }
-      },
-      {
-        $sort: {
-          score: 1
         }
       }
     ]);
@@ -564,7 +557,9 @@ export class ScoresService {
       threshold = 0.75
     }
 
-    const RecordData = await this.scoreModel.aggregate([
+    let RecordData = [];
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
       },
@@ -644,36 +639,27 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: -1
+          date: 1
         }
       },
       {
         $group: {
           _id: {
-            token: "$token",
-            userId: "$user_id",
-            sessionId: "$sessionId"
+            token: "$token"
           },
-          meanScore: { $avg: "$score" }
+          scores: { $push: '$score' }
         }
       },
       {
         $project: {
           _id: 0,
-          user_id: "$_id.userId",
-          session_id: "$_id.sessionId",
           character: "$_id.token",
-          score: "$meanScore"
+          score: { $max: { $slice: ['$scores', -5] } }
         }
       },
       {
         $match: {
           'score': { $gte: threshold }
-        }
-      },
-      {
-        $sort: {
-          score: 1
         }
       }
     ]);

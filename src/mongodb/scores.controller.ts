@@ -1785,6 +1785,62 @@ export class ScoresController {
   }
 
   @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('/GetTargets/subsession/:subsessionId/:contentType')
+  @ApiOperation({ summary: 'Get Targets character by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get Targets character and score for user id',
+    schema: {
+      properties: {
+        character: { type: 'string' },
+        score: { type: 'number', format: 'float' },
+      }
+    },
+  })
+  async GetTargetsbysubsession(@Param('subsessionId') id: string, @Param('contentType') contentType: string, @Query('language') language: string, @Res() response: FastifyReply) {
+    try {
+      let targetResult = await this.scoresService.getTargetsBysubSession(id, contentType, language);
+      return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('/GetFamiliarity/subsession/:subsessionId/:contentType')
+  @ApiOperation({ summary: 'Get familiarity character by sub session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get familiarity character and score for sub session',
+    schema: {
+      properties: {
+        character: { type: 'string' },
+        score: { type: 'number', format: 'float' },
+      }
+    },
+  })
+  async GetFamiliaritybysubsession(@Param('subsessionId') id: string, @Param('contentType') contentType: string, @Query('language') language: string, @Res() response: FastifyReply) {
+    try {
+      let familiarityResult = await this.scoresService.getFamiliarityBysubSession(id, contentType, language);
+      return response.status(HttpStatus.OK).send(familiarityResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiParam({
     name: "sessionId",
     example: "20200765061699008295109"
   })
