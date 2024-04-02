@@ -251,12 +251,14 @@ export class ScoresService {
 
   async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.90;
+    let RecordData = [];
 
     if (contentType != null && contentType.toLowerCase() === 'word') {
       threshold = 0.75
     }
 
-    const RecordData = await this.scoreModel.aggregate([
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
       },
@@ -336,39 +338,52 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: -1
-        }
-      },
-      {
-        $group: {
-          _id: {
-            token: "$token",
-            userId: "$user_id",
-            sessionId: "$sessionId"
-          },
-          meanScore: { $avg: "$score" }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          user_id: "$_id.userId",
-          session_id: "$_id.sessionId",
-          character: "$_id.token",
-          score: "$meanScore"
-        }
-      },
-      {
-        $match: {
-          'score': { $lt: threshold }
-        }
-      },
-      {
-        $sort: {
-          score: 1
+          date: 1
         }
       }
     ]);
+
+    let charSet = new Set();
+    let getTargetsArr = [];
+
+    for (let RecordDataEle of RecordData) {
+      charSet.add(RecordDataEle.token);
+    }
+
+    for (let char of charSet) {
+      let charScore = 0;
+      let prevScore = 0;
+      let scoreCount = 0;
+
+      for (let recordDataEle of RecordData) {
+        if (recordDataEle.token === char) {
+          if (prevScore === 0.1 && recordDataEle.score >= 0.90) {
+            charScore = charScore - 0.1;
+            scoreCount--;
+
+            charScore = charScore + recordDataEle.score;
+            prevScore = recordDataEle.score;
+            scoreCount++;
+          } else {
+            if (scoreCount <= 5) {
+              charScore = charScore + recordDataEle.score;
+              scoreCount++;
+              prevScore = recordDataEle.score;
+
+            } else {
+              break;
+            }
+          }
+        }
+      }
+
+      let avgCharScore = charScore / scoreCount;
+      if (avgCharScore < threshold) {
+        getTargetsArr.push({ token: char, score: avgCharScore })
+      }
+    }
+
+    RecordData = getTargetsArr;
 
     return RecordData.sort((a, b) => a.score - b.score);
   }
@@ -564,7 +579,9 @@ export class ScoresService {
       threshold = 0.75
     }
 
-    const RecordData = await this.scoreModel.aggregate([
+    let RecordData = [];
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
       },
@@ -644,39 +661,52 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: -1
-        }
-      },
-      {
-        $group: {
-          _id: {
-            token: "$token",
-            userId: "$user_id",
-            sessionId: "$sessionId"
-          },
-          meanScore: { $avg: "$score" }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          user_id: "$_id.userId",
-          session_id: "$_id.sessionId",
-          character: "$_id.token",
-          score: "$meanScore"
-        }
-      },
-      {
-        $match: {
-          'score': { $gte: threshold }
-        }
-      },
-      {
-        $sort: {
-          score: 1
+          date: 1
         }
       }
     ]);
+
+    let charSet = new Set();
+    let getTargetsArr = [];
+
+    for (let RecordDataEle of RecordData) {
+      charSet.add(RecordDataEle.token);
+    }
+
+    for (let char of charSet) {
+      let charScore = 0;
+      let prevScore = 0;
+      let scoreCount = 0;
+
+      for (let recordDataEle of RecordData) {
+        if (recordDataEle.token === char) {
+          if (prevScore === 0.1 && recordDataEle.score >= 0.90) {
+            charScore = charScore - 0.1;
+            scoreCount--;
+
+            charScore = charScore + recordDataEle.score;
+            prevScore = recordDataEle.score;
+            scoreCount++;
+          } else {
+            if (scoreCount <= 5) {
+              charScore = charScore + recordDataEle.score;
+              scoreCount++;
+              prevScore = recordDataEle.score;
+
+            } else {
+              break;
+            }
+          }
+        }
+      }
+
+      let avgCharScore = charScore / scoreCount;
+      if (avgCharScore >= threshold) {
+        getTargetsArr.push({ token: char, score: avgCharScore })
+      }
+    }
+
+    RecordData = getTargetsArr;
 
     return RecordData.sort((a, b) => a.score - b.score);
   }
