@@ -17,11 +17,11 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       -
         name: Load .env from GitHub Secret
         run: echo "${{ secrets.MY_ENV_VARS_PROD }}" > .env
-      
+
       -
         name: Build and push
         uses: docker/build-push-action@v2
@@ -30,7 +30,7 @@ jobs:
           push: true
           tags:  ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
         env:
-          MY_ENV_VARS: ${{ secrets.MY_ENV_VARS_PROD }}   
+          MY_ENV_VARS: ${{ secrets.MY_ENV_VARS_PROD }}
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -39,7 +39,7 @@ jobs:
     -
       name: Checkout
       uses: actions/checkout@v2
-    - 
+    -
       name: Deploy Stack
       uses: appleboy/ssh-action@master
       with:
@@ -48,13 +48,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY_PROD }}
           port: ${{ secrets.PORT }}
           script: |
-              
+
               docker login
-              
+
               docker container stop ${{ secrets.CONTAINER_NAME }}
-              
+
               docker rm ${{ secrets.CONTAINER_NAME }}
               docker rmi ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
-         
+
               docker run -d --name ${{ secrets.CONTAINER_NAME }} --network ${{ secrets.NETWORK }} -p ${{ secrets.CONTAINER_PORT }} -t ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
