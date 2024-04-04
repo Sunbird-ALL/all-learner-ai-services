@@ -2198,11 +2198,17 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
@@ -2347,9 +2353,16 @@ export class ScoresController {
 
       // Total syllablul count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
@@ -2493,9 +2506,16 @@ export class ScoresController {
 
       // Total syllablul count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
