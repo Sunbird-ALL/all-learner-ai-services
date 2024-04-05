@@ -564,8 +564,8 @@ export class ScoresController {
         createScoreData: createScoreData,
         subsessionTarget : targets,
         contentTarget : targetsByContent,
-        totalSubsessionTargets: totalTargets,
-        totalContentTargets : totalContentTargets,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount : totalContentTargets,
 
       });
 
@@ -1711,9 +1711,8 @@ export class ScoresController {
         createScoreData: createScoreData,
         subsessionTarget : targets,
         contentTarget : targetsByContent,
-        totalSubsessionTargets: totalTargets,
-        totalContentTargets : totalContentTargets,
-
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount : totalContentTargets,
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
