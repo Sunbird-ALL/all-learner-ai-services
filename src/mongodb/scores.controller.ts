@@ -2571,11 +2571,9 @@ export class ScoresController {
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
-
+     
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
+      let totalSyllables = getSetResult.totalSyllableCount
       let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
@@ -2757,8 +2755,6 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          familiarity: familiarity,
-          familiarityCount: totalFamiliarity,
           targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
