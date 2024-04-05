@@ -715,7 +715,7 @@ export class ScoresService {
       {
         $match: {
           $expr: {
-            $gt: ['$countAboveThreshold', '$countBelowThreshold']
+            $gte: ['$countAboveThreshold', '$countBelowThreshold']
           }
         }
       }
