@@ -250,12 +250,12 @@ export class ScoresService {
   }
 
   async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
-    let threshold = 0.90;
+    let threshold = 0.70;
     let RecordData = [];
 
-    if (contentType != null && contentType.toLowerCase() === 'word') {
-      threshold = 0.75
-    }
+    // if (contentType != null && contentType.toLowerCase() === 'word') {
+    //   threshold = 0.75
+    // }
 
 
     RecordData = await this.scoreModel.aggregate([
@@ -338,7 +338,7 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: 1
+          date: -1
         }
       },
       {
@@ -346,24 +346,53 @@ export class ScoresService {
           _id: {
             token: "$token"
           },
-          scores: { $push: '$score' }
+          scores: {
+            $push: '$score'
+          }
         }
       },
       {
         $project: {
           _id: 0,
           character: "$_id.token",
-          score: { $max: { $slice: ['$scores', -5] } }
+          latestScores: {
+            $slice: ['$scores', -5]
+          },
+          countBelowThreshold: {
+            $size: {
+              $filter: {
+                input: '$scores',
+                as: 'score',
+                cond: {
+                  $lt: ['$$score', threshold]
+                }
+              }
+            }
+          },
+          countAboveThreshold: {
+            $size: {
+              $filter: {
+                input: '$scores',
+                as: 'score',
+                cond: {
+                  $gte: ['$$score', threshold]
+                }
+              }
+            }
+          }
         }
       },
       {
         $match: {
-          'score': { $lt: threshold }
+          $expr: {
+            $gt: ['$countBelowThreshold', '$countAboveThreshold']
+          }
         }
       }
-    ]);
+    ]
+    );
 
-    return RecordData.sort((a, b) => a.score - b.score);
+    return RecordData;
   }
 
   async getTargetsByUser(userId: string, language: string = null) {
@@ -551,11 +580,11 @@ export class ScoresService {
   }
 
   async getFamiliarityBysubSession(subSessionId: string, contentType: string, language: string) {
-    let threshold = 0.90;
+    let threshold = 0.70;
 
-    if (contentType != null && contentType.toLowerCase() === 'word') {
-      threshold = 0.75
-    }
+    // if (contentType != null && contentType.toLowerCase() === 'word') {
+    //   threshold = 0.75
+    // }
 
     let RecordData = [];
 
@@ -639,7 +668,7 @@ export class ScoresService {
       },
       {
         $sort: {
-          date: 1
+          date: -1
         }
       },
       {
@@ -647,24 +676,52 @@ export class ScoresService {
           _id: {
             token: "$token"
           },
-          scores: { $push: '$score' }
+          scores: {
+            $push: '$score'
+          }
         }
       },
       {
         $project: {
           _id: 0,
           character: "$_id.token",
-          score: { $max: { $slice: ['$scores', -5] } }
+          latestScores: {
+            $slice: ['$scores', -5]
+          },
+          countBelowThreshold: {
+            $size: {
+              $filter: {
+                input: '$scores',
+                as: 'score',
+                cond: {
+                  $lt: ['$$score', threshold]
+                }
+              }
+            }
+          },
+          countAboveThreshold: {
+            $size: {
+              $filter: {
+                input: '$scores',
+                as: 'score',
+                cond: {
+                  $gte: ['$$score', threshold]
+                }
+              }
+            }
+          }
         }
       },
       {
         $match: {
-          'score': { $gte: threshold }
+          $expr: {
+            $gt: ['$countAboveThreshold', '$countBelowThreshold']
+          }
         }
       }
     ]);
 
-    return RecordData.sort((a, b) => a.score - b.score);
+    return RecordData;
   }
 
   async getFamiliarityByUser(userId: string) {
