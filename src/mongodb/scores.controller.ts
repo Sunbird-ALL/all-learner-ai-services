@@ -363,8 +363,6 @@ export class ScoresController {
                 isPrevVowel = false;
               }
 
-
-
               if (char === charEle) {
                 if (scoreVal > score) {
                   score = scoreVal;
@@ -552,25 +550,24 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-
+      let targetsByContent  = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
+      
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
-
-
+      let totalContentTargets = targetsByContent.length;
+       
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        totalTargets: totalTargets,
-        totalFamiliarity: totalFamiliarity,
-        totalSyllables: totalSyllables,
-        targetsPercentage: targetsPercentage,
-      })
+        subsessionTarget : targets,
+        contentTarget : targetsByContent,
+        totalSubsessionTargets: totalTargets,
+        totalContentTargets : totalContentTargets,
+
+      });
 
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -1700,26 +1697,24 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-
+      let targetsByContent  = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
+      
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
-
+      let totalContentTargets = targetsByContent.length;
+       
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        totalTargets: totalTargets,
-        totalFamiliarity: totalFamiliarity,
-        totalSyllables: totalSyllables,
-        targetsPercentage: targetsPercentage,
+        subsessionTarget : targets,
+        contentTarget : targetsByContent,
+        totalSubsessionTargets: totalTargets,
+        totalContentTargets : totalContentTargets,
 
       });
-
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
