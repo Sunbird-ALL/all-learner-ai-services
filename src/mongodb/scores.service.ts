@@ -353,11 +353,15 @@ export class ScoresService {
           character: "$_id.token",
           latestScores: {
             $slice: ['$scores', -5]
-          },
+          }
+        }
+      },
+      {
+        $addFields: {
           countBelowThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $lt: ['$$score', threshold]
@@ -368,7 +372,7 @@ export class ScoresService {
           countAboveThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $gte: ['$$score', threshold]
@@ -389,7 +393,7 @@ export class ScoresService {
     );
     return RecordData;
   }
-  
+
   async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.70;
     let RecordData = [];
@@ -498,11 +502,15 @@ export class ScoresService {
           character: "$_id.token",
           latestScores: {
             $slice: ['$scores', -5]
-          },
+          }
+        }
+      },
+      {
+        $addFields: {
           countBelowThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $lt: ['$$score', threshold]
@@ -513,7 +521,7 @@ export class ScoresService {
           countAboveThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $gte: ['$$score', threshold]
@@ -828,11 +836,15 @@ export class ScoresService {
           character: "$_id.token",
           latestScores: {
             $slice: ['$scores', -5]
-          },
+          }
+        }
+      },
+      {
+        $addFields: {
           countBelowThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $lt: ['$$score', threshold]
@@ -843,7 +855,7 @@ export class ScoresService {
           countAboveThreshold: {
             $size: {
               $filter: {
-                input: '$scores',
+                input: '$latestScores',
                 as: 'score',
                 cond: {
                   $gte: ['$$score', threshold]
