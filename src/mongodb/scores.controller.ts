@@ -2568,6 +2568,7 @@ export class ScoresController {
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
+      let targetPerThreshold = 30;
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
@@ -2575,6 +2576,7 @@ export class ScoresController {
       let totalTargets = targets.length;
       let totalSyllables = getSetResult.totalSyllableCount
       let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
@@ -2582,7 +2584,21 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (targetsPercentage <= 30) {
+      if(getSetResult.contentType.toLowerCase() != 'word'){
+        if(totalSyllables <= 85){
+          targetPerThreshold = 25;
+         }else if(totalSyllables > 85 && totalSyllables <= 130){
+          targetPerThreshold = 20
+         }else if(totalSyllables > 130 && totalSyllables <= 250){
+          targetPerThreshold = 15
+         }else if(totalSyllables > 250 && totalSyllables <= 500){
+          targetPerThreshold = 10;
+         }else if(totalSyllables > 500){
+          targetPerThreshold = 5
+         }
+      }
+      
+      if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
