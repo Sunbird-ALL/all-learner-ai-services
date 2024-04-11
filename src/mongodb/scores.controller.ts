@@ -2596,8 +2596,7 @@ export class ScoresController {
      
       let totalTargets = targets.length;
       let totalSyllables = getSetResult.totalSyllableCount
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
-
+      let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
@@ -2605,19 +2604,19 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if(getSetResult.contentType.toLowerCase() != 'word'){
-        if(totalSyllables <= 85){
-          targetPerThreshold = 25;
-         }else if(totalSyllables > 85 && totalSyllables <= 130){
+        if(totalSyllables <= 100){
+          targetPerThreshold = 30;
+         }else if(totalSyllables > 100 && totalSyllables <= 150){
+          targetPerThreshold = 25
+         }else if(totalSyllables > 150 && totalSyllables <= 175){
           targetPerThreshold = 20
-         }else if(totalSyllables > 130 && totalSyllables <= 250){
-          targetPerThreshold = 15
+         }else if(totalSyllables > 175 && totalSyllables <= 250){
+          targetPerThreshold = 15;
          }else if(totalSyllables > 250 && totalSyllables <= 500){
           targetPerThreshold = 10;
          }else if(totalSyllables > 500){
-          targetPerThreshold = 5
+          targetPerThreshold = 5;
          }
-      }
       
       if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
