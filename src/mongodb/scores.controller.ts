@@ -2583,7 +2583,7 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if(getSetResult.contentType.toLowerCase() != 'word'){
+      
         if(totalSyllables <= 100){
           targetPerThreshold = 30;
          }else if(totalSyllables > 100 && totalSyllables <= 150){
@@ -2597,7 +2597,7 @@ export class ScoresController {
          }else if(totalSyllables > 500){
           targetPerThreshold = 5;
          }
-      }
+      
       
       if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
