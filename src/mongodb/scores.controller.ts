@@ -552,21 +552,23 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let targetsByContent  = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
-      
+      let targetsByContent = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
+
       let totalTargets = targets.length;
       let totalContentTargets = targetsByContent.length;
-       
+
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        subsessionTarget : targets,
-        contentTarget : targetsByContent,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
-        contentTargetsCount : totalContentTargets,
-
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
       });
 
     } catch (err) {
@@ -1704,6 +1706,8 @@ export class ScoresController {
       let totalTargets = targets.length;
       let totalContentTargets = targetsByContent.length;
 
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
       function processText(text) {
         // Convert the text to lowercase
         text = text.toLowerCase();
@@ -1734,6 +1738,7 @@ export class ScoresController {
         contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
         contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2593,7 +2598,7 @@ export class ScoresController {
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-     
+
       let totalTargets = targets.length;
       let totalSyllables = getSetResult.totalSyllableCount
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
@@ -2604,20 +2609,20 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-        if(totalSyllables <= 100){
-          targetPerThreshold = 30;
-         }else if(totalSyllables > 100 && totalSyllables <= 150){
-          targetPerThreshold = 25
-         }else if(totalSyllables > 150 && totalSyllables <= 175){
-          targetPerThreshold = 20
-         }else if(totalSyllables > 175 && totalSyllables <= 250){
-          targetPerThreshold = 15;
-         }else if(totalSyllables > 250 && totalSyllables <= 500){
-          targetPerThreshold = 10;
-         }else if(totalSyllables > 500){
-          targetPerThreshold = 5;
-         }
-      
+      if (totalSyllables <= 100) {
+        targetPerThreshold = 30;
+      } else if (totalSyllables > 100 && totalSyllables <= 150) {
+        targetPerThreshold = 25
+      } else if (totalSyllables > 150 && totalSyllables <= 175) {
+        targetPerThreshold = 20
+      } else if (totalSyllables > 175 && totalSyllables <= 250) {
+        targetPerThreshold = 15;
+      } else if (totalSyllables > 250 && totalSyllables <= 500) {
+        targetPerThreshold = 10;
+      } else if (totalSyllables > 500) {
+        targetPerThreshold = 5;
+      }
+
       if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
