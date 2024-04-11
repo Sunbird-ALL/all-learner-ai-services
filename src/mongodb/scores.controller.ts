@@ -1738,6 +1738,7 @@ export class ScoresController {
 
       let vowelSignArr = [];
 
+      
       let telguVowelSignArr = [
         "అ",
         "ఆ",
