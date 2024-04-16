@@ -7,7 +7,6 @@ import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiPar
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
-import { request } from 'http';
 
 @ApiTags('scores')
 @Controller('scores')
