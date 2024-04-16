@@ -2775,9 +2775,13 @@ export class ScoresController {
   @Post('/getUsersTargets')
   async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const {userId,language}  = data;
-      let targetResult = await this.scoresService.getUsersTargets(userId, language);
-      return response.status(HttpStatus.OK).send(targetResult);
+      const {userIds,language}  = data;
+      let recordData = {};
+        for (const userId of userIds) {
+            const userRecord = await this.scoresService.getTargetsByUser(userId, language);
+            recordData[userId] = userRecord ;
+        }
+      return response.status(HttpStatus.OK).send(recordData);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
