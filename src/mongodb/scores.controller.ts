@@ -2768,4 +2768,24 @@ export class ScoresController {
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
   }
+
+  
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersTargets')
+  async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const {userIds,language}  = data;
+      let recordData = {};
+        for (const userId of userIds) {
+            const userRecord = await this.scoresService.getTargetsByUser(userId, language);
+            recordData[userId] = userRecord ;
+        }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
 }
