@@ -1251,4 +1251,158 @@ export class ScoresService {
 
     return sessionIds;
   }
+
+  async getUsersTargets(userIds: string[], language: string) {
+    let threshold = 0.70;
+    let RecordData = {};
+
+    for(const userId of userIds){
+     const userRecord = await this.scoreModel.aggregate([
+        {
+          $match: {
+            'user_id': userId
+          }
+        },
+        {
+          $unwind: '$sessions'
+        },
+        {
+          $match: {
+            'sessions.language': language
+          }
+        },
+        {
+          $facet: {
+            confidenceScores: [
+              {
+                $unwind: '$sessions.confidence_scores'
+              },
+              {
+                $project: {
+                  _id: 0,
+                  user_id: 1,
+                  date: '$sessions.createdAt',
+                  session_id: '$sessions.session_id',
+                  character: '$sessions.confidence_scores.token',
+                  score: '$sessions.confidence_scores.confidence_score',
+                }
+              },
+              {
+                $sort: {
+                  date: -1
+                }
+              }
+            ],
+            missingTokenScores: [
+              {
+                $unwind: '$sessions.missing_token_scores'
+              },
+              {
+                $project: {
+                  _id: 0,
+                  user_id: 1,
+                  session_id: '$sessions.session_id',
+                  date: '$sessions.createdAt',
+                  character: '$sessions.missing_token_scores.token',
+                  score: '$sessions.missing_token_scores.confidence_score'
+                }
+              },
+              {
+                $sort: {
+                  date: -1
+                }
+              }
+            ]
+          }
+        },
+        {
+          $project: {
+            combinedResults: {
+              $concatArrays: ['$confidenceScores', '$missingTokenScores']
+            }
+          }
+        },
+        {
+          $unwind: '$combinedResults'
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$combinedResults'
+          }
+        },
+        {
+          $project: {
+            user_id: "$user_id",
+            sessionId: '$session_id',
+            date: '$date',
+            token: '$character',
+            score: '$score'
+          }
+        },
+        {
+          $sort: {
+            date: -1
+          }
+        },
+        {
+          $group: {
+            _id: {
+              token: "$token"
+            },
+            scores: {
+              $push: '$score'
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            character: "$_id.token",
+            latestScores: {
+              $slice: ['$scores', -5]
+            }
+          }
+        },
+        {
+          $addFields: {
+            countBelowThreshold: {
+              $size: {
+                $filter: {
+                  input: '$latestScores',
+                  as: 'score',
+                  cond: {
+                    $lt: ['$$score', threshold]
+                  }
+                }
+              }
+            },
+            countAboveThreshold: {
+              $size: {
+                $filter: {
+                  input: '$latestScores',
+                  as: 'score',
+                  cond: {
+                    $gte: ['$$score', threshold]
+                  }
+                }
+              }
+            },
+            avgScore:{$avg:"$latestScores"}
+          }
+        },
+        {
+          $match: {
+            $expr: {
+              $gt: ['$countBelowThreshold', '$countAboveThreshold'],
+              
+            }
+          }
+        }
+      ]
+      );
+  
+      RecordData[userId] = userRecord;
+    }
+    return RecordData;
+  }
 }

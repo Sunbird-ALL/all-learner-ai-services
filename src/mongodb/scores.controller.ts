@@ -7,6 +7,7 @@ import { ApiBody, ApiExcludeEndpoint, ApiForbiddenResponse, ApiOperation, ApiPar
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
+import { request } from 'http';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -2767,5 +2768,21 @@ export class ScoresController {
   @Get('/GetSessionIds/:userId')
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
+  }
+
+  
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersTargets')
+  async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const {userId,language}  = data;
+      let targetResult = await this.scoresService.getUsersTargets(userId, language);
+      return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 }
