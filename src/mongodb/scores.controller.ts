@@ -63,6 +63,8 @@ export class ScoresController {
     try {
       let originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
+      let asrOutNonDenoised;
+      let nonDenoisedresponseText;
 
       let correctTokens = [];
       let missingTokens = [];
@@ -129,7 +131,8 @@ export class ScoresController {
 
           // Send Audio file to ASR to process and provide vector with char and score
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          CreateLearnerProfileDto['output'] = audioOutput.asrOut.output;
+          asrOutNonDenoised = audioOutput.asrOutNonDenoised?.output || "";
 
           if (CreateLearnerProfileDto.output[0].source === "") {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -144,6 +147,7 @@ export class ScoresController {
         let anomaly_scoreArr = [];
 
         responseText = CreateLearnerProfileDto.output[0].source;
+        nonDenoisedresponseText = asrOutNonDenoised?.output[0]?.source || "";
         let constructText = '';
         let originalTextTokensArr = originalText.split("");
         let responseTextTokensArr = responseText.split("");
@@ -479,6 +483,31 @@ export class ScoresController {
             }),
           )
         );
+
+        if (responseText !== nonDenoisedresponseText && nonDenoisedresponseText !== "") {
+          let improved = false;
+          let similarityScoreResText = similarity(CreateLearnerProfileDto.original_text, responseText);
+          let similarityScoreNonDenoisedResText = similarity(CreateLearnerProfileDto.original_text, nonDenoisedresponseText);
+
+          if (similarityScoreResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: CreateLearnerProfileDto.original_text,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: responseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
 
         let wer = textEvalMatrices.wer;
         let cercal = textEvalMatrices.cer * 2;
@@ -1529,6 +1558,9 @@ export class ScoresController {
       let anomaly_scoreArr = [];
       let missing_token_scoresArr = [];
 
+      let asrOutNonDenoised;
+      let nonDenoisedresponseText;
+
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1543,7 +1575,8 @@ export class ScoresController {
 
           // Send Audio file to ASR to process and provide vector with char and score
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          CreateLearnerProfileDto['output'] = audioOutput.asrOut.output;
+          asrOutNonDenoised = audioOutput.asrOutNonDenoised?.output || "";
 
           if (CreateLearnerProfileDto.output[0].source === "") {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1562,6 +1595,8 @@ export class ScoresController {
         });
 
         responseText = processText(CreateLearnerProfileDto.output[0].source);
+        nonDenoisedresponseText = asrOutNonDenoised?.output[0]?.source || "";
+        nonDenoisedresponseText = processText(nonDenoisedresponseText);
 
         const url = process.env.ALL_TEXT_EVAL_API;
 
@@ -1627,6 +1662,30 @@ export class ScoresController {
           }
         }
 
+        if (responseText !== nonDenoisedresponseText && nonDenoisedresponseText !== "") {
+          let improved = false;
+          let similarityScoreResText = similarity(CreateLearnerProfileDto.original_text, responseText);
+          let similarityScoreNonDenoisedResText = similarity(CreateLearnerProfileDto.original_text, nonDenoisedresponseText);
+
+          if (similarityScoreResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: CreateLearnerProfileDto.original_text,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: responseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
 
         let wer = textEvalMatrices.wer;
         let cercal = textEvalMatrices.cer * 2;
@@ -1727,6 +1786,47 @@ export class ScoresController {
         let processedText = processedSentences.join(' ').trim();
 
         return processedText;
+      }
+
+      function similarity(s1, s2) {
+        var longer = s1;
+        var shorter = s2;
+        if (s1.length < s2.length) {
+          longer = s2;
+          shorter = s1;
+        }
+        var longerLength = longer.length;
+        if (longerLength == 0) {
+          return 1.0;
+        }
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+      }
+
+      function editDistance(s1, s2) {
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+
+        var costs = new Array();
+        for (var i = 0; i <= s1.length; i++) {
+          var lastValue = i;
+          for (var j = 0; j <= s2.length; j++) {
+            if (i == 0)
+              costs[j] = j;
+            else {
+              if (j > 0) {
+                var newValue = costs[j - 1];
+                if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                  newValue = Math.min(Math.min(newValue, lastValue),
+                    costs[j]) + 1;
+                costs[j - 1] = lastValue;
+                lastValue = newValue;
+              }
+            }
+          }
+          if (i > 0)
+            costs[s2.length] = lastValue;
+        }
+        return costs[s2.length];
       }
 
       return response.status(HttpStatus.CREATED).send({

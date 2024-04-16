@@ -66,6 +66,8 @@ export class ScoresService {
 
   async audioFileToAsrOutput(data: any, language: String): Promise<any> {
     let asrOut: any;
+    let asrOutBeforeDenoised: any = "";
+    let audio: any = data;
 
     let serviceId = '';
     switch (language) {
@@ -85,50 +87,82 @@ export class ScoresService {
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
 
-    let optionsObj = {
-      "config": {
-        "serviceId": serviceId,
-        "language": {
-          "sourceLanguage": language
+    if (process.env.skipNonDenoiserAsrCall !== "true") {
+      await asrCall();
+    }
+
+    if (process.env.denoiserEnabled === "true") {
+
+      let denoiserConfig =
+      {
+        method: 'post',
+        url: process.env.ALL_TEXT_EVAL_API,
+        headers: {
+          'Content-Type': 'application/json'
         },
-        "audioFormat": "wav",
-        "transcriptionFormat": {
-          "value": "transcript"
-        },
-        "bestTokenCount": 2
-      },
-      "audio": [
-        {
-          "audioContent": data
+        data: {
+          "audio": data,
         }
-      ]
+      }
+
+      await axios.request(denoiserConfig)
+        .then((response) => {
+          audio = response.data;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+
+      asrOutBeforeDenoised = asrOut;
+      await asrCall();
     }
 
-    if (language === "en") {
-      delete optionsObj.config.bestTokenCount
+    async function asrCall() {
+      let optionsObj = {
+        "config": {
+          "serviceId": serviceId,
+          "language": {
+            "sourceLanguage": language
+          },
+          "audioFormat": "wav",
+          "transcriptionFormat": {
+            "value": "transcript"
+          },
+          "bestTokenCount": 2
+        },
+        "audio": [
+          {
+            "audioContent": audio
+          }
+        ]
+      }
+
+      if (language === "en") {
+        delete optionsObj.config.bestTokenCount
+      }
+
+      let options = JSON.stringify(optionsObj);
+
+      let config = {
+        method: 'post',
+        url: process.env.AI4BHARAT_URL,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': process.env.AI4BHARAT_API_KEY
+        },
+        data: options
+      };
+
+      await axios.request(config)
+        .then((response) => {
+          asrOut = response.data;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
     }
 
-    let options = JSON.stringify(optionsObj);
-
-    let config = {
-      method: 'post',
-      url: process.env.AI4BHARAT_URL,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': process.env.AI4BHARAT_API_KEY
-      },
-      data: options
-    };
-
-    await axios.request(config)
-      .then((response) => {
-        asrOut = response.data;
-      })
-      .catch((error) => {
-        console.log(error);
-      });
-
-    return asrOut;
+    return { asrOut: asrOut, asrOutBeforeDenoised: asrOutBeforeDenoised };
   }
 
   async findAll(): Promise<any> {
@@ -1446,5 +1480,15 @@ export class ScoresService {
     }).filter((sessionIdEle) => sessionIdEle != undefined)
 
     return sessionIds;
+  }
+
+  async addDenoisedOutputLog(DenoisedOutputLog: any): Promise<any> {
+    try {
+      const createdScore = new this.scoreModel(DenoisedOutputLog);
+      const result = await createdScore.save();
+      return result;
+    } catch (err) {
+      return err;
+    }
   }
 }
