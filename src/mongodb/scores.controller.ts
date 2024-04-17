@@ -2773,14 +2773,9 @@ export class ScoresController {
       for (const userId of userIds) {
         const userRecord = await this.scoresService.getTargetsByUser(userId, language);
 
-        const filteredData = userRecord.map(data => ({
-          character: data.character,
-          score: data.avgScore,
-        }));
-
         recordData.push({
           user_id: userId,
-          targetData: filteredData,
+          targetData: userRecord,
           targetCount: userRecord.length
         })
       }

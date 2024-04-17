@@ -306,7 +306,7 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.session_id': subSessionId,
+          'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         }
       },
@@ -583,6 +583,12 @@ export class ScoresService {
             $gt: ['$countBelowThreshold', '$countAboveThreshold'],
 
           }
+        }
+      },
+      {
+        $project: {
+            character:1,
+            score:"$avgScore"
         }
       }
     ]
