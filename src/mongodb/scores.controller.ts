@@ -1704,9 +1704,10 @@ export class ScoresController {
     },
   })
   @ApiOperation({ summary: 'Get Targets character by session id' })
-  async GetTargetsbySession(@Param('sessionId') id: string, @Res() response: FastifyReply) {
+  async GetTargetsbySession(@Param('sessionId') id: string, @Query('language') language: string, @Res() response: FastifyReply) {
     try {
-      let targetResult = await this.scoresService.getTargetsBySession(id)
+      console.log("sessionId--", id);
+      let targetResult = await this.scoresService.getTargetsBySession(id, language)
       return response.status(HttpStatus.OK).send(targetResult);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2769,17 +2770,27 @@ export class ScoresController {
     return this.scoresService.getAllSessions(id, limit);
   }
 
-  
+
   @ApiExcludeEndpoint(true)
   @Post('/getUsersTargets')
   async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const {userIds,language}  = data;
-      let recordData = {};
-        for (const userId of userIds) {
-            const userRecord = await this.scoresService.getTargetsByUser(userId, language);
-            recordData[userId] = userRecord ;
-        }
+      const { userIds, language } = data;
+      let recordData = []
+      for (const userId of userIds) {
+        const userRecord = await this.scoresService.getTargetsByUser(userId, language);
+
+        const filteredData = userRecord.map(data => ({
+          character: data.character,
+          score: data.avgScore,
+        }));
+        
+        recordData.push({
+          user_id: userId,
+          targetData: filteredData,
+          targetCount: userRecord.length
+        })
+      }
       return response.status(HttpStatus.OK).send(recordData);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
