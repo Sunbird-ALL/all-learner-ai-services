@@ -759,8 +759,6 @@ export class ScoresController {
       //unique token list for ai4bharat response
       let uniqueCharArr = Array.from(uniqueChar);
 
-      //console.log(uniqueCharArr);
-
       isPrevVowel = false;
 
       // Get best score for Each Char
@@ -804,8 +802,7 @@ export class ScoresController {
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
 
-      //console.log(filteredTokenArr);
-
+  
       // Create confidence score array and anomoly array
       for (let value of filteredTokenArr) {
         let score: any = value.charvalue
@@ -1225,7 +1222,6 @@ export class ScoresController {
         //unique token list for ai4bharat response
         let uniqueCharArr = Array.from(uniqueChar);
 
-        //console.log(uniqueCharArr);
 
         isPrevVowel = false;
 
@@ -1706,7 +1702,6 @@ export class ScoresController {
   @ApiOperation({ summary: 'Get Targets character by session id' })
   async GetTargetsbySession(@Param('sessionId') id: string, @Query('language') language: string, @Res() response: FastifyReply) {
     try {
-      console.log("sessionId--", id);
       let targetResult = await this.scoresService.getTargetsBySession(id, language)
       return response.status(HttpStatus.OK).send(targetResult);
     } catch (err) {
@@ -2752,8 +2747,6 @@ export class ScoresController {
       }
     });
     let notIncludedTotal = notIncluded.length;
-
-    console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({ status: 'success', matched: matched, matchtedTotal: matchtedTotal, notIncluded: notIncluded, notIncludedTotal: notIncludedTotal })
   }
 
@@ -2784,7 +2777,7 @@ export class ScoresController {
           character: data.character,
           score: data.avgScore,
         }));
-        
+
         recordData.push({
           user_id: userId,
           targetData: filteredData,
