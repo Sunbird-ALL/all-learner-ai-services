@@ -363,8 +363,6 @@ export class ScoresController {
                 isPrevVowel = false;
               }
 
-
-
               if (char === charEle) {
                 if (scoreVal > score) {
                   score = scoreVal;
@@ -552,25 +550,26 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let targetsByContent = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
 
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+      let totalContentTargets = targetsByContent.length;
 
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        totalTargets: totalTargets,
-        totalFamiliarity: totalFamiliarity,
-        totalSyllables: totalSyllables,
-        targetsPercentage: targetsPercentage,
-      })
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
+      });
 
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -1520,7 +1519,7 @@ export class ScoresController {
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/g, ' ').trim();
+      let originalText = processText(CreateLearnerProfileDto.original_text);
 
       let createScoreData;
       let language = "en";
@@ -1562,7 +1561,7 @@ export class ScoresController {
           tokenHexcodeDataArr = tokenHexcodedata;
         });
 
-        responseText = CreateLearnerProfileDto.output[0].source.replace(/[^\w\s]/gi, '');
+        responseText = processText(CreateLearnerProfileDto.output[0].source);
 
         const url = process.env.ALL_TEXT_EVAL_API;
 
@@ -1700,26 +1699,47 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let targetsByContent = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
 
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+      let totalContentTargets = targetsByContent.length;
+
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
+      function processText(text) {
+        // Convert the text to lowercase
+        text = text.toLowerCase();
+
+        // Split the text into sentences based on '. and ,'
+        let sentences = text.split(/[.,]/);
+
+        // Process each sentence
+        let processedSentences = sentences.map(sentence => {
+          // Apply special character logic
+          let cleanedSentence = sentence.replace(/[^\w\s]/g, '');
+
+          return cleanedSentence.trim(); // Trim any extra spaces
+        });
+
+        // Join the processed sentences back together with spaces and without the dot and comma
+        let processedText = processedSentences.join(' ').trim();
+
+        return processedText;
+      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
         createScoreData: createScoreData,
-        totalTargets: totalTargets,
-        totalFamiliarity: totalFamiliarity,
-        totalSyllables: totalSyllables,
-        targetsPercentage: targetsPercentage,
-
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
       });
-
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2198,11 +2218,17 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
@@ -2347,9 +2373,16 @@ export class ScoresController {
 
       // Total syllablul count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
@@ -2493,9 +2526,16 @@ export class ScoresController {
 
       // Total syllablul count added
       let totalSyllableCount = 0;
-      contentArr.forEach((contentObject) => {
-        totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
-      });
+
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
 
       return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
@@ -2554,15 +2594,14 @@ export class ScoresController {
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
+      let targetPerThreshold = 30;
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
 
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+      let totalSyllables = getSetResult.totalSyllableCount
+      let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
@@ -2570,7 +2609,21 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (targetsPercentage <= 30) {
+      if (totalSyllables <= 100) {
+        targetPerThreshold = 30;
+      } else if (totalSyllables > 100 && totalSyllables <= 150) {
+        targetPerThreshold = 25
+      } else if (totalSyllables > 150 && totalSyllables <= 175) {
+        targetPerThreshold = 20
+      } else if (totalSyllables > 175 && totalSyllables <= 250) {
+        targetPerThreshold = 15;
+      } else if (totalSyllables > 250 && totalSyllables <= 500) {
+        targetPerThreshold = 10;
+      } else if (totalSyllables > 500) {
+        targetPerThreshold = 5;
+      }
+
+      if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
@@ -2743,8 +2796,6 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          familiarity: familiarity,
-          familiarityCount: totalFamiliarity,
           targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
