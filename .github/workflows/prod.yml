@@ -57,4 +57,4 @@ jobs:
               docker rmi ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
 
-              docker run -d --name ${{ secrets.CONTAINER_NAME }} --network ${{ secrets.NETWORK }} -p ${{ secrets.CONTAINER_PORT }} -t ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }}
+              docker run -d --name ${{ secrets.CONTAINER_NAME }} --network ${{ secrets.NETWORK }} -p ${{ secrets.CONTAINER_PORT }} -t ${{ secrets.CONTAINER_REGISTRY_PROD }}:${{ secrets.IMAGE_TAG }} restart:always
