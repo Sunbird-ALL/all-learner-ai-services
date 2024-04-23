@@ -153,6 +153,34 @@ export class ScoresService {
     return UserRecordData;
   }
 
+  async getRetryStatus(userId: string, contentId: string) {
+    try {
+      const recordData = await this.scoreModel.find({ user_id: userId }).exec();
+      const updatedRecords = [];
+      for (const record of recordData) {
+        if (record.sessions.length > 0) {
+          const lastSession = record.sessions[record.sessions.length - 1];
+          if (lastSession.contentId === contentId) {
+            lastSession.isRetry = true;
+            const updatedRecord = await this.scoreModel.updateOne(
+              {
+                'sessions._id': lastSession._id,
+              },
+              {
+                $set: { 'sessions.$': lastSession },
+              },
+            );
+            updatedRecords.push(updatedRecord);
+          }
+        }
+      }
+      return 1;
+    } catch (error) {
+      console.error('Error fetching retry status:', error);
+      throw error;
+    }
+  }
+
   async getTargetsBySession(sessionId: string, language: string = null) {
     const threshold = 0.90
     const RecordData = await this.scoreModel.aggregate([
@@ -397,11 +425,11 @@ export class ScoresService {
   async getTargetsBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.70;
     let RecordData = [];
+    let isRetry = false;
 
     // if (contentType != null && contentType.toLowerCase() === 'word') {
     //   threshold = 0.75
     // }
-
 
     RecordData = await this.scoreModel.aggregate([
       {
@@ -410,7 +438,8 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
+          'sessions.isRetry': isRetry
         }
       },
       {
@@ -730,10 +759,7 @@ export class ScoresService {
 
   async getFamiliarityBysubSession(subSessionId: string, contentType: string, language: string) {
     let threshold = 0.70;
-
-    // if (contentType != null && contentType.toLowerCase() === 'word') {
-    //   threshold = 0.75
-    // }
+    let isRetry = false;
 
     let RecordData = [];
 
@@ -744,7 +770,8 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
+          'sessions.isRetry': isRetry
         }
       },
       {

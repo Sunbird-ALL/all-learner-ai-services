@@ -75,11 +75,13 @@ export class Score {
                 },
                 reptitionsCount: { type: Number },
                 asrOutput: { type: String, required: true },
+                isRetry: { type: Boolean, required: false }
             },
         ],
         required: true,
     })
     sessions: {
+        _id: any;
         session_id: string; // working logged in session id
         original_text: string; // content text shown to speak
         sub_session_id: string; // used to club set recorded data within session
@@ -137,6 +139,7 @@ export class Score {
         reptitionsCount: number;
         asrOutput: string;
         createdAt: Date;
+        isRetry: boolean;
     }[];
 
     @Prop({
