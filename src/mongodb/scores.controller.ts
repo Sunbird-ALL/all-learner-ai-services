@@ -2814,7 +2814,7 @@ export class ScoresController {
   @Post('/getUsersMilestones')
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const { userIds , language} = data;
+      const {userIds , language} = data;
       let recordData = [];
       for(const userId of userIds){
         let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
@@ -2822,7 +2822,7 @@ export class ScoresController {
       
         recordData.push({
           user_id: userId,
-          milestone_level: milestone_level,
+          data:{milestone_level: milestone_level},
         });
       }
       return response.status(HttpStatus.OK).send(recordData);
