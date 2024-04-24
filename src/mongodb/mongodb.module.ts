@@ -10,23 +10,21 @@ import { ScoresService } from './scores.service';
 import { HttpModule } from '@nestjs/axios';
 
 @Module({
-    imports: [
-        HttpModule.register({
-            timeout: 5000
-        }),
-        ConfigModule.forRoot({
-            isGlobal: true,
-        }),
-        MongooseModule.forRoot(process.env.MONGO_URL),
-        MongooseModule.forFeature([
-            { name: 'Score', schema: ScoreSchema },
-            { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
-            { name: 'assessmentInput', schema: assessmentInputSchema }
-        ])
-    ],
-    controllers: [ScoresController],
-    providers: [
-        ScoresService
-    ]
+  imports: [
+    HttpModule.register({
+      timeout: 5000,
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(process.env.MONGO_URL),
+    MongooseModule.forFeature([
+      { name: 'Score', schema: ScoreSchema },
+      { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
+      { name: 'assessmentInput', schema: assessmentInputSchema },
+    ]),
+  ],
+  controllers: [ScoresController],
+  providers: [ScoresService],
 })
-export class MongodbModule { }
+export class MongodbModule {}

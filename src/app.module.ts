@@ -24,19 +24,15 @@ export class AppModule {
       module: AppModule,
       imports: [
         HttpModule.register({
-          timeout: 5000
+          timeout: 5000,
         }),
         ConfigModule.forRoot({
           isGlobal: true,
         }),
         databaseModule, // Dynamically load the selected database module
       ],
-      controllers: [
-        AppController,
-      ],
-      providers: [
-        AppService
-      ]
+      controllers: [AppController],
+      providers: [AppService],
     };
   }
 }
