@@ -590,7 +590,17 @@ export class ScoresService {
             character:1,
             score:"$avgScore"
         }
-      }
+      },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]
     );
 
@@ -807,7 +817,17 @@ export class ScoresService {
           character: '$sessions.confidence_scores.token',
           score: '$sessions.confidence_scores.confidence_score'
         }
-      }
+      },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]);
     let charScoreData = [];
 
