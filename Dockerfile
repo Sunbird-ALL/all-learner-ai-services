@@ -13,16 +13,6 @@ RUN npm install
 # Copy the rest of the application code to the container
 COPY . .
 
-# Set environment variables
-ENV DATABASE=mongodb
-ENV PORT=3001
-ENV MONGO_URL=
-ENV MYSQL_HOST=
-ENV MYSQL_PORT=
-ENV MYSQL_USERNAME=
-ENV MYSQL_PASSWORD=
-ENV MYSQL_DATABASE=
-
 # Expose the port on which the application will run
 EXPOSE $PORT
 
