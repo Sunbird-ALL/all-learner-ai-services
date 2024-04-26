@@ -18,6 +18,15 @@ export class CreateLearnerProfileDto {
     session_id: string;
 
     @ApiProperty()
+    sub_session_id: string;
+
+    @ApiProperty()
+    contentType: string;
+
+    @ApiProperty()
+    contentId: string;
+
+    @ApiProperty()
     language: string;
 
     @ApiProperty()
