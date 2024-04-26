@@ -56,6 +56,6 @@ jobs:
               docker rm ${{ secrets.CONTAINER_NAME }}
               docker rmi ${{ secrets.CONTAINER_REGISTRY }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY }}:${{ secrets.IMAGE_TAG }}
-              cd all-profile-id-generator
+              cd /home/alldevuser/all-services/all-learner-ai-services
               docker-compose up -d --force-recreate --no-deps
                
