@@ -363,8 +363,6 @@ export class ScoresController {
                 isPrevVowel = false;
               }
 
-
-
               if (char === charEle) {
                 if (scoreVal > score) {
                   score = scoreVal;
@@ -544,7 +542,7 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        let data = await this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
@@ -552,7 +550,27 @@ export class ScoresController {
         }
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
+      // Cal the subsessionWise and content_id wise target.
+      let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let targetsByContent = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
+
+      let totalTargets = targets.length;
+      let totalContentTargets = targetsByContent.length;
+
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
+      return response.status(HttpStatus.CREATED).send({
+        status: 'success',
+        msg: "Successfully stored data to learner profile",
+        responseText: responseText,
+        createScoreData: createScoreData,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
+      });
+
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -1501,7 +1519,8 @@ export class ScoresController {
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
-      let originalText = CreateLearnerProfileDto.original_text.replace(/[^\w\s]/gi, '');
+      let originalText = processText(CreateLearnerProfileDto.original_text);
+
       let createScoreData;
       let language = "en";
       let reptitionCount = 0;
@@ -1542,7 +1561,7 @@ export class ScoresController {
           tokenHexcodeDataArr = tokenHexcodedata;
         });
 
-        responseText = CreateLearnerProfileDto.output[0].source.replace(/[^\w\s]/gi, '');
+        responseText = processText(CreateLearnerProfileDto.output[0].source);
 
         const url = process.env.ALL_TEXT_EVAL_API;
 
@@ -1671,7 +1690,8 @@ export class ScoresController {
         };
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        let data = await this.scoresService.create(createScoreData);
+
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
@@ -1679,7 +1699,47 @@ export class ScoresController {
         }
       }
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
+      // Cal the subsessionWise and content_id wise target.
+      let targets = await this.scoresService.getTargetsBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language);
+      let targetsByContent = await this.scoresService.getTargetsByContentId(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.contentType, CreateLearnerProfileDto.language, CreateLearnerProfileDto.contentId);
+
+      let totalTargets = targets.length;
+      let totalContentTargets = targetsByContent.length;
+
+      let fluency = await this.scoresService.getFluencyBysubSession(CreateLearnerProfileDto.sub_session_id, CreateLearnerProfileDto.language);
+
+      function processText(text) {
+        // Convert the text to lowercase
+        text = text.toLowerCase();
+
+        // Split the text into sentences based on '. and ,'
+        let sentences = text.split(/[.,]/);
+
+        // Process each sentence
+        let processedSentences = sentences.map(sentence => {
+          // Apply special character logic
+          let cleanedSentence = sentence.replace(/[^\w\s]/g, '');
+
+          return cleanedSentence.trim(); // Trim any extra spaces
+        });
+
+        // Join the processed sentences back together with spaces and without the dot and comma
+        let processedText = processedSentences.join(' ').trim();
+
+        return processedText;
+      }
+
+      return response.status(HttpStatus.CREATED).send({
+        status: 'success',
+        msg: "Successfully stored data to learner profile",
+        responseText: responseText,
+        createScoreData: createScoreData,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2))
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -1736,6 +1796,62 @@ export class ScoresController {
     try {
       let targetResult = await this.scoresService.getTargetsByUser(id, language);
       return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('/GetTargets/subsession/:subsessionId/:contentType')
+  @ApiOperation({ summary: 'Get Targets character by user id' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get Targets character and score for user id',
+    schema: {
+      properties: {
+        character: { type: 'string' },
+        score: { type: 'number', format: 'float' },
+      }
+    },
+  })
+  async GetTargetsbysubsession(@Param('subsessionId') id: string, @Param('contentType') contentType: string, @Query('language') language: string, @Res() response: FastifyReply) {
+    try {
+      let targetResult = await this.scoresService.getTargetsBysubSession(id, contentType, language);
+      return response.status(HttpStatus.OK).send(targetResult);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiParam({
+    name: "userId",
+    example: "2020076506"
+  })
+  @Get('/GetFamiliarity/subsession/:subsessionId/:contentType')
+  @ApiOperation({ summary: 'Get familiarity character by sub session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Success response with Get familiarity character and score for sub session',
+    schema: {
+      properties: {
+        character: { type: 'string' },
+        score: { type: 'number', format: 'float' },
+      }
+    },
+  })
+  async GetFamiliaritybysubsession(@Param('subsessionId') id: string, @Param('contentType') contentType: string, @Query('language') language: string, @Res() response: FastifyReply) {
+    try {
+      let familiarityResult = await this.scoresService.getFamiliarityBysubSession(id, contentType, language);
+      return response.status(HttpStatus.OK).send(familiarityResult);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2102,7 +2218,19 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      // Total Syllable count added
+      let totalSyllableCount = 0;
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2243,7 +2371,20 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      // Total syllablul count added
+      let totalSyllableCount = 0;
+
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2383,8 +2524,20 @@ export class ScoresController {
         return result?.graphemes || '';
       }
 
+      // Total syllablul count added
+      let totalSyllableCount = 0;
 
-      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets });
+      if (language === "en") {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].phonemes.length;
+        });
+      } else {
+        contentArr.forEach((contentObject) => {
+          totalSyllableCount += contentObject.contentSourceData[0].syllableCount;
+        });
+      }
+
+      return response.status(HttpStatus.OK).send({ content: contentArr, contentForToken: contentForTokenArr, getTargetChar: getGetTargetCharArr, totalTargets: totalTargets, totalSyllableCount: totalSyllableCount });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
@@ -2441,15 +2594,14 @@ export class ScoresController {
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
+      let targetPerThreshold = 30;
       let milestoneEntry = true;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
 
       let totalTargets = targets.length;
-      let totalFamiliarity = familiarity.length;
-      let totalSyllables = totalTargets + totalFamiliarity;
-      let targetsPercentage = Math.floor((totalTargets / totalSyllables) * 100);
+      let totalSyllables = getSetResult.totalSyllableCount
+      let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
@@ -2457,7 +2609,21 @@ export class ScoresController {
       let recordData: any = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
       let previous_level = recordData[0]?.milestone_level || undefined;
 
-      if (targetsPercentage <= 30) {
+      if (totalSyllables <= 100) {
+        targetPerThreshold = 30;
+      } else if (totalSyllables > 100 && totalSyllables <= 150) {
+        targetPerThreshold = 25
+      } else if (totalSyllables > 150 && totalSyllables <= 175) {
+        targetPerThreshold = 20
+      } else if (totalSyllables > 175 && totalSyllables <= 250) {
+        targetPerThreshold = 15;
+      } else if (totalSyllables > 250 && totalSyllables <= 500) {
+        targetPerThreshold = 10;
+      } else if (totalSyllables > 500) {
+        targetPerThreshold = 5;
+      }
+
+      if (targetsPercentage <= targetPerThreshold) {
         if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
@@ -2483,151 +2649,145 @@ export class ScoresController {
 
       let milestone_level = previous_level;
 
-      if (getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" || getSetResult.collectionId === "e9c7d535-3e98-4de1-b638-fae9413d7c09" || getSetResult.collectionId === "575fbb16-5b6c-43d8-96ca-f2288251b45e" ||
-        getSetResult.collectionId === "7c736010-6c8f-42b7-b61a-e6f801b3e163" && getSetResult.language === "ta") {
-        previous_level = 'm0';
-        let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-          user_id: getSetResult.user_id,
-          session_id: getSetResult.session_id,
-          sub_session_id: getSetResult.sub_session_id,
-          milestone_level: previous_level,
-          sub_milestone_level: "",
-        });
-      } else if (getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" || getSetResult.collectionId === "976a7631-3887-4d18-9576-7ca8205b82e8" ||
-        getSetResult.collectionId === "9374ae97-80e4-419b-8e96-784734317e82" || getSetResult.collectionId === "e6f3537d-7a34-4b08-9824-0ddbc4c49be3" && getSetResult.language === "kn") {
-        previous_level = 'm0';
-        let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-          user_id: getSetResult.user_id,
-          session_id: getSetResult.session_id,
-          sub_session_id: getSetResult.sub_session_id,
-          milestone_level: previous_level,
-          sub_milestone_level: "",
-        });
-      } else if (getSetResult.collectionId === "36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1" || getSetResult.collectionId === "fba7282d-aba3-4e95-8916-40b79f9e3f50" ||
-        getSetResult.collectionId === "3c62cb34-9565-4b81-8e96-da86d90b6072" || getSetResult.collectionId === "c637ac92-2ecf-4015-82e9-c4002479ae32" && getSetResult.language === "en") {
-        previous_level = 'm0';
-        let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-          user_id: getSetResult.user_id,
-          session_id: getSetResult.session_id,
-          sub_session_id: getSetResult.sub_session_id,
-          milestone_level: previous_level,
-          sub_milestone_level: "",
-        });
+      // For Showcase, We are not sending collectionId based on this are calculating milestone
+      if (!getSetResult.hasOwnProperty("collectionId") || getSetResult.collectionId === "" || getSetResult?.collectionId === undefined) {
+        let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level[1])
+        if (sessionResult === "pass") {
+          if (previous_level_id === 9) {
+            milestone_level = "m9"
+          } else {
+            previous_level_id++;
+            milestone_level = "m" + previous_level_id;
+          }
+        }
       } else {
-        if (getSetResult.language === "ta" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
-          if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff" || getSetResult.collectionId === "61bc9579-0f9b-47ae-b446-7cdd525ce413" ||
-            getSetResult.collectionId === "76ef507c-5d56-457c-aa3a-647cf5dba545" ||
-            getSetResult.collectionId === "55767bfa-0e12-4d8f-999b-e84daf6c7587") {
-            if (sessionResult === "pass") {
-              milestone_level = "m2";
-            }
-            else {
-              milestone_level = "m1";
-            }
-          } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da" || getSetResult.collectionId === "85d58650-0771-4b28-b185-d074b5a5982d" ||
-            getSetResult.collectionId === "461d9b9e-0db6-48ce-9088-d377d0cd33a6" ||
-            getSetResult.collectionId === "2b196c2a-5f8e-4507-ac60-98d9fe6ae12b") {
-            if (sessionResult === "fail") {
-              milestone_level = "m3";
-            }
-            else {
-              milestoneEntry = false;
-            }
-          } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e" || getSetResult.collectionId === "895518d8-64ec-406d-a3d9-44c4ba8d2e57" ||
-            getSetResult.collectionId === "b83971a5-22a8-46ea-90ab-485182c7cd9d" ||
-            getSetResult.collectionId === "68dfd9cb-a33d-4d15-a3ea-54755f8311c8") {
-            milestone_level = "m4";
-          } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8" || getSetResult.collectionId === "67697c4f-fdd2-446b-b765-f610bc2c355c" ||
-            getSetResult.collectionId === "f9ea2715-0d1b-465e-83f9-54c77341f388" ||
-            getSetResult.collectionId === "ed47eb63-87c8-41f4-821d-1400fef37b78") {
-            milestone_level = "m1";
+        if (getSetResult.collectionId === "5221f84c-8abb-4601-a9d0-f8d8dd496566" || getSetResult.collectionId === "e9c7d535-3e98-4de1-b638-fae9413d7c09" || getSetResult.collectionId === "575fbb16-5b6c-43d8-96ca-f2288251b45e" ||
+          getSetResult.collectionId === "7c736010-6c8f-42b7-b61a-e6f801b3e163" && getSetResult.language === "ta") {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
           }
-        } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
-          if (getSetResult.collectionId === "b755df98-198b-440a-90e0-391579ef4bfb" || getSetResult.collectionId === "4a8bddeb-cddd-4b64-9845-662a0d287c34" ||
-            getSetResult.collectionId === "f9b877d2-4994-4eab-998c-aacaf0076b5a" ||
-            getSetResult.collectionId === "6a89f990-8727-49da-b128-b7ea1839d025") {
-            if (sessionResult === "pass") {
-              milestone_level = "m2";
-            }
-            else {
-              milestone_level = "m1";
-            }
-          } else if (getSetResult.collectionId === "29bb9cff-9510-4693-bec5-9436a686b836" || getSetResult.collectionId === "5828539f-4b1f-4502-b648-b2843d61f35d" ||
-            getSetResult.collectionId === "37a406a5-d82e-447d-9762-17c76f5005ef" ||
-            getSetResult.collectionId === "69b5512e-7b9f-43a6-9e6c-b25fb83b8661") {
-            if (sessionResult === "fail") {
-              milestone_level = "m3";
-            }
-            else {
-              milestoneEntry = false;
-            }
-          } else if (getSetResult.collectionId === "a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c" || getSetResult.collectionId === "390c8719-fc52-42f3-b49d-41547a0639d7" ||
-            getSetResult.collectionId === "aee5f3f4-213c-4596-8074-0addab60122a" ||
-            getSetResult.collectionId === "e28d2463-adca-46e6-8159-04c99d6158d3") {
-            milestone_level = "m4";
-          } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993" || getSetResult.collectionId === "086482ed-9748-4c74-93b1-fe24dd6c98c7" ||
-            getSetResult.collectionId === "272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d" ||
-            getSetResult.collectionId === "61b65b9b-94b8-4212-94e5-33ce8e80435a") {
-            milestone_level = "m1";
+        } else if (getSetResult.collectionId === "1cc3b4d4-79ad-4412-9325-b7fb6ca875bf" || getSetResult.collectionId === "976a7631-3887-4d18-9576-7ca8205b82e8" ||
+          getSetResult.collectionId === "9374ae97-80e4-419b-8e96-784734317e82" || getSetResult.collectionId === "e6f3537d-7a34-4b08-9824-0ddbc4c49be3" && getSetResult.language === "kn") {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
           }
-        } else if (getSetResult.language === "en" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
-          if (getSetResult.collectionId === "91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995" || getSetResult.collectionId === "d6d95b4a-9d74-48ff-8f75-a606d5672764" ||
-            getSetResult.collectionId === "f99ff325-05c0-4cff-b825-b2cbb9638300" ||
-            getSetResult.collectionId === "775c974a-4bda-4cfc-bc47-2aff56e39c46") {
-            if (sessionResult === "pass") {
-              milestone_level = "m2";
-            }
-            else {
-              milestone_level = "m1";
-            }
-          } else if (getSetResult.collectionId === "f9eb8c70-524f-46a1-a737-1eec64a42e6f" || getSetResult.collectionId === "f24d6660-c759-44f9-a4ae-5b46b62098b2" ||
-            getSetResult.collectionId === "f6b5638d-4398-4cf4-833c-42a4695a6425" ||
-            getSetResult.collectionId === "87c2866e-6249-4fe1-9b1b-8b22ddd05ea7") {
-            if (sessionResult === "fail") {
-              milestone_level = "m3";
-            }
-            else {
-              milestoneEntry = false;
-            }
-          } else if (getSetResult.collectionId === "e62061ea-4195-4460-b8e3-c0433bf8624e" || getSetResult.collectionId === "e276d47b-b262-4af1-b424-ead68b2b83bf" ||
-            getSetResult.collectionId === "b9ab3b2f-5c21-4c61-b9c8-90898b5278dd" ||
-            getSetResult.collectionId === "809039e5-119d-42ae-925f-b2546b1e3d7b") {
-            milestone_level = "m4";
-          } else if (getSetResult.collectionId === "5b69052e-f609-4004-adce-cf0fcfdac98b" || getSetResult.collectionId === "30c5800e-4a02-4259-8328-abf57e4255ca" ||
-            getSetResult.collectionId === "b2eb8d4a-5d2b-441a-8269-0151e089c253" ||
-            getSetResult.collectionId === "b12b79ec-f7cb-44b4-99c9-5ea747d4f99a") {
-            milestone_level = "m1";
+        } else if (getSetResult.collectionId === "36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1" || getSetResult.collectionId === "fba7282d-aba3-4e95-8916-40b79f9e3f50" ||
+          getSetResult.collectionId === "3c62cb34-9565-4b81-8e96-da86d90b6072" || getSetResult.collectionId === "c637ac92-2ecf-4015-82e9-c4002479ae32" && getSetResult.language === "en") {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
           }
         }
-        else if (getSetResult.collectionId === "" || getSetResult.collectionId === undefined) {
-          let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level[1])
-          if (sessionResult === "pass") {
-            if (previous_level_id === 9) {
-              milestone_level = "m9"
-            } else {
-              previous_level_id++;
-              milestone_level = "m" + previous_level_id;
+        else {
+          if (getSetResult.language === "ta" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
+            if (getSetResult.collectionId === "bd20fee5-31c3-48d9-ab6f-842eeebf17ff" || getSetResult.collectionId === "61bc9579-0f9b-47ae-b446-7cdd525ce413" ||
+              getSetResult.collectionId === "76ef507c-5d56-457c-aa3a-647cf5dba545" ||
+              getSetResult.collectionId === "55767bfa-0e12-4d8f-999b-e84daf6c7587") {
+              if (sessionResult === "pass") {
+                milestone_level = "m2";
+              }
+              else {
+                milestone_level = "m1";
+              }
+            } else if (getSetResult.collectionId === "986ff23e-8b56-4366-8510-8a7e7e0f36da" || getSetResult.collectionId === "85d58650-0771-4b28-b185-d074b5a5982d" ||
+              getSetResult.collectionId === "461d9b9e-0db6-48ce-9088-d377d0cd33a6" ||
+              getSetResult.collectionId === "2b196c2a-5f8e-4507-ac60-98d9fe6ae12b") {
+              if (sessionResult === "fail") {
+                milestone_level = "m3";
+              }
+              else {
+                milestoneEntry = false;
+              }
+            } else if (getSetResult.collectionId === "67b820f5-096d-42c2-acce-b781d59efe7e" || getSetResult.collectionId === "895518d8-64ec-406d-a3d9-44c4ba8d2e57" ||
+              getSetResult.collectionId === "b83971a5-22a8-46ea-90ab-485182c7cd9d" ||
+              getSetResult.collectionId === "68dfd9cb-a33d-4d15-a3ea-54755f8311c8") {
+              milestone_level = "m4";
+            } else if (getSetResult.collectionId === "94312c93-5bb8-4144-8822-9a61ad1cd5a8" || getSetResult.collectionId === "67697c4f-fdd2-446b-b765-f610bc2c355c" ||
+              getSetResult.collectionId === "f9ea2715-0d1b-465e-83f9-54c77341f388" ||
+              getSetResult.collectionId === "ed47eb63-87c8-41f4-821d-1400fef37b78") {
+              milestone_level = "m1";
+            }
+          } else if (getSetResult.language === "kn" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
+            if (getSetResult.collectionId === "b755df98-198b-440a-90e0-391579ef4bfb" || getSetResult.collectionId === "4a8bddeb-cddd-4b64-9845-662a0d287c34" ||
+              getSetResult.collectionId === "f9b877d2-4994-4eab-998c-aacaf0076b5a" ||
+              getSetResult.collectionId === "6a89f990-8727-49da-b128-b7ea1839d025") {
+              if (sessionResult === "pass") {
+                milestone_level = "m2";
+              }
+              else {
+                milestone_level = "m1";
+              }
+            } else if (getSetResult.collectionId === "29bb9cff-9510-4693-bec5-9436a686b836" || getSetResult.collectionId === "5828539f-4b1f-4502-b648-b2843d61f35d" ||
+              getSetResult.collectionId === "37a406a5-d82e-447d-9762-17c76f5005ef" ||
+              getSetResult.collectionId === "69b5512e-7b9f-43a6-9e6c-b25fb83b8661") {
+              if (sessionResult === "fail") {
+                milestone_level = "m3";
+              }
+              else {
+                milestoneEntry = false;
+              }
+            } else if (getSetResult.collectionId === "a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c" || getSetResult.collectionId === "390c8719-fc52-42f3-b49d-41547a0639d7" ||
+              getSetResult.collectionId === "aee5f3f4-213c-4596-8074-0addab60122a" ||
+              getSetResult.collectionId === "e28d2463-adca-46e6-8159-04c99d6158d3") {
+              milestone_level = "m4";
+            } else if (getSetResult.collectionId === "ac930427-4a73-41a8-94d5-be74defd2993" || getSetResult.collectionId === "086482ed-9748-4c74-93b1-fe24dd6c98c7" ||
+              getSetResult.collectionId === "272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d" ||
+              getSetResult.collectionId === "61b65b9b-94b8-4212-94e5-33ce8e80435a") {
+              milestone_level = "m1";
+            }
+          } else if (getSetResult.language === "en" && getSetResult.collectionId !== "" && getSetResult.collectionId !== undefined) {
+            if (getSetResult.collectionId === "91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995" || getSetResult.collectionId === "d6d95b4a-9d74-48ff-8f75-a606d5672764" ||
+              getSetResult.collectionId === "f99ff325-05c0-4cff-b825-b2cbb9638300" ||
+              getSetResult.collectionId === "775c974a-4bda-4cfc-bc47-2aff56e39c46") {
+              if (sessionResult === "pass") {
+                milestone_level = "m2";
+              }
+              else {
+                milestone_level = "m1";
+              }
+            } else if (getSetResult.collectionId === "f9eb8c70-524f-46a1-a737-1eec64a42e6f" || getSetResult.collectionId === "f24d6660-c759-44f9-a4ae-5b46b62098b2" ||
+              getSetResult.collectionId === "f6b5638d-4398-4cf4-833c-42a4695a6425" ||
+              getSetResult.collectionId === "87c2866e-6249-4fe1-9b1b-8b22ddd05ea7") {
+              if (sessionResult === "fail") {
+                milestone_level = "m3";
+              }
+              else {
+                milestoneEntry = false;
+              }
+            } else if (getSetResult.collectionId === "e62061ea-4195-4460-b8e3-c0433bf8624e" || getSetResult.collectionId === "e276d47b-b262-4af1-b424-ead68b2b83bf" ||
+              getSetResult.collectionId === "b9ab3b2f-5c21-4c61-b9c8-90898b5278dd" ||
+              getSetResult.collectionId === "809039e5-119d-42ae-925f-b2546b1e3d7b") {
+              milestone_level = "m4";
+            } else if (getSetResult.collectionId === "5b69052e-f609-4004-adce-cf0fcfdac98b" || getSetResult.collectionId === "30c5800e-4a02-4259-8328-abf57e4255ca" ||
+              getSetResult.collectionId === "b2eb8d4a-5d2b-441a-8269-0151e089c253" ||
+              getSetResult.collectionId === "b12b79ec-f7cb-44b4-99c9-5ea747d4f99a") {
+              milestone_level = "m1";
             }
           }
-        }
-
-        if (milestoneEntry) {
-          let addMilestoneResult = await this.scoresService.createMilestoneRecord({
-            user_id: getSetResult.user_id,
-            session_id: getSetResult.session_id,
-            sub_session_id: getSetResult.sub_session_id,
-            milestone_level: milestone_level,
-            sub_milestone_level: "",
-          });
         }
       }
 
-      recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
+      let currentLevel = milestone_level;
 
-      let currentLevel = recordData[0]?.milestone_level || undefined;
+      if (milestoneEntry) {
+        await this.scoresService.createMilestoneRecord({
+          user_id: getSetResult.user_id,
+          session_id: getSetResult.session_id,
+          sub_session_id: getSetResult.sub_session_id,
+          milestone_level: milestone_level,
+          sub_milestone_level: "",
+        }).then(async () => {
+          recordData = await this.scoresService.getlatestmilestone(getSetResult.user_id, getSetResult.language);
 
-      if (currentLevel === undefined) {
-        currentLevel = previous_level;
+          currentLevel = recordData[0]?.milestone_level || undefined;
+          if (currentLevel === undefined) {
+            currentLevel = previous_level;
+          } else if (getSetResult.contentType.toLowerCase() === "char") {
+            currentLevel = milestone_level;
+          }
+        })
       }
 
       return response.status(HttpStatus.CREATED).send({
@@ -2636,8 +2796,6 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          familiarity: familiarity,
-          familiarityCount: totalFamiliarity,
           targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
@@ -2646,6 +2804,8 @@ export class ScoresController {
           targetsPercentage: targetsPercentage || 0
         }
       })
+
+
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
