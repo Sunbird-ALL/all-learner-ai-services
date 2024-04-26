@@ -2596,11 +2596,18 @@ export class ScoresController {
     try {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
+      let totalSyllables = 0;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-
+      let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
       let totalTargets = targets.length;
-      let totalSyllables = getSetResult.totalSyllableCount
+     
+      if(getSetResult.totalSyllableCount == undefined){
+        totalSyllables = totalTargets + famalarity.length;
+      }else{
+        totalSyllables = getSetResult.totalSyllableCount
+      }
+      
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
