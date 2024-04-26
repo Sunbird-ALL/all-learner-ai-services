@@ -2928,4 +2928,74 @@ export class ScoresController {
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
   }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersTargets')
+  async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userIds, language } = data;
+      let recordData = []
+      for (const userId of userIds) {
+        const userRecord = await this.scoresService.getTargetsByUser(userId, language);
+        recordData.push({
+          user_id: userId,
+          targetData: userRecord,
+          targetCount: userRecord.length
+        })
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersFamalarity')
+  async GetUsersFamalarity(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userIds } = data;
+      let recordData = []
+      for (const userId of userIds) {
+        const famalarityRecord = await this.scoresService.getFamiliarityByUser(userId);
+
+        recordData.push({
+          user_id: userId,
+          famalarityData: famalarityRecord,
+          famalarityCount: famalarityRecord.length
+        })
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @Post('/getUsersMilestones')
+  async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const {userIds , language} = data;
+      let recordData = [];
+      for(const userId of userIds){
+        let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
+        let milestone_level = milestoneData[0]?.milestone_level || "m0";
+      
+        recordData.push({
+          user_id: userId,
+          data:{milestone_level: milestone_level},
+        });
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
 }

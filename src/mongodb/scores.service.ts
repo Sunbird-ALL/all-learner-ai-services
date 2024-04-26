@@ -659,7 +659,17 @@ export class ScoresService {
         $sort: {
           score: 1
         }
-      }
+      },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]);
 
     return RecordData.sort((a, b) => a.score - b.score);
@@ -899,7 +909,17 @@ export class ScoresService {
           character: '$sessions.confidence_scores.token',
           score: '$sessions.confidence_scores.confidence_score'
         }
-      }
+      },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]);
     let charScoreData = [];
 
