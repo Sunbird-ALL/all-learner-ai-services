@@ -2924,7 +2924,43 @@ export class ScoresController {
   }
 
 
-  @ApiExcludeEndpoint(true)
+  @ApiBody({
+    description: `Api request body include these schema properties`,
+    schema: {
+      type: 'object',
+      properties: {
+        userIds: { type: 'Array', example: '["8591582684","7568010954"]' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: `This will provide you users target using this api.`,
+    schema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'string', example: '8591582684' },
+        famalarityData: { type: 'object', 
+        properties:{
+          character:{type: 'string', example: 'வ'},
+          score: {type: 'number', example:'0.27'}
+        }},
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: `Error while populating the users targets Data`,
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({ summary: 'This API will gives the multipes users famalarity' })
   @Post('/getUsersTargets')
   async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
     try {
@@ -2947,7 +2983,43 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  @ApiBody({
+    description: `Api request body include these schema properties`,
+    schema: {
+      type: 'object',
+      properties: {
+        userIds: { type: 'Array', example: '["8591582684","7568010954"]' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: `This will provide you users Famalarity using this api.`,
+    schema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'string', example: '8591582684' },
+        famalarityData: { type: 'object', 
+        properties:{
+          character:{type: 'string', example: 'வ'},
+          score: {type: 'number', example:'0.27'}
+        }},
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: `Error while populating the user famalarity Data`,
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({ summary: 'This API will gives the multipes users famalarity' })
   @Post('/getUsersFamalarity')
   async GetUsersFamalarity(@Res() response: FastifyReply, @Body() data: any) {
     try {
@@ -2971,6 +3043,44 @@ export class ScoresController {
     }
   }
 
+  
+  @ApiBody({
+    description: `Api request body include these schema properties`,
+    schema: {
+      type: 'object',
+      properties: {
+        userIds: { type: 'Array', example: '["8591582684","7568010954"]' },
+        language: { type: 'string', example: 'ta' },
+      }
+    }
+  })
+  @ApiResponse({
+    status: 201,
+    description: `This will provide you user highest achived milestone using this api.`,
+    schema: {
+      type: 'object',
+      properties: {
+        user_id: { type: 'string', example: '8591582684' },
+        data: { type: 'object', 
+        properties:{
+          milestone_level:{type: 'string', example: 'm0'}
+        }},
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: `Error while populating the user milestone level`,
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({ summary: 'This API will gives the users latest achived milestone' })
   @Post('/getUsersMilestones')
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
