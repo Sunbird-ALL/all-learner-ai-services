@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -2109,7 +2109,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
     try {
 
       let recordData: any = await this.scoresService.getlatestmilestone(id, language);
@@ -2181,7 +2181,7 @@ export class ScoresController {
         "language": language || "ta",
         "contentType": "Word",
         "limit": contentlimit || 5,
-        "tags": tags,
+        "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
@@ -2261,7 +2261,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
       let recordData: any = await this.scoresService.getlatestmilestone(id, language);
@@ -2334,7 +2334,7 @@ export class ScoresController {
         "language": language || "ta",
         "contentType": "Sentence",
         "limit": contentlimit || 5,
-        "tags": tags,
+        "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj
@@ -2416,7 +2416,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query() { tags }, @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
 
@@ -2487,7 +2487,7 @@ export class ScoresController {
         "language": language || "ta",
         "contentType": "Paragraph",
         "limit": contentlimit || 5,
-        "tags": tags,
+        "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj
@@ -2607,13 +2607,13 @@ export class ScoresController {
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
       let totalTargets = targets.length;
-     
-      if(getSetResult.totalSyllableCount == undefined){
+
+      if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + famalarity.length;
-      }else{
+      } else {
         totalSyllables = getSetResult.totalSyllableCount
       }
-      
+
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
@@ -2992,15 +2992,15 @@ export class ScoresController {
   @Post('/getUsersMilestones')
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const {userIds , language} = data;
+      const { userIds, language } = data;
       let recordData = [];
-      for(const userId of userIds){
+      for (const userId of userIds) {
         let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
         let milestone_level = milestoneData[0]?.milestone_level || "m0";
-      
+
         recordData.push({
           user_id: userId,
-          data:{milestone_level: milestone_level},
+          data: { milestone_level: milestone_level },
         });
       }
       return response.status(HttpStatus.OK).send(recordData);
