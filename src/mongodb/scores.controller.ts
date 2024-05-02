@@ -2109,7 +2109,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
 
       let recordData: any = await this.scoresService.getlatestmilestone(id, language);
@@ -2261,7 +2261,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
       let recordData: any = await this.scoresService.getlatestmilestone(id, language);
@@ -2416,7 +2416,7 @@ export class ScoresController {
       }
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',' })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
 
