@@ -73,7 +73,7 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(data: any, language: string): Promise<any> {
+  async audioFileToAsrOutput(data: any, language: string, originalText: string): Promise<any> {
     let asrOut: any;
     let asrOutBeforeDenoised: any = "";
     let audio: any = data;
@@ -111,6 +111,9 @@ export class ScoresService {
         },
         data: {
           "audio": data,
+          "language": language,
+          "originalText": originalText,
+          "asrOutBeforeDenoised": asrOutBeforeDenoised.output[0].source
         }
       }
 
