@@ -718,9 +718,19 @@ export class ScoresService {
       },
       {
         $sort: {
-          score: 1,
-        },
+          score: 1
+        }
       },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]);
 
     return RecordData.sort((a, b) => a.score - b.score);
@@ -964,9 +974,19 @@ export class ScoresService {
           user_id: 1,
           date: '$sessions.date',
           character: '$sessions.confidence_scores.token',
-          score: '$sessions.confidence_scores.confidence_score',
-        },
+          score: '$sessions.confidence_scores.confidence_score'
+        }
       },
+      {
+        $addFields: {
+          score: {
+            $divide: [
+              { $trunc: { $multiply: ['$score', 100] } },
+              100
+            ]
+          }
+        }
+    }
     ]);
     const charScoreData = [];
 

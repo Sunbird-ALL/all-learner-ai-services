@@ -1,16 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpStatus,
-  Res,
-  Search,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -2535,14 +2523,7 @@ export class ScoresController {
       },
     },
   })
-  async GetContentWordbyUser(
-    @Param('userId') id: string,
-    @Query('language') language: string,
-    @Query() { contentlimit = 5 },
-    @Query() { gettargetlimit = 5 },
-    @Query() { tags },
-    @Res() response: FastifyReply,
-  ) {
+  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
@@ -2621,14 +2602,14 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
-        tokenArr: getGetTargetCharArr,
-        language: language || 'ta',
-        contentType: 'Word',
-        limit: contentlimit || 5,
-        tags: tags,
-        cLevel: contentLevel,
-        complexityLevel: complexityLevel,
-        graphemesMappedObj: graphemesMappedObj,
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Word",
+        "limit": contentlimit || 5,
+        "tags": tags || [],
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -2721,14 +2702,7 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(
-    @Param('userId') id: string,
-    @Query('language') language,
-    @Query() { contentlimit = 5 },
-    @Query() { gettargetlimit = 5 },
-    @Query() { tags },
-    @Res() response: FastifyReply,
-  ) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
@@ -2808,14 +2782,14 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
-        tokenArr: getGetTargetCharArr,
-        language: language || 'ta',
-        contentType: 'Sentence',
-        limit: contentlimit || 5,
-        tags: tags,
-        cLevel: contentLevel,
-        complexityLevel: complexityLevel,
-        graphemesMappedObj: graphemesMappedObj,
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Sentence",
+        "limit": contentlimit || 5,
+        "tags": tags || [],
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj
       };
 
       const newContent = await lastValueFrom(
@@ -2909,14 +2883,7 @@ export class ScoresController {
       },
     },
   })
-  async GetContentParagraphbyUser(
-    @Param('userId') id: string,
-    @Query('language') language,
-    @Query() { contentlimit = 5 },
-    @Query() { gettargetlimit = 5 },
-    @Query() { tags },
-    @Res() response: FastifyReply,
-  ) {
+  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
       let currentLevel = 'm0';
 
@@ -2993,14 +2960,14 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
-        tokenArr: getGetTargetCharArr,
-        language: language || 'ta',
-        contentType: 'Paragraph',
-        limit: contentlimit || 5,
-        tags: tags,
-        cLevel: contentLevel,
-        complexityLevel: complexityLevel,
-        graphemesMappedObj: graphemesMappedObj,
+        "tokenArr": getGetTargetCharArr,
+        "language": language || "ta",
+        "contentType": "Paragraph",
+        "limit": contentlimit || 5,
+        "tags": tags || [],
+        "cLevel": contentLevel,
+        "complexityLevel": complexityLevel,
+        "graphemesMappedObj": graphemesMappedObj
       };
 
       const newContent = await lastValueFrom(
@@ -3136,22 +3103,20 @@ export class ScoresController {
     try {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
-      const targets = await this.scoresService.getTargetsBysubSession(
-        getSetResult.sub_session_id,
-        getSetResult.contentType,
-        getSetResult.language,
-      );
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        getSetResult.sub_session_id,
-        getSetResult.language,
-      );
+      let totalSyllables = 0;
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
+      let totalTargets = targets.length;
 
-      const totalTargets = targets.length;
-      const totalSyllables = getSetResult.totalSyllableCount;
-      const targetsPercentage = Math.min(
-        Math.floor((totalTargets / totalSyllables) * 100),
-      );
-      const passingPercentage = Math.floor(100 - targetsPercentage);
+      if (getSetResult.totalSyllableCount == undefined) {
+        totalSyllables = totalTargets + famalarity.length;
+      } else {
+        totalSyllables = getSetResult.totalSyllableCount
+      }
+
+      let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
+      let passingPercentage = Math.floor(100 - targetsPercentage);
 
       let sessionResult = 'No Result';
 
@@ -3631,5 +3596,75 @@ export class ScoresController {
   @Get('/GetSessionIds/:userId')
   GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersTargets')
+  async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userIds, language } = data;
+      let recordData = []
+      for (const userId of userIds) {
+        const userRecord = await this.scoresService.getTargetsByUser(userId, language);
+        recordData.push({
+          user_id: userId,
+          targetData: userRecord,
+          targetCount: userRecord.length
+        })
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUsersFamalarity')
+  async GetUsersFamalarity(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userIds } = data;
+      let recordData = []
+      for (const userId of userIds) {
+        const famalarityRecord = await this.scoresService.getFamiliarityByUser(userId);
+
+        recordData.push({
+          user_id: userId,
+          famalarityData: famalarityRecord,
+          famalarityCount: famalarityRecord.length
+        })
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @Post('/getUsersMilestones')
+  async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userIds, language } = data;
+      let recordData = [];
+      for (const userId of userIds) {
+        let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
+        let milestone_level = milestoneData[0]?.milestone_level || "m0";
+
+        recordData.push({
+          user_id: userId,
+          data: { milestone_level: milestone_level },
+        });
+      }
+      return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
   }
 }
