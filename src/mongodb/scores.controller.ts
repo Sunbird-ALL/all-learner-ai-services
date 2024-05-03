@@ -15,7 +15,6 @@ import {
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
-
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
@@ -2140,22 +2139,21 @@ export class ScoresController {
 
       
       let telguVowelSignArr = [
-        "అ",
-        "ఆ",
-        "ఇ",
-        "ఈ",
-        "ఉ",
-        "ఊ",
-        "ఋ",
-        "ౠ",
-        "ఎ",
-        "ఏ",
-        "ఐ",
-        "ఒ",
-        "ఓ",
-        "ఔ",
-        "అం",
-        "అః",
+        "ా",
+        "ి",
+        "ీ",
+        "ు",
+        "ూ",
+        "ృ",
+        "ౄ",
+        "ె",
+        "ే",
+        "ై",
+        "ొ",
+        "ో",
+        "ౌ",
+        "ం",
+        "ః"
       ];
 
       let language = "te";
@@ -2216,8 +2214,94 @@ export class ScoresController {
         let confidence_scoresArr = [];
         let missing_token_scoresArr = [];
         let anomaly_scoreArr = [];
+        let flag=0;
+        let tokenArr = [];
+        let anamolyTokenArr = [];
+        const word=CreateLearnerProfileDto.original_text
+        let data_arr = [];        
+        if(CreateLearnerProfileDto.contentType.toLowerCase()=='word') {
+        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+          element.tokens.forEach((token) => {
+            let insertObj = {}; // Create an empty object for each iteration
+            let key = Object.keys(token)[0]; // Check if the first key is valid (non-empty and defined)
+            if (key && key.trim() !== '') { // Ensure key is valid
+              let value = Object.values(token)[0];
+              insertObj[key] = value; // Add the first key-value pair
+            }
+            // Check if there's a second key and if it's valid
+            if (Object.keys(token).length > 1) { // Ensure there's a second key
+              let key1 = Object.keys(token)[1];
+              if (key1 && key1.trim() !== '') { // Ensure key is valid
+                let value1 = Object.values(token)[1];
+                insertObj[key1] = value1; // Add the second key-value pair
+              }
+            }            
+            if (Object.keys(insertObj).length > 0) { // Only push to data_arr if there's at least one valid key-value pair
+              data_arr.push(insertObj);
+            }
+          });
+        });
+        const response_word=CreateLearnerProfileDto.output[0].source;
+        function generateWords(dataArr) {
+          const generateRecursive = (currentWord, usedKeyValueArr, index) => {
+            if (index === dataArr.length) {
+              return [[currentWord, usedKeyValueArr]];
+            }
+            const possibleWords = [];
+            const currentObject = dataArr[index];
+            for (const key in currentObject) {
+              if (currentObject.hasOwnProperty(key)) {
+                const newWord = currentWord + key;
+                const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
+                possibleWords.push(
+                  ...generateRecursive(newWord, newUsedKeyValueArr, index + 1)
+                );
+              }
+            }
+            return possibleWords;
+          };
+          const generatedWords = generateRecursive("", [], 0); // Generate all possible words
+          const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
+            const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
+            const unusedKeyValueArr = []; // Find unused key-value pairs
+            dataArr.forEach(data => {
+              Object.entries(data).forEach(([key, value]) => {
+                if (!usedKeys.includes(key)) {
+                  unusedKeyValueArr.push({ [key]: value });
+                }
+              });
+            });
 
-        responseText = CreateLearnerProfileDto.output[0].source;
+            return [word, usedKeyValueArr, unusedKeyValueArr]; // Return an array with word, used key-value pairs, and unused key-value pairs
+          });
+          return results;
+        }
+          const words_with_values = generateWords(data_arr);
+          function findAllSimilarities(wordArray, s1) {
+            const similarityList = wordArray.map((wordWithVal) => {
+              const word = wordWithVal[0];
+              const usedarr = wordWithVal[1];
+              const unusedarr = wordWithVal[2];
+              const score = similarity(s1, word);
+              return [word, usedarr,unusedarr,score];
+            });
+            similarityList.sort((a, b) => b[3] - a[3]); // Sort the list in descending order based on similarity score
+            return similarityList;
+          }
+          let restext=[...findAllSimilarities(words_with_values,word)][0];
+          if(similarity(CreateLearnerProfileDto.output[0].source,word)>=restext[3]){
+            responseText = CreateLearnerProfileDto.output[0].source;
+            flag=1;
+          }
+          else {
+            responseText = restext[0];
+            tokenArr = restext[1];
+            anamolyTokenArr = restext[2];
+          }         
+        }
+        else {
+          responseText = CreateLearnerProfileDto.output[0].source;
+        }
         let constructText = '';
         let originalTextTokensArr = originalText.split("");
         let responseTextTokensArr = responseText.split("");
@@ -2357,26 +2441,27 @@ export class ScoresController {
         let filteredTokenArr = [];
 
         //token list for ai4bharat response
-        let tokenArr = [];
-        let anamolyTokenArr = [];
+        
 
         // Create Single Array from AI4bharat tokens array
-        CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
-          element.tokens.forEach(token => {
-            let key = Object.keys(token)[0];
-            let value = Object.values(token)[0];
+        if(CreateLearnerProfileDto.contentType.toLowerCase()!='word' || flag==1){
+          CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
+            element.tokens.forEach(token => {
+              let key = Object.keys(token)[0];
+              let value = Object.values(token)[0];
 
-            let insertObj = {};
-            insertObj[key] = value;
-            tokenArr.push(insertObj);
+              let insertObj = {};
+              insertObj[key] = value;
+              tokenArr.push(insertObj);
 
-            let key1 = Object.keys(token)[1];
-            let value1 = Object.values(token)[1];
-            insertObj = {}
-            insertObj[key1] = value1;
-            anamolyTokenArr.push(insertObj);
+              let key1 = Object.keys(token)[1];
+              let value1 = Object.values(token)[1];
+              insertObj = {}
+              insertObj[key1] = value1;
+              anamolyTokenArr.push(insertObj);
+            });
           });
-        });
+      }
 
         let uniqueChar = new Set();
         prevEle = '';
