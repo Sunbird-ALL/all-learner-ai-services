@@ -1,54 +1,55 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateLearnerProfileDto {
-    @ApiProperty()
-    original_text: string;
+  @ApiProperty()
+  original_text: string;
 
-    output: OutputDTO[];
+  output: OutputDTO[];
 
-    @ApiProperty({
-        type: 'string', format: 'base64'
-    })
-    audio: Buffer;
+  @ApiProperty({
+    type: 'string',
+    format: 'base64',
+  })
+  audio: Buffer;
 
-    @ApiProperty()
-    user_id: string;
+  @ApiProperty()
+  user_id: string;
 
-    @ApiProperty()
-    session_id: string;
+  @ApiProperty()
+  session_id: string;
 
-    @ApiProperty()
-    sub_session_id: string;
+  @ApiProperty()
+  sub_session_id: string;
 
-    @ApiProperty()
-    contentType: string;
+  @ApiProperty()
+  contentType: string;
 
-    @ApiProperty()
-    contentId: string;
+  @ApiProperty()
+  contentId: string;
 
-    @ApiProperty()
-    language: string;
+  @ApiProperty()
+  language: string;
 
-    @ApiProperty()
-    date: Date;
+  @ApiProperty()
+  date: Date;
 }
 
 export class OutputDTO {
-    @ApiProperty()
-    source: string;
+  @ApiProperty()
+  source: string;
 
-    @ApiProperty()
-    nBestTokens: NBestTokenDTO[];
+  @ApiProperty()
+  nBestTokens: NBestTokenDTO[];
 }
 
 export class NBestTokenDTO {
-    @ApiProperty()
-    word: string;
+  @ApiProperty()
+  word: string;
 
-    @ApiProperty()
-    tokens: TokenDTO[];
+  @ApiProperty()
+  tokens: TokenDTO[];
 }
 
 export class TokenDTO {
-    [key: string]: number;
+  [key: string]: number;
 }
