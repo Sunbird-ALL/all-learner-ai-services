@@ -629,9 +629,16 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false,
           },
         };
 
+        // For retry attempt detection
+        const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
+        
         // Store Array to DB
         const data = await this.scoresService.create(createScoreData);
 
