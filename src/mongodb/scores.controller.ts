@@ -2214,11 +2214,13 @@ export class ScoresController {
         let confidence_scoresArr = [];
         let missing_token_scoresArr = [];
         let anomaly_scoreArr = [];
+        /*  If the content type is of word ,Generating Constructed text from the ASR Output . From all those constructed combinations 
+          will be taking the best with similarity score and compare with the original response and choose the best */
         let flag=0;
         let tokenArr = [];
         let anamolyTokenArr = [];
         const word=CreateLearnerProfileDto.original_text
-        let data_arr = [];        
+        let data_arr = [];// Storing the chars and their scores from the ASR Output for the construvcted text
         if(CreateLearnerProfileDto.contentType.toLowerCase()=='word') {
         CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
           element.tokens.forEach((token) => {
@@ -2242,6 +2244,8 @@ export class ScoresController {
           });
         });
         const response_word=CreateLearnerProfileDto.output[0].source;
+        /*  Function for generating the constructed text without  issing the sequence and for every constructed text
+            we are storing used chars and that are not used we are storing it in unused char array  */
         function generateWords(dataArr) {
           const generateRecursive = (currentWord, usedKeyValueArr, index) => {
             if (index === dataArr.length) {
@@ -2264,7 +2268,7 @@ export class ScoresController {
           const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
             const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
             const unusedKeyValueArr = []; // Find unused key-value pairs
-            dataArr.forEach(data => {
+            dataArr.forEach(data => {  //fetching the unused char for a particular constructed text and storing it
               Object.entries(data).forEach(([key, value]) => {
                 if (!usedKeys.includes(key)) {
                   unusedKeyValueArr.push({ [key]: value });
@@ -2277,6 +2281,8 @@ export class ScoresController {
           return results;
         }
           const words_with_values = generateWords(data_arr);
+          /* Function for generating the simnilarities for each and every word with the
+            original word and sort it in descending order */
           function findAllSimilarities(wordArray, s1) {
             const similarityList = wordArray.map((wordWithVal) => {
               const word = wordWithVal[0];
@@ -2289,17 +2295,19 @@ export class ScoresController {
             return similarityList;
           }
           let restext=[...findAllSimilarities(words_with_values,word)][0];
-          if(similarity(CreateLearnerProfileDto.output[0].source,word)>=restext[3]){
+          /*checks whether the ASR has highest similarity or constructed has highest 
+            and assign to the response text*/
+          if(similarity(CreateLearnerProfileDto.output[0].source,word)>=restext[3]){ 
             responseText = CreateLearnerProfileDto.output[0].source;
             flag=1;
           }
-          else {
+          else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
             responseText = restext[0];
             tokenArr = restext[1];
             anamolyTokenArr = restext[2];
           }         
         }
-        else {
+        else { //if the response has higher then response will be same as ASR output
           responseText = CreateLearnerProfileDto.output[0].source;
         }
         let constructText = '';
@@ -2710,8 +2718,38 @@ export class ScoresController {
           return result?.hexcode || '';
         }
       }
+      // Cal the subsessionWise and content_id wise target.
+      const targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+      );
+      const targetsByContent = await this.scoresService.getTargetsByContentId(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+        CreateLearnerProfileDto.contentId,
+      );
 
-      return response.status(HttpStatus.CREATED).send({ status: 'success', msg: "Successfully stored data to learner profile", responseText: responseText, createScoreData: createScoreData })
+      const totalTargets = targets.length;
+      const totalContentTargets = targetsByContent.length;
+
+      const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
+
+      return response.status(HttpStatus.CREATED).send({ 
+        status: 'success',
+        msg: "Successfully stored data to learner profile",
+        responseText: responseText,
+        createScoreData: createScoreData,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
