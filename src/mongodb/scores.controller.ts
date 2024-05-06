@@ -2601,13 +2601,13 @@ export class ScoresController {
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
       let totalTargets = targets.length;
-     
-      if(getSetResult.totalSyllableCount == undefined){
+
+      if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + famalarity.length;
-      }else{
+      } else {
         totalSyllables = getSetResult.totalSyllableCount
       }
-      
+
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
@@ -2986,18 +2986,48 @@ export class ScoresController {
   @Post('/getUsersMilestones')
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const {userIds , language} = data;
+      const { userIds, language } = data;
       let recordData = [];
-      for(const userId of userIds){
+      for (const userId of userIds) {
         let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
         let milestone_level = milestoneData[0]?.milestone_level || "m0";
-      
+
         recordData.push({
           user_id: userId,
-          data:{milestone_level: milestone_level},
+          data: { milestone_level: milestone_level },
         });
       }
       return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUserProfile')
+  async GetUserProfile(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userId, language } = data;
+      let sessionRecord = [];
+
+      const userRecord = await this.scoresService.getTargetsByUserForProfile(userId, language);
+      const subsessionData = await this.scoresService.getSubessionIds(userId);
+
+      for (const sessionId of subsessionData) {
+        const sessionData = await this.scoresService.getFamiliarityBysubSessionForProfile(sessionId, language);
+        if (sessionData && Object.keys(sessionData).length > 0) {
+          sessionRecord = sessionData;
+        }
+      }
+      const finalResponse = {
+        TargetByUser: userRecord,
+        FamiliarityBySubsession: sessionRecord
+      };
+      console.log("finalRecord---1", finalResponse);
+      return response.status(HttpStatus.OK).send(finalResponse);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
