@@ -90,6 +90,9 @@ export class ScoresService {
       case 'hi':
         serviceId = 'ai4bharat/conformer-hi--gpu-t4';
         break;
+      case "te":
+        serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
+        break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
