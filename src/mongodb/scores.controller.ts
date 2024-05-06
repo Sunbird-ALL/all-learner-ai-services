@@ -120,8 +120,10 @@ export class ScoresController {
     try {
       const originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
-      let asrOutNonDenoised;
+      let asrOutDenoised;
       let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
 
       const correctTokens = [];
       let missingTokens = [];
@@ -189,9 +191,20 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, originalText);
-          CreateLearnerProfileDto['output'] = audioOutput.asrOut.output;
-          asrOutNonDenoised = audioOutput.asrOutNonDenoised?.output || "";
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -207,13 +220,7 @@ export class ScoresController {
         const anomaly_scoreArr = [];
 
         responseText = CreateLearnerProfileDto.output[0].source;
-        nonDenoisedresponseText = asrOutNonDenoised?.output[0]?.source || "";
         let constructText = '';
-        const originalTextTokensArr = originalText.split('');
-        const responseTextTokensArr = responseText.split('');
-
-        const originalTextArr = originalText.split(' ');
-        const responseTextArr = responseText.split(' ');
 
         // Get All hexcode for this selected language
         const tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
@@ -526,7 +533,7 @@ export class ScoresController {
           }
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
@@ -550,24 +557,26 @@ export class ScoresController {
             ),
         );
 
-        if (responseText !== nonDenoisedresponseText && nonDenoisedresponseText !== "") {
+        if (process.env.denoiserEnabled === "true") {
           let improved = false;
-          let similarityScoreResText = similarity(CreateLearnerProfileDto.original_text, responseText);
-          let similarityScoreNonDenoisedResText = similarity(CreateLearnerProfileDto.original_text, nonDenoisedresponseText);
 
-          if (similarityScoreResText > similarityScoreNonDenoisedResText) {
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
           }
 
           let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
             contentId: CreateLearnerProfileDto.contentId || "",
             language: language,
-            original_text: CreateLearnerProfileDto.original_text,
+            original_text: originalText,
             response_text: nonDenoisedresponseText,
-            denoised_response_text: responseText,
+            denoised_response_text: DenoisedresponseText,
             improved: improved,
             comment: ""
           }
@@ -777,8 +786,7 @@ export class ScoresController {
         const decoded = audioFile.toString('base64');
         const audioOutput = await this.scoresService.audioFileToAsrOutput(
           decoded,
-          'hi',
-          CreateLearnerProfileDto.original_text
+          'hi'
         );
         CreateLearnerProfileDto['output'] = audioOutput.output;
 
@@ -1235,8 +1243,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
           const audioOutput = await this.scoresService.audioFileToAsrOutput(
             decoded,
-            'kn',
-            originalText
+            'kn'
           );
           CreateLearnerProfileDto['output'] = audioOutput.output;
 
@@ -1603,7 +1610,7 @@ export class ScoresController {
           }
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
@@ -1839,8 +1846,10 @@ export class ScoresController {
       let anomaly_scoreArr = [];
       let missing_token_scoresArr = [];
 
-      let asrOutNonDenoised;
+      let asrOutDenoised;
       let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
 
 
       /* Condition to check whether content type is char or not. If content type is char
@@ -1857,9 +1866,20 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, originalText);
-          CreateLearnerProfileDto['output'] = audioOutput.asrOut.output;
-          asrOutNonDenoised = audioOutput.asrOutNonDenoised?.output || "";
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, processText(asrOutDenoised[0]?.source || "")) <= similarity(originalText, processText(asrOutBeforeDenoised[0]?.source || ""))) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+          }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1879,10 +1899,8 @@ export class ScoresController {
         });
 
         responseText = processText(CreateLearnerProfileDto.output[0].source);
-        nonDenoisedresponseText = asrOutNonDenoised?.output[0]?.source || "";
-        nonDenoisedresponseText = processText(nonDenoisedresponseText);
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: originalText,
@@ -1946,24 +1964,27 @@ export class ScoresController {
           }
         }
 
-        if (responseText !== nonDenoisedresponseText && nonDenoisedresponseText !== "") {
-          let improved = false;
-          let similarityScoreResText = similarity(CreateLearnerProfileDto.original_text, responseText);
-          let similarityScoreNonDenoisedResText = similarity(CreateLearnerProfileDto.original_text, nonDenoisedresponseText);
 
-          if (similarityScoreResText > similarityScoreNonDenoisedResText) {
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
+
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
           }
 
           let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
             contentId: CreateLearnerProfileDto.contentId || "",
             language: language,
-            original_text: CreateLearnerProfileDto.original_text,
+            original_text: originalText,
             response_text: nonDenoisedresponseText,
-            denoised_response_text: responseText,
+            denoised_response_text: DenoisedresponseText,
             improved: improved,
             comment: ""
           }

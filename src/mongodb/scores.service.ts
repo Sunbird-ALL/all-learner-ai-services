@@ -1,14 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
-import { ScoreSchema, ScoreDocument } from './schemas/scores.schema';
+import { ScoreDocument } from './schemas/scores.schema';
 import {
-  hexcodeMappingSchema,
   hexcodeMappingDocument,
 } from './schemas/hexcodeMapping.schema';
 import {
-  assessmentInputSchema,
   assessmentInputDocument,
 } from './schemas/assessmentInput.schema';
+import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
@@ -21,6 +19,7 @@ export class ScoresService {
     private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>,
     @InjectModel('assessmentInput')
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
+    @InjectModel('denoiserOutputLogs') private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
   ) { }
 
   async create(createScoreDto: any): Promise<any> {
@@ -73,9 +72,9 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(data: any, language: string, originalText: string): Promise<any> {
-    let asrOut: any;
-    let asrOutBeforeDenoised: any = "";
+  async audioFileToAsrOutput(data: any, language: string): Promise<any> {
+    let asrOutDenoisedOutput: any;
+    let asrOutBeforeDenoised: any;
     let audio: any = data;
 
     let serviceId = '';
@@ -97,7 +96,7 @@ export class ScoresService {
     }
 
     if (process.env.skipNonDenoiserAsrCall !== "true") {
-      await asrCall();
+      asrOutBeforeDenoised = await asrCall();
     }
 
     if (process.env.denoiserEnabled === "true") {
@@ -105,31 +104,29 @@ export class ScoresService {
       let denoiserConfig =
       {
         method: 'post',
-        url: process.env.ALL_TEXT_EVAL_API,
+        url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
         headers: {
           'Content-Type': 'application/json'
         },
         data: {
-          "audio": data,
-          "language": language,
-          "originalText": originalText,
-          "asrOutBeforeDenoised": asrOutBeforeDenoised.output[0].source
+          "audio_base64": audio
         }
       }
 
       await axios.request(denoiserConfig)
         .then((response) => {
-          audio = response.data;
+          audio = response.data.denoised_audio_base64;
         })
         .catch((error) => {
           console.log(error);
         });
 
-      asrOutBeforeDenoised = asrOut;
-      await asrCall();
+      asrOutDenoisedOutput = await asrCall();
     }
 
     async function asrCall() {
+      let output: any;
+
       let optionsObj = {
         "config": {
           "serviceId": serviceId,
@@ -167,14 +164,16 @@ export class ScoresService {
 
       await axios.request(config)
         .then((response) => {
-          asrOut = response.data;
+          output = response.data;
         })
         .catch((error) => {
           console.log(error);
         });
+
+      return output;
     }
 
-    return { asrOut: asrOut, asrOutBeforeDenoised: asrOutBeforeDenoised };
+    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised };
   }
 
   async findAll(): Promise<any> {
@@ -1615,8 +1614,8 @@ export class ScoresService {
 
   async addDenoisedOutputLog(DenoisedOutputLog: any): Promise<any> {
     try {
-      const createdScore = new this.scoreModel(DenoisedOutputLog);
-      const result = await createdScore.save();
+      const createDenoisedOutputLog = new this.denoiserOutputLogsModel(DenoisedOutputLog);
+      const result = await createDenoisedOutputLog.save();
       return result;
     } catch (err) {
       return err;
