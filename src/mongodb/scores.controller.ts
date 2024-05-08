@@ -3011,22 +3011,31 @@ export class ScoresController {
   async GetUserProfile(@Res() response: FastifyReply, @Body() data: any) {
     try {
       const { userId, language } = data;
-      let sessionRecord = [];
-
-      const userRecord = await this.scoresService.getTargetsByUserForProfile(userId, language);
+      let target_Data: any = []
+      let famalarity_Data: any = [];
+ 
       const subsessionData = await this.scoresService.getSubessionIds(userId);
 
-      for (const sessionId of subsessionData) {
-        const sessionData = await this.scoresService.getFamiliarityBysubSessionForProfile(sessionId, language);
-        if (sessionData && Object.keys(sessionData).length > 0) {
-          sessionRecord = sessionData;
+      for (const subSessionId of subsessionData) {
+        const famalarityData = await this.scoresService.getFamiliarityBysubSessionUserProfile(subSessionId, language);
+        if (famalarityData) {
+          famalarity_Data.push({
+            subSessionId: subSessionId,
+            score:famalarityData || []
+          })
+        }
+        const targetData = await this.scoresService.getTargetsBysubSessionUserProfile(subSessionId, language);
+        if (targetData) {
+          target_Data.push({
+            subSessionId: subSessionId,
+            score:targetData || []
+          })
         }
       }
       const finalResponse = {
-        TargetByUser: userRecord,
-        FamiliarityBySubsession: sessionRecord
+        Target: target_Data,
+        Famalarity: famalarity_Data
       };
-      console.log("finalRecord---1", finalResponse);
       return response.status(HttpStatus.OK).send(finalResponse);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({

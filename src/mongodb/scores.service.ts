@@ -684,8 +684,8 @@ export class ScoresService {
       },
       {
         $project: {
-            character:1,
-            score:"$avgScore"
+          character: 1,
+          score: "$avgScore"
         }
       },
       {
@@ -697,7 +697,7 @@ export class ScoresService {
             ]
           }
         }
-    }
+      }
     ]
     );
 
@@ -948,7 +948,7 @@ export class ScoresService {
             ]
           }
         }
-    }
+      }
     ]);
     let charScoreData = [];
 
@@ -1497,174 +1497,49 @@ export class ScoresService {
     return sessionIds;
   }
 
-  async getTargetsByUserForProfile(userId: string, language: string) {
-    let threshold = 0.70;
-
+  async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          'user_id': userId
+          'user_id': user_id
         }
       },
       {
         $unwind: '$sessions'
       },
       {
-        $match: {
-          'sessions.language': language
-        }
-      },
-      {
-        $facet: {
-          confidenceScores: [
-            {
-              $unwind: '$sessions.confidence_scores'
-            },
-            {
-              $project: {
-                _id: 0,
-                user_id: 1,
-                date: '$sessions.createdAt',
-                session_id: '$sessions.session_id',
-                character: '$sessions.confidence_scores.token',
-                score: '$sessions.confidence_scores.confidence_score',
-              }
-            },
-            {
-              $sort: {
-                date: -1
-              }
-            }
-          ],
-          missingTokenScores: [
-            {
-              $unwind: '$sessions.missing_token_scores'
-            },
-            {
-              $project: {
-                _id: 0,
-                user_id: 1,
-                session_id: '$sessions.session_id',
-                date: '$sessions.createdAt',
-                character: '$sessions.missing_token_scores.token',
-                score: '$sessions.missing_token_scores.confidence_score'
-              }
-            },
-            {
-              $sort: {
-                date: -1
-              }
-            }
-          ]
-        }
-      },
-      {
         $project: {
-          combinedResults: {
-            $concatArrays: ['$confidenceScores', '$missingTokenScores']
-          }
+          user_id: 1,
+          sub_session_ids: '$sessions.sub_session_id'
         }
       },
       {
-        $unwind: '$combinedResults'
-      },
-      {
-        $replaceRoot: {
-          newRoot: '$combinedResults'
-        }
-      },
-      {
-        $project: {
-          user_id: "$user_id",
-          sessionId: '$session_id',
-          date: '$date',
-          token: '$character',
-          score: '$score'
-        }
-      },
-      {
-        $sort: {
-          date: -1
-        }
+        $unwind: '$sub_session_ids'
       },
       {
         $group: {
-          _id: {
-            token: "$token"
-          },
-          scores: {
-            $push: '$score'
+          _id: null,
+          sub_session_ids: {
+            $addToSet: '$sub_session_ids'
           }
         }
       },
       {
         $project: {
           _id: 0,
-          character: "$_id.token",
-          latestScores: {
-            $slice: ['$scores', -5]
-          }
+          sub_session_ids: 1
         }
-      },
-      {
-        $addFields: {
-          countBelowThreshold: {
-            $size: {
-              $filter: {
-                input: '$latestScores',
-                as: 'score',
-                cond: {
-                  $lt: ['$$score', threshold]
-                }
-              }
-            }
-          },
-          countAboveThreshold: {
-            $size: {
-              $filter: {
-                input: '$latestScores',
-                as: 'score',
-                cond: {
-                  $gte: ['$$score', threshold]
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        $match: {
-          $expr: {
-            $gt: ['$countBelowThreshold', '$countAboveThreshold'],
-
-          }
-        }
-      },
-      {
-        $project: {
-            character: 1,
-            meanScore: {
-                $avg: "$latestScores"
-            },
-            minScore: {
-                $min: "$latestScores"
-            },
-            maxScore: {
-                $max: "$latestScores"
-            }
-        }
-    }
-    ]
-    );
-    return RecordData;
+      }
+    ]);
+    const subSessionIds = RecordData.length > 0 ? RecordData[0].sub_session_ids : [];
+    console.log("subSessionIds---", subSessionIds);
+    return subSessionIds;
   }
 
-  async getFamiliarityBysubSessionForProfile(subSessionId: string, language: string) {
+  async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
 
-    let RecordData = [];
-
-    RecordData = await this.scoreModel.aggregate([
+    const RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions'
       },
@@ -1789,57 +1664,164 @@ export class ScoresService {
                 }
               }
             }
-          }
+          },
+          avgScore: { $avg: "$latestScores" }
         }
       },
       {
         $match: {
           $expr: {
-            $gte: ['$countAboveThreshold', '$countBelowThreshold']
+            $gt: ['$countBelowThreshold', '$countAboveThreshold'],
+
           }
         }
       }
     ]);
-
     return RecordData;
   }
 
-  async getSubessionIds(user_id: string) {
-    const RecordData = await this.scoreModel.aggregate([
-      {
-          $match: {
-              'user_id': user_id
-          }
-      },
-      {
-          $unwind: '$sessions'
-      },
-      {
-          $project: {
-              user_id: 1,
-              sub_session_ids: '$sessions.sub_session_id'
-          }
-      },
-      {
-          $unwind: '$sub_session_ids'
-      },
-      {
-          $group: {
-              _id: null,
-              sub_session_ids: {
-                  $addToSet: '$sub_session_ids'
-              }
-          }
-      },
-      {
-          $project: {
-              _id: 0,
-              sub_session_ids: 1
-          }
+
+ async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
+  let threshold = 0.70;
+  let RecordData = [];
+
+  RecordData = await this.scoreModel.aggregate([
+    {
+      $unwind: '$sessions'
+    },
+    {
+      $match: {
+        'sessions.sub_session_id': subSessionId,
+        'sessions.language': language
       }
+    },
+    {
+      $facet: {
+        confidenceScores: [
+          {
+            $unwind: '$sessions.confidence_scores'
+          },
+          {
+            $project: {
+              _id: 0,
+              user_id: 1,
+              date: '$sessions.createdAt',
+              session_id: '$sessions.session_id',
+              character: '$sessions.confidence_scores.token',
+              score: '$sessions.confidence_scores.confidence_score',
+            }
+          },
+          {
+            $sort: {
+              date: -1
+            }
+          }
+        ],
+        missingTokenScores: [
+          {
+            $unwind: '$sessions.missing_token_scores'
+          },
+          {
+            $project: {
+              _id: 0,
+              user_id: 1,
+              session_id: '$sessions.session_id',
+              date: '$sessions.createdAt',
+              character: '$sessions.missing_token_scores.token',
+              score: '$sessions.missing_token_scores.confidence_score'
+            }
+          },
+          {
+            $sort: {
+              date: -1
+            }
+          }
+        ]
+      }
+    },
+    {
+      $project: {
+        combinedResults: {
+          $concatArrays: ['$confidenceScores', '$missingTokenScores']
+        }
+      }
+    },
+    {
+      $unwind: '$combinedResults'
+    },
+    {
+      $replaceRoot: {
+        newRoot: '$combinedResults'
+      }
+    },
+    {
+      $project: {
+        user_id: "$user_id",
+        sessionId: '$session_id',
+        date: '$date',
+        token: '$character',
+        score: '$score'
+      }
+    },
+    {
+      $sort: {
+        date: -1
+      }
+    },
+    {
+      $group: {
+        _id: {
+          token: "$token"
+        },
+        scores: {
+          $push: '$score'
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        character: "$_id.token",
+        latestScores: {
+          $slice: ['$scores', -5]
+        }
+      }
+    },
+    {
+      $addFields: {
+        countBelowThreshold: {
+          $size: {
+            $filter: {
+              input: '$latestScores',
+              as: 'score',
+              cond: {
+                $lt: ['$$score', threshold]
+              }
+            }
+          }
+        },
+        countAboveThreshold: {
+          $size: {
+            $filter: {
+              input: '$latestScores',
+              as: 'score',
+              cond: {
+                $gte: ['$$score', threshold]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      $match: {
+        $expr: {
+          $gte: ['$countAboveThreshold', '$countBelowThreshold']
+        }
+      }
+    }
   ]);
-  const subSessionIds = RecordData.length > 0 ? RecordData[0].sub_session_ids : [];
-  console.log("subSessionIds---", subSessionIds);
-  return subSessionIds;
-  }
+
+  return RecordData;
+}
 }
