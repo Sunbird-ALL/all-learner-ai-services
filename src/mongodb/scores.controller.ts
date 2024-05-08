@@ -3005,13 +3005,16 @@ export class ScoresController {
       const { userId, language } = data;
       let target_Data: any = []
       let famalarity_Data: any = [];
-      const subsessionData = await this.scoresService.getSubessionIds(userId);
-
-      for (const subSessionId of subsessionData) {
+      const subsessionData: any = await this.scoresService.getSubessionIds(userId);
+     
+      for (const subsession of subsessionData) {
+        const subSessionId = subsession.sub_session_id;
+        const createdAt = subsession.createdAt
         const famalarityData = await this.scoresService.getFamiliarityBysubSessionUserProfile(subSessionId, language);
         if (famalarityData) {
           famalarity_Data.push({
             subSessionId: subSessionId,
+            createdAt:createdAt,
             score:famalarityData || []
           })
         }
@@ -3019,6 +3022,7 @@ export class ScoresController {
         if (targetData) {
           target_Data.push({
             subSessionId: subSessionId,
+            createdAt:createdAt,
             score:targetData || []
           })
         }

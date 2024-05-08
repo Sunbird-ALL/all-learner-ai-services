@@ -1500,7 +1500,7 @@ export class ScoresService {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          'user_id': user_id
+          "user_id": user_id
         }
       },
       {
@@ -1508,30 +1508,28 @@ export class ScoresService {
       },
       {
         $project: {
-          user_id: 1,
-          sub_session_ids: '$sessions.sub_session_id'
+          _id:0,
+          sub_session_ids: '$sessions.sub_session_id',
+          createdAt: '$sessions.createdAt'
         }
       },
       {
-        $unwind: '$sub_session_ids'
-      },
-      {
         $group: {
-          _id: null,
-          sub_session_ids: {
-            $addToSet: '$sub_session_ids'
-          }
+      _id: {
+        sub_session_id: "$sub_session_ids",
+      },
+      createdAt:{ $max: "$createdAt" }
         }
       },
       {
         $project: {
-          _id: 0,
-          sub_session_ids: 1
+          _id:0,
+          sub_session_id: '$_id.sub_session_id',
+          createdAt: '$createdAt'
         }
-      }
+      },
     ]);
-    const subSessionIds = RecordData.length > 0 ? RecordData[0].sub_session_ids : [];
-    return subSessionIds;
+    return RecordData;
   }
 
   async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
