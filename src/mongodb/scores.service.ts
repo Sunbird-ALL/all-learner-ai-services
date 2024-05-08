@@ -1344,7 +1344,6 @@ export class ScoresService {
     const RecordData = await this.hexcodeMappingModel.find({
       'language': language
     }, { 'token': 1, '_id': 0 }).exec();
-    console.log(RecordData);
     let tokenArray = RecordData.map((data) => {
       return data.token;
     })
@@ -1532,7 +1531,6 @@ export class ScoresService {
       }
     ]);
     const subSessionIds = RecordData.length > 0 ? RecordData[0].sub_session_ids : [];
-    console.log("subSessionIds---", subSessionIds);
     return subSessionIds;
   }
 
