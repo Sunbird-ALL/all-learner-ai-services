@@ -498,10 +498,6 @@ export class ScoresService {
     let RecordData = [];
     const isRetry = false;
 
-    // if (contentType != null && contentType.toLowerCase() === 'word') {
-    //   threshold = 0.75
-    // }
-
     RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
@@ -644,20 +640,22 @@ export class ScoresService {
   }
 
   async getTargetsByUser(userId: string, language: string = null) {
-    const threshold = 0.9;
-
-    const RecordData = await this.scoreModel.aggregate([
-      {
-        $match: {
-          user_id: userId,
-        },
-      },
+    const threshold = 0.7;
+    let RecordData = [];
+    const isRetry = false;
+    RecordData = await this.scoreModel.aggregate([
+       {
+          $match:{
+            user_id:userId
+          }
+       },
       {
         $unwind: '$sessions',
       },
       {
         $match: {
           'sessions.language': language,
+          'sessions.isRetry': isRetry,
         },
       },
       {
@@ -671,6 +669,7 @@ export class ScoresService {
                 _id: 0,
                 user_id: 1,
                 date: '$sessions.createdAt',
+                session_id: '$sessions.session_id',
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
               },
@@ -689,6 +688,7 @@ export class ScoresService {
               $project: {
                 _id: 0,
                 user_id: 1,
+                session_id: '$sessions.session_id',
                 date: '$sessions.createdAt',
                 character: '$sessions.missing_token_scores.token',
                 score: '$sessions.missing_token_scores.confidence_score',
@@ -735,44 +735,58 @@ export class ScoresService {
         $group: {
           _id: {
             token: '$token',
-            userId: '$user_id',
           },
-          meanScore: { $avg: '$score' },
+          scores: {
+            $push: '$score',
+          },
         },
       },
       {
         $project: {
           _id: 0,
-          user_id: '$_id.userId',
-          session_id: '$_id.sessionId',
           character: '$_id.token',
-          score: '$meanScore',
+          latestScores: {
+            $slice: ['$scores', -5],
+          },
+        },
+      },
+      {
+        $addFields: {
+          countBelowThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: {
+                  $lt: ['$$score', threshold],
+                },
+              },
+            },
+          },
+          countAboveThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: {
+                  $gte: ['$$score', threshold],
+                },
+              },
+            },
+          },
         },
       },
       {
         $match: {
-          score: { $lt: threshold },
+          $expr: {
+            $gt: ['$countBelowThreshold', '$countAboveThreshold'],
+          },
         },
       },
-      {
-        $sort: {
-          score: 1
-        }
-      },
-      {
-        $addFields: {
-          score: {
-            $divide: [
-              { $trunc: { $multiply: ['$score', 100] } },
-              100
-            ]
-          }
-        }
-      }
     ]);
 
-    return RecordData.sort((a, b) => a.score - b.score);
-  }
+    return RecordData;
+    }
 
   async getFamiliarityBySession(sessionId: string) {
     const threshold = 0.9;
@@ -994,67 +1008,152 @@ export class ScoresService {
 
   async getFamiliarityByUser(userId: string) {
     const threshold = 0.7;
-    const RecordData = await this.scoreModel.aggregate([
+    const isRetry = false;
+
+    let RecordData = [];
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          user_id: userId,
-        },
+          user_id:userId
+        }
       },
       {
         $unwind: '$sessions',
       },
       {
-        $unwind: '$sessions.confidence_scores',
+        $match: {
+          'sessions.isRetry': isRetry,
+        },
+      },
+      {
+        $facet: {
+          confidenceScores: [
+            {
+              $unwind: '$sessions.confidence_scores',
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                date: '$sessions.createdAt',
+                session_id: '$sessions.session_id',
+                character: '$sessions.confidence_scores.token',
+                score: '$sessions.confidence_scores.confidence_score',
+              },
+            },
+            {
+              $sort: {
+                date: -1,
+              },
+            },
+          ],
+          missingTokenScores: [
+            {
+              $unwind: '$sessions.missing_token_scores',
+            },
+            {
+              $project: {
+                _id: 0,
+                user_id: 1,
+                session_id: '$sessions.session_id',
+                date: '$sessions.createdAt',
+                character: '$sessions.missing_token_scores.token',
+                score: '$sessions.missing_token_scores.confidence_score',
+              },
+            },
+            {
+              $sort: {
+                date: -1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $project: {
+          combinedResults: {
+            $concatArrays: ['$confidenceScores', '$missingTokenScores'],
+          },
+        },
+      },
+      {
+        $unwind: '$combinedResults',
+      },
+      {
+        $replaceRoot: {
+          newRoot: '$combinedResults',
+        },
+      },
+      {
+        $project: {
+          user_id: '$user_id',
+          sessionId: '$session_id',
+          date: '$date',
+          token: '$character',
+          score: '$score',
+        },
+      },
+      {
+        $sort: {
+          date: -1,
+        },
+      },
+      {
+        $group: {
+          _id: {
+            token: '$token',
+          },
+          scores: {
+            $push: '$score',
+          },
+        },
       },
       {
         $project: {
           _id: 0,
-          user_id: 1,
-          date: '$sessions.date',
-          character: '$sessions.confidence_scores.token',
-          score: '$sessions.confidence_scores.confidence_score'
-        }
+          character: '$_id.token',
+          latestScores: {
+            $slice: ['$scores', -5],
+          },
+        },
       },
       {
         $addFields: {
-          score: {
-            $divide: [
-              { $trunc: { $multiply: ['$score', 100] } },
-              100
-            ]
-          }
-        }
-      }
+          countBelowThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: {
+                  $lt: ['$$score', threshold],
+                },
+              },
+            },
+          },
+          countAboveThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: {
+                  $gte: ['$$score', threshold],
+                },
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: {
+          $expr: {
+            $gte: ['$countAboveThreshold', '$countBelowThreshold'],
+          },
+        },
+      },
     ]);
-    const charScoreData = [];
 
-    const uniqueChar = new Set();
-
-    for (const RecordDataele of RecordData) {
-      uniqueChar.add(RecordDataele.character);
-    }
-
-    for (const char of uniqueChar) {
-      let score = 0;
-      let count = 0;
-
-      for (const checkRecordDataele of RecordData) {
-        if (
-          char === checkRecordDataele.character &&
-          checkRecordDataele.score >= score
-        ) {
-          score += checkRecordDataele.score;
-          count++;
-        }
-      }
-
-      const avgScore = score / count;
-      if (avgScore >= 0.9) {
-        charScoreData.push({ character: char, score: score });
-      }
-    }
-
-    return charScoreData.sort((a, b) => a.score - b.score);
+    return RecordData;
   }
 
   async getFluencyBysubSession(subSessionId: string, language: string) {
