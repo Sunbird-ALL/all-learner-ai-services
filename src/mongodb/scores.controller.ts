@@ -629,8 +629,15 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false,
           },
         };
+
+         // For retry attempt detection
+         const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
 
         // Store Array to DB
         const data = await this.scoresService.create(createScoreData);
@@ -979,8 +986,6 @@ export class ScoresController {
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
 
-      //console.log(filteredTokenArr);
-
       // Create confidence score array and anomoly array
       for (const value of filteredTokenArr) {
         const score: any = value.charvalue;
@@ -1070,8 +1075,15 @@ export class ScoresController {
           confidence_scores: confidence_scoresArr,
           missing_token_scores: missing_token_scoresArr,
           anamolydata_scores: anomaly_scoreArr,
+          isRetry: false,
         },
       };
+
+      // For retry attempt detection
+      const retryAttempt = await this.scoresService.getRetryStatus(
+        CreateLearnerProfileDto.user_id,
+        CreateLearnerProfileDto.contentId,
+      );
 
       // Store Array to DB
       const data = this.scoresService.create(createScoreData);
@@ -1695,8 +1707,15 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false
           },
         };
+
+        // For retry attempt detection
+        const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
 
         // Store Array to DB
         const data = this.scoresService.create(createScoreData);

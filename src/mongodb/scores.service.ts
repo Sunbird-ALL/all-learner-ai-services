@@ -955,7 +955,7 @@ export class ScoresService {
   }
 
   async getFamiliarityByUser(userId: string) {
-    const threshold = 0.9;
+    const threshold = 0.7;
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -1020,6 +1020,7 @@ export class ScoresService {
   }
 
   async getFluencyBysubSession(subSessionId: string, language: string) {
+    const isRetry = false;
     const RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
@@ -1028,6 +1029,7 @@ export class ScoresService {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language,
+          'sessions.isRetry': isRetry,
         },
       },
       {
