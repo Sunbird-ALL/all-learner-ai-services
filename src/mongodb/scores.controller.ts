@@ -3013,7 +3013,6 @@ export class ScoresController {
       const { userId, language } = data;
       let target_Data: any = []
       let famalarity_Data: any = [];
- 
       const subsessionData = await this.scoresService.getSubessionIds(userId);
 
       for (const subSessionId of subsessionData) {
