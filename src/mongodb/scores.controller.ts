@@ -777,8 +777,6 @@ export class ScoresController {
       //unique token list for ai4bharat response
       let uniqueCharArr = Array.from(uniqueChar);
 
-      //console.log(uniqueCharArr);
-
       isPrevVowel = false;
 
       // Get best score for Each Char
@@ -821,8 +819,6 @@ export class ScoresController {
 
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
-
-      //console.log(filteredTokenArr);
 
       // Create confidence score array and anomoly array
       for (let value of filteredTokenArr) {
@@ -1242,8 +1238,6 @@ export class ScoresController {
 
         //unique token list for ai4bharat response
         let uniqueCharArr = Array.from(uniqueChar);
-
-        //console.log(uniqueCharArr);
 
         isPrevVowel = false;
 
@@ -2601,13 +2595,13 @@ export class ScoresController {
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
       let totalTargets = targets.length;
-     
-      if(getSetResult.totalSyllableCount == undefined){
+
+      if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + famalarity.length;
-      }else{
+      } else {
         totalSyllables = getSetResult.totalSyllableCount
       }
-      
+
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
 
@@ -2918,8 +2912,6 @@ export class ScoresController {
       }
     });
     let notIncludedTotal = notIncluded.length;
-
-    console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({ status: 'success', matched: matched, matchtedTotal: matchtedTotal, notIncluded: notIncluded, notIncludedTotal: notIncludedTotal })
   }
 
@@ -2986,18 +2978,56 @@ export class ScoresController {
   @Post('/getUsersMilestones')
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const {userIds , language} = data;
+      const { userIds, language } = data;
       let recordData = [];
-      for(const userId of userIds){
+      for (const userId of userIds) {
         let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
         let milestone_level = milestoneData[0]?.milestone_level || "m0";
-      
+
         recordData.push({
           user_id: userId,
-          data:{milestone_level: milestone_level},
+          data: { milestone_level: milestone_level },
         });
       }
       return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUserProfile')
+  async GetUserProfile(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userId, language } = data;
+      let target_Data: any = []
+      let famalarity_Data: any = [];
+      const subsessionData = await this.scoresService.getSubessionIds(userId);
+
+      for (const subSessionId of subsessionData) {
+        const famalarityData = await this.scoresService.getFamiliarityBysubSessionUserProfile(subSessionId, language);
+        if (famalarityData) {
+          famalarity_Data.push({
+            subSessionId: subSessionId,
+            score:famalarityData || []
+          })
+        }
+        const targetData = await this.scoresService.getTargetsBysubSessionUserProfile(subSessionId, language);
+        if (targetData) {
+          target_Data.push({
+            subSessionId: subSessionId,
+            score:targetData || []
+          })
+        }
+      }
+      const finalResponse = {
+        Target: target_Data,
+        Famalarity: famalarity_Data
+      };
+      return response.status(HttpStatus.OK).send(finalResponse);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
