@@ -1617,6 +1617,7 @@ export class ScoresController {
           }
         }
 
+
         const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
@@ -2729,7 +2730,7 @@ export class ScoresController {
 
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API+ "/getTextMatrices";
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
@@ -4001,7 +4002,18 @@ export class ScoresController {
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-        } else {
+        } else if (
+          getSetResult.collectionId === '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
+          getSetResult.collectionId === '1df7cb53-4609-4ba0-a0dc-2e4dc188619a' ||
+          getSetResult.collectionId === 'cfbd93f9-10f6-4064-ab0f-f2f8d6e45e6a' ||
+          (getSetResult.collectionId === 'd6f84966-53fa-44bb-93d9-598c84974f04' &&
+            getSetResult.language === 'te')
+        ) {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
+        }else {
           if (
             getSetResult.language === 'ta' &&
             getSetResult.collectionId !== '' &&
@@ -4173,6 +4185,48 @@ export class ScoresController {
               'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
               getSetResult.collectionId ===
               'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
+            ) {
+              milestone_level = 'm1';
+            }
+          } else if (
+            getSetResult.language === 'te' &&
+            getSetResult.collectionId !== '' &&
+            getSetResult.collectionId !== undefined
+          ) {
+            if (
+              getSetResult.collectionId === '9682eee7-f6dc-4277-9ff7-1d1f4f079020' ||
+              getSetResult.collectionId === '45e148f0-c591-479f-becd-2e1f85caf11e' ||
+              getSetResult.collectionId === '33fb7dfa-4c51-42dd-b4cd-7a38747b96f4' ||
+              getSetResult.collectionId === '5a5560e8-e22a-402c-a6da-fb93bfc2b335'
+            ) {
+              if (sessionResult === 'pass') {
+                milestone_level = 'm2';
+              } else {
+                milestone_level = 'm1';
+              }
+            } else if (
+              getSetResult.collectionId === '3b339169-df4e-4490-8ff4-4616370ba9af' ||
+              getSetResult.collectionId === '7d1d2108-c742-470b-9af9-988411bc05d6' ||
+              getSetResult.collectionId === 'edc2b898-ba23-4cc6-83c4-54a567a83f09' ||
+              getSetResult.collectionId === '835f0357-f0fe-45ba-8ec1-d55f19d80b3c'
+            ) {
+              if (sessionResult === 'fail') {
+                milestone_level = 'm3';
+              } else {
+                milestoneEntry = false;
+              }
+            } else if (
+              getSetResult.collectionId === '56b06985-fe48-4a89-9b1f-a9f3c6cf1e28' ||
+              getSetResult.collectionId === 'c76fe38d-0881-4b36-aaa2-85dc679a5640' ||
+              getSetResult.collectionId === '81faf48a-e37c-4909-80de-4ff7d7f204f0' ||
+              getSetResult.collectionId === 'd4652c35-a39c-44ca-b833-74504efc69ab'
+            ) {
+              milestone_level = 'm4';
+            } else if (
+              getSetResult.collectionId === '21a6619e-bb15-4b49-823e-68bfc703e394' ||
+              getSetResult.collectionId === '74102541-9127-4c2e-aa6f-e19f9b914f42' ||
+              getSetResult.collectionId === '34651976-b302-4ddf-b858-236b5e4eb093' ||
+              getSetResult.collectionId === '55149fbb-4fb1-4e4d-9b77-16e30e537b21'
             ) {
               milestone_level = 'm1';
             }
