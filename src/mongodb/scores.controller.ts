@@ -1590,7 +1590,7 @@ export class ScoresController {
           }
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API+ "/getTextMatrices";
 
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
@@ -2627,7 +2627,7 @@ export class ScoresController {
 
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API+ "/getTextMatrices";
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
