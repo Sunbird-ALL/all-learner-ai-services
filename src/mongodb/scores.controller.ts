@@ -21,7 +21,7 @@ export class ScoresController {
   constructor(
     private readonly scoresService: ScoresService,
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   @ApiBody({
     schema: {
@@ -119,6 +119,10 @@ export class ScoresController {
     try {
       const originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
+      let asrOutDenoised;
+      let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
 
       const correctTokens = [];
       let missingTokens = [];
@@ -186,11 +190,20 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          const audioOutput = await this.scoresService.audioFileToAsrOutput(
-            decoded,
-            CreateLearnerProfileDto.language,
-          );
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -207,11 +220,6 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
         let constructText = '';
-        const originalTextTokensArr = originalText.split('');
-        const responseTextTokensArr = responseText.split('');
-
-        const originalTextArr = originalText.split(' ');
-        const responseTextArr = responseText.split(' ');
 
         // Get All hexcode for this selected language
         const tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
@@ -524,7 +532,7 @@ export class ScoresController {
           }
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
@@ -548,35 +556,46 @@ export class ScoresController {
             ),
         );
 
-        const wer = textEvalMatrices.wer;
-        const cercal = textEvalMatrices.cer * 2;
-        const charCount = Math.abs(
-          CreateLearnerProfileDto.original_text.length -
-            CreateLearnerProfileDto.output[0].source.length,
-        );
-        const wordCount = Math.abs(
-          CreateLearnerProfileDto.original_text.split(' ').length -
-            CreateLearnerProfileDto.output[0].source.split(' ').length,
-        );
-        const repetitions = reptitionCount;
-        const pauseCount = textEvalMatrices.pause_count;
-        const ins = textEvalMatrices.insertion.length;
-        const del = textEvalMatrices.deletion.length;
-        const sub = textEvalMatrices.substitution.length;
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
 
-        const fluencyScore =
-          (wer * 5 +
-            cercal * 10 +
-            charCount * 10 +
-            wordCount * 10 +
-            repetitions * 10 +
-            pauseCount * 10 +
-            ins * 20 +
-            del * 15 +
-            sub * 5) /
-          100;
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
 
-        const createdAt = new Date().toISOString().replace('Z', '+00:00');
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
+
+        let wer = textEvalMatrices.wer;
+        let cercal = textEvalMatrices.cer * 2;
+        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
+        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
+        let repetitions = reptitionCount;
+        let pauseCount = textEvalMatrices.pause_count;
+        let ins = textEvalMatrices.insertion.length;
+        let del = textEvalMatrices.deletion.length;
+        let sub = textEvalMatrices.substitution.length;
+
+        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+
+        let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id, // userid sent by client
@@ -600,11 +619,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  CreateLearnerProfileDto.output[0].source.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  CreateLearnerProfileDto.output[0].source.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -628,8 +647,15 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false,
           },
         };
+
+        // For retry attempt detection
+        const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
 
         // Store Array to DB
         const data = await this.scoresService.create(createScoreData);
@@ -766,7 +792,7 @@ export class ScoresController {
         const decoded = audioFile.toString('base64');
         const audioOutput = await this.scoresService.audioFileToAsrOutput(
           decoded,
-          'hi',
+          'hi'
         );
         CreateLearnerProfileDto['output'] = audioOutput.output;
 
@@ -935,8 +961,6 @@ export class ScoresController {
       //unique token list for ai4bharat response
       const uniqueCharArr = Array.from(uniqueChar);
 
-      //console.log(uniqueCharArr);
-
       isPrevVowel = false;
 
       // Get best score for Each Char
@@ -977,8 +1001,6 @@ export class ScoresController {
 
         filteredTokenArr.push({ charkey: char, charvalue: score });
       }
-
-      //console.log(filteredTokenArr);
 
       // Create confidence score array and anomoly array
       for (const value of filteredTokenArr) {
@@ -1069,8 +1091,15 @@ export class ScoresController {
           confidence_scores: confidence_scoresArr,
           missing_token_scores: missing_token_scoresArr,
           anamolydata_scores: anomaly_scoreArr,
+          isRetry: false,
         },
       };
+
+      // For retry attempt detection
+      const retryAttempt = await this.scoresService.getRetryStatus(
+        CreateLearnerProfileDto.user_id,
+        CreateLearnerProfileDto.contentId,
+      );
 
       // Store Array to DB
       const data = this.scoresService.create(createScoreData);
@@ -1223,7 +1252,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
           const audioOutput = await this.scoresService.audioFileToAsrOutput(
             decoded,
-            'kn',
+            'kn'
           );
           CreateLearnerProfileDto['output'] = audioOutput.output;
 
@@ -1467,8 +1496,6 @@ export class ScoresController {
         //unique token list for ai4bharat response
         const uniqueCharArr = Array.from(uniqueChar);
 
-        //console.log(uniqueCharArr);
-
         isPrevVowel = false;
 
         // Get best score for Each Char
@@ -1590,7 +1617,8 @@ export class ScoresController {
           }
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API+ "/getTextMatrices";
+
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
@@ -1618,11 +1646,11 @@ export class ScoresController {
         const cercal = textEvalMatrices.cer * 2;
         const charCount = Math.abs(
           CreateLearnerProfileDto.original_text.length -
-            CreateLearnerProfileDto.output[0].source.length,
+          CreateLearnerProfileDto.output[0].source.length,
         );
         const wordCount = Math.abs(
           CreateLearnerProfileDto.original_text.split(' ').length -
-            CreateLearnerProfileDto.output[0].source.split(' ').length,
+          CreateLearnerProfileDto.output[0].source.split(' ').length,
         );
         const repetitions = reptitionCount;
         const pauseCount = textEvalMatrices.pause_count;
@@ -1666,11 +1694,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  CreateLearnerProfileDto.output[0].source.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  CreateLearnerProfileDto.output[0].source.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -1694,8 +1722,15 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false
           },
         };
+
+        // For retry attempt detection
+        const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
 
         // Store Array to DB
         const data = this.scoresService.create(createScoreData);
@@ -1819,12 +1854,18 @@ export class ScoresController {
       const originalText = processText(CreateLearnerProfileDto.original_text);
 
       let createScoreData;
-      const language = 'en';
-      const reptitionCount = 0;
-      let responseText = '';
-      const confidence_scoresArr = [];
-      const anomaly_scoreArr = [];
-      const missing_token_scoresArr = [];
+      let language = "en";
+      let reptitionCount = 0;
+      let responseText = "";
+      let confidence_scoresArr = [];
+      let anomaly_scoreArr = [];
+      let missing_token_scoresArr = [];
+
+      let asrOutDenoised;
+      let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
+
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1840,11 +1881,20 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          const audioOutput = await this.scoresService.audioFileToAsrOutput(
-            decoded,
-            CreateLearnerProfileDto.language,
-          );
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, processText(asrOutDenoised[0]?.source || "")) <= similarity(originalText, processText(asrOutBeforeDenoised[0]?.source || ""))) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+          }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1865,7 +1915,7 @@ export class ScoresController {
 
         responseText = processText(CreateLearnerProfileDto.output[0].source);
 
-        const url = process.env.ALL_TEXT_EVAL_API;
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           reference: originalText,
@@ -1929,35 +1979,47 @@ export class ScoresController {
           }
         }
 
-        const wer = textEvalMatrices.wer;
-        const cercal = textEvalMatrices.cer * 2;
-        const charCount = Math.abs(
-          CreateLearnerProfileDto.original_text.length -
-            CreateLearnerProfileDto.output[0].source.length,
-        );
-        const wordCount = Math.abs(
-          CreateLearnerProfileDto.original_text.split(' ').length -
-            CreateLearnerProfileDto.output[0].source.split(' ').length,
-        );
-        const repetitions = reptitionCount;
-        const pauseCount = textEvalMatrices.pause_count;
-        const ins = textEvalMatrices.insertion.length;
-        const del = textEvalMatrices.deletion.length;
-        const sub = textEvalMatrices.substitution.length;
 
-        const fluencyScore =
-          (wer * 5 +
-            cercal * 10 +
-            charCount * 10 +
-            wordCount * 10 +
-            repetitions * 10 +
-            pauseCount * 10 +
-            ins * 20 +
-            del * 15 +
-            sub * 5) /
-          100;
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
 
-        const createdAt = new Date().toISOString().replace('Z', '+00:00');
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
+
+        let wer = textEvalMatrices.wer;
+        let cercal = textEvalMatrices.cer * 2;
+        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
+        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
+        let repetitions = reptitionCount;
+        let pauseCount = textEvalMatrices.pause_count;
+        let ins = textEvalMatrices.insertion.length;
+        let del = textEvalMatrices.deletion.length;
+        let sub = textEvalMatrices.substitution.length;
+
+        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+
+        let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id, // userid sent by client
@@ -2068,6 +2130,47 @@ export class ScoresController {
         return processedText;
       }
 
+      function similarity(s1, s2) {
+        var longer = s1;
+        var shorter = s2;
+        if (s1.length < s2.length) {
+          longer = s2;
+          shorter = s1;
+        }
+        var longerLength = longer.length;
+        if (longerLength == 0) {
+          return 1.0;
+        }
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+      }
+
+      function editDistance(s1, s2) {
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+
+        var costs = new Array();
+        for (var i = 0; i <= s1.length; i++) {
+          var lastValue = i;
+          for (var j = 0; j <= s2.length; j++) {
+            if (i == 0)
+              costs[j] = j;
+            else {
+              if (j > 0) {
+                var newValue = costs[j - 1];
+                if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                  newValue = Math.min(Math.min(newValue, lastValue),
+                    costs[j]) + 1;
+                costs[j - 1] = lastValue;
+                lastValue = newValue;
+              }
+            }
+          }
+          if (i > 0)
+            costs[s2.length] = lastValue;
+        }
+        return costs[s2.length];
+      }
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -2137,7 +2240,7 @@ export class ScoresController {
 
       let vowelSignArr = [];
 
-      
+
       let telguVowelSignArr = [
         "ా",
         "ి",
@@ -2214,72 +2317,72 @@ export class ScoresController {
         let confidence_scoresArr = [];
         let missing_token_scoresArr = [];
         let anomaly_scoreArr = [];
-        /*  If the content type is of word ,Generating Constructed text from the ASR Output . From all those constructed combinations 
+        /*  If the content type is of word ,Generating Constructed text from the ASR Output . From all those constructed combinations
           will be taking the best with similarity score and compare with the original response and choose the best */
-        let flag=0;
+        let flag = 0;
         let tokenArr = [];
         let anamolyTokenArr = [];
-        const word=CreateLearnerProfileDto.original_text
+        const word = CreateLearnerProfileDto.original_text
         let data_arr = [];// Storing the chars and their scores from the ASR Output for the construvcted text
-        if(CreateLearnerProfileDto.contentType.toLowerCase()=='word') {
-        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-          element.tokens.forEach((token) => {
-            let insertObj = {}; // Create an empty object for each iteration
-            let key = Object.keys(token)[0]; // Check if the first key is valid (non-empty and defined)
-            if (key && key.trim() !== '') { // Ensure key is valid
-              let value = Object.values(token)[0];
-              insertObj[key] = value; // Add the first key-value pair
-            }
-            // Check if there's a second key and if it's valid
-            if (Object.keys(token).length > 1) { // Ensure there's a second key
-              let key1 = Object.keys(token)[1];
-              if (key1 && key1.trim() !== '') { // Ensure key is valid
-                let value1 = Object.values(token)[1];
-                insertObj[key1] = value1; // Add the second key-value pair
+        if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') {
+          CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+            element.tokens.forEach((token) => {
+              let insertObj = {}; // Create an empty object for each iteration
+              let key = Object.keys(token)[0]; // Check if the first key is valid (non-empty and defined)
+              if (key && key.trim() !== '') { // Ensure key is valid
+                let value = Object.values(token)[0];
+                insertObj[key] = value; // Add the first key-value pair
               }
-            }            
-            if (Object.keys(insertObj).length > 0) { // Only push to data_arr if there's at least one valid key-value pair
-              data_arr.push(insertObj);
-            }
-          });
-        });
-        const response_word=CreateLearnerProfileDto.output[0].source;
-        /*  Function for generating the constructed text without  issing the sequence and for every constructed text
-            we are storing used chars and that are not used we are storing it in unused char array  */
-        function generateWords(dataArr) {
-          const generateRecursive = (currentWord, usedKeyValueArr, index) => {
-            if (index === dataArr.length) {
-              return [[currentWord, usedKeyValueArr]];
-            }
-            const possibleWords = [];
-            const currentObject = dataArr[index];
-            for (const key in currentObject) {
-              if (currentObject.hasOwnProperty(key)) {
-                const newWord = currentWord + key;
-                const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
-                possibleWords.push(
-                  ...generateRecursive(newWord, newUsedKeyValueArr, index + 1)
-                );
-              }
-            }
-            return possibleWords;
-          };
-          const generatedWords = generateRecursive("", [], 0); // Generate all possible words
-          const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
-            const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
-            const unusedKeyValueArr = []; // Find unused key-value pairs
-            dataArr.forEach(data => {  //fetching the unused char for a particular constructed text and storing it
-              Object.entries(data).forEach(([key, value]) => {
-                if (!usedKeys.includes(key)) {
-                  unusedKeyValueArr.push({ [key]: value });
+              // Check if there's a second key and if it's valid
+              if (Object.keys(token).length > 1) { // Ensure there's a second key
+                let key1 = Object.keys(token)[1];
+                if (key1 && key1.trim() !== '') { // Ensure key is valid
+                  let value1 = Object.values(token)[1];
+                  insertObj[key1] = value1; // Add the second key-value pair
                 }
-              });
+              }
+              if (Object.keys(insertObj).length > 0) { // Only push to data_arr if there's at least one valid key-value pair
+                data_arr.push(insertObj);
+              }
             });
-
-            return [word, usedKeyValueArr, unusedKeyValueArr]; // Return an array with word, used key-value pairs, and unused key-value pairs
           });
-          return results;
-        }
+          const response_word = CreateLearnerProfileDto.output[0].source;
+          /*  Function for generating the constructed text without  issing the sequence and for every constructed text
+              we are storing used chars and that are not used we are storing it in unused char array  */
+          function generateWords(dataArr) {
+            const generateRecursive = (currentWord, usedKeyValueArr, index) => {
+              if (index === dataArr.length) {
+                return [[currentWord, usedKeyValueArr]];
+              }
+              const possibleWords = [];
+              const currentObject = dataArr[index];
+              for (const key in currentObject) {
+                if (currentObject.hasOwnProperty(key)) {
+                  const newWord = currentWord + key;
+                  const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
+                  possibleWords.push(
+                    ...generateRecursive(newWord, newUsedKeyValueArr, index + 1)
+                  );
+                }
+              }
+              return possibleWords;
+            };
+            const generatedWords = generateRecursive("", [], 0); // Generate all possible words
+            const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
+              const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
+              const unusedKeyValueArr = []; // Find unused key-value pairs
+              dataArr.forEach(data => {  //fetching the unused char for a particular constructed text and storing it
+                Object.entries(data).forEach(([key, value]) => {
+                  if (!usedKeys.includes(key)) {
+                    unusedKeyValueArr.push({ [key]: value });
+                  }
+                });
+              });
+
+              return [word, usedKeyValueArr, unusedKeyValueArr]; // Return an array with word, used key-value pairs, and unused key-value pairs
+            });
+            return results;
+          }
           const words_with_values = generateWords(data_arr);
           /* Function for generating the simnilarities for each and every word with the
             original word and sort it in descending order */
@@ -2289,23 +2392,23 @@ export class ScoresController {
               const usedarr = wordWithVal[1];
               const unusedarr = wordWithVal[2];
               const score = similarity(s1, word);
-              return [word, usedarr,unusedarr,score];
+              return [word, usedarr, unusedarr, score];
             });
             similarityList.sort((a, b) => b[3] - a[3]); // Sort the list in descending order based on similarity score
             return similarityList;
           }
-          let restext=[...findAllSimilarities(words_with_values,word)][0];
-          /*checks whether the ASR has highest similarity or constructed has highest 
+          let restext = [...findAllSimilarities(words_with_values, word)][0];
+          /*checks whether the ASR has highest similarity or constructed has highest
             and assign to the response text*/
-          if(similarity(CreateLearnerProfileDto.output[0].source,word)>=restext[3]){ 
+          if (similarity(CreateLearnerProfileDto.output[0].source, word) >= restext[3]) {
             responseText = CreateLearnerProfileDto.output[0].source;
-            flag=1;
+            flag = 1;
           }
           else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
             responseText = restext[0];
             tokenArr = restext[1];
             anamolyTokenArr = restext[2];
-          }         
+          }
         }
         else { //if the response has higher then response will be same as ASR output
           responseText = CreateLearnerProfileDto.output[0].source;
@@ -2449,10 +2552,10 @@ export class ScoresController {
         let filteredTokenArr = [];
 
         //token list for ai4bharat response
-        
+
 
         // Create Single Array from AI4bharat tokens array
-        if(CreateLearnerProfileDto.contentType.toLowerCase()!='word' || flag==1){
+        if (CreateLearnerProfileDto.contentType.toLowerCase() != 'word' || flag == 1) {
           CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
             element.tokens.forEach(token => {
               let key = Object.keys(token)[0];
@@ -2469,7 +2572,7 @@ export class ScoresController {
               anamolyTokenArr.push(insertObj);
             });
           });
-      }
+        }
 
         let uniqueChar = new Set();
         prevEle = '';
@@ -2739,7 +2842,7 @@ export class ScoresController {
         CreateLearnerProfileDto.language,
       );
 
-      return response.status(HttpStatus.CREATED).send({ 
+      return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
@@ -3856,11 +3959,11 @@ export class ScoresController {
       } else {
         if (
           getSetResult.collectionId ===
-            '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
+          '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
           getSetResult.collectionId ===
-            'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
+          'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
           getSetResult.collectionId ===
-            '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
+          '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
           (getSetResult.collectionId ===
             '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
             getSetResult.language === 'ta')
@@ -3871,11 +3974,11 @@ export class ScoresController {
           }
         } else if (
           getSetResult.collectionId ===
-            '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
+          '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
           getSetResult.collectionId ===
-            '976a7631-3887-4d18-9576-7ca8205b82e8' ||
+          '976a7631-3887-4d18-9576-7ca8205b82e8' ||
           getSetResult.collectionId ===
-            '9374ae97-80e4-419b-8e96-784734317e82' ||
+          '9374ae97-80e4-419b-8e96-784734317e82' ||
           (getSetResult.collectionId ===
             'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
             getSetResult.language === 'kn')
@@ -3886,11 +3989,11 @@ export class ScoresController {
           }
         } else if (
           getSetResult.collectionId ===
-            '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
+          '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
           getSetResult.collectionId ===
-            'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
+          'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
           getSetResult.collectionId ===
-            '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
+          '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
           (getSetResult.collectionId ===
             'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
             getSetResult.language === 'en')
@@ -3918,13 +4021,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
+              'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
               getSetResult.collectionId ===
-                '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
+              '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
               getSetResult.collectionId ===
-                '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
+              '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
               getSetResult.collectionId ===
-                '55767bfa-0e12-4d8f-999b-e84daf6c7587'
+              '55767bfa-0e12-4d8f-999b-e84daf6c7587'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -3933,13 +4036,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
+              '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
               getSetResult.collectionId ===
-                '85d58650-0771-4b28-b185-d074b5a5982d' ||
+              '85d58650-0771-4b28-b185-d074b5a5982d' ||
               getSetResult.collectionId ===
-                '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
+              '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
               getSetResult.collectionId ===
-                '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
+              '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -3948,24 +4051,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '67b820f5-096d-42c2-acce-b781d59efe7e' ||
+              '67b820f5-096d-42c2-acce-b781d59efe7e' ||
               getSetResult.collectionId ===
-                '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
+              '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
               getSetResult.collectionId ===
-                'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
+              'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
               getSetResult.collectionId ===
-                '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
+              '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
+              '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
               getSetResult.collectionId ===
-                '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
+              '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
               getSetResult.collectionId ===
-                'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
+              'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
               getSetResult.collectionId ===
-                'ed47eb63-87c8-41f4-821d-1400fef37b78'
+              'ed47eb63-87c8-41f4-821d-1400fef37b78'
             ) {
               milestone_level = 'm1';
             }
@@ -3976,13 +4079,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                'b755df98-198b-440a-90e0-391579ef4bfb' ||
+              'b755df98-198b-440a-90e0-391579ef4bfb' ||
               getSetResult.collectionId ===
-                '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
+              '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
               getSetResult.collectionId ===
-                'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
+              'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
               getSetResult.collectionId ===
-                '6a89f990-8727-49da-b128-b7ea1839d025'
+              '6a89f990-8727-49da-b128-b7ea1839d025'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -3991,13 +4094,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '29bb9cff-9510-4693-bec5-9436a686b836' ||
+              '29bb9cff-9510-4693-bec5-9436a686b836' ||
               getSetResult.collectionId ===
-                '5828539f-4b1f-4502-b648-b2843d61f35d' ||
+              '5828539f-4b1f-4502-b648-b2843d61f35d' ||
               getSetResult.collectionId ===
-                '37a406a5-d82e-447d-9762-17c76f5005ef' ||
+              '37a406a5-d82e-447d-9762-17c76f5005ef' ||
               getSetResult.collectionId ===
-                '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
+              '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -4006,24 +4109,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
+              'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
               getSetResult.collectionId ===
-                '390c8719-fc52-42f3-b49d-41547a0639d7' ||
+              '390c8719-fc52-42f3-b49d-41547a0639d7' ||
               getSetResult.collectionId ===
-                'aee5f3f4-213c-4596-8074-0addab60122a' ||
+              'aee5f3f4-213c-4596-8074-0addab60122a' ||
               getSetResult.collectionId ===
-                'e28d2463-adca-46e6-8159-04c99d6158d3'
+              'e28d2463-adca-46e6-8159-04c99d6158d3'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                'ac930427-4a73-41a8-94d5-be74defd2993' ||
+              'ac930427-4a73-41a8-94d5-be74defd2993' ||
               getSetResult.collectionId ===
-                '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
+              '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
               getSetResult.collectionId ===
-                '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
+              '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
               getSetResult.collectionId ===
-                '61b65b9b-94b8-4212-94e5-33ce8e80435a'
+              '61b65b9b-94b8-4212-94e5-33ce8e80435a'
             ) {
               milestone_level = 'm1';
             }
@@ -4034,13 +4137,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
+              '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
               getSetResult.collectionId ===
-                'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
+              'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
               getSetResult.collectionId ===
-                'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
+              'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
               getSetResult.collectionId ===
-                '775c974a-4bda-4cfc-bc47-2aff56e39c46'
+              '775c974a-4bda-4cfc-bc47-2aff56e39c46'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -4049,13 +4152,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
+              'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
               getSetResult.collectionId ===
-                'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
+              'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
               getSetResult.collectionId ===
-                'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
+              'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
               getSetResult.collectionId ===
-                '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
+              '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -4064,24 +4167,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
+              'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
               getSetResult.collectionId ===
-                'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
+              'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
               getSetResult.collectionId ===
-                'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
+              'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
               getSetResult.collectionId ===
-                '809039e5-119d-42ae-925f-b2546b1e3d7b'
+              '809039e5-119d-42ae-925f-b2546b1e3d7b'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
+              '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
               getSetResult.collectionId ===
-                '30c5800e-4a02-4259-8328-abf57e4255ca' ||
+              '30c5800e-4a02-4259-8328-abf57e4255ca' ||
               getSetResult.collectionId ===
-                'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
+              'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
               getSetResult.collectionId ===
-                'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
+              'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
             ) {
               milestone_level = 'm1';
             }
@@ -4384,6 +4487,48 @@ export class ScoresController {
         });
       }
       return response.status(HttpStatus.OK).send(recordData);
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: "error",
+        message: "Server error - " + err
+      });
+    }
+  }
+
+  @ApiExcludeEndpoint(true)
+  @Post('/getUserProfile')
+  async GetUserProfile(@Res() response: FastifyReply, @Body() data: any) {
+    try {
+      const { userId, language } = data;
+      let target_Data: any = []
+      let famalarity_Data: any = [];
+      const subsessionData: any = await this.scoresService.getSubessionIds(userId);
+
+      for (const subsession of subsessionData) {
+        const subSessionId = subsession.sub_session_id;
+        const createdAt = subsession.createdAt
+        const famalarityData = await this.scoresService.getFamiliarityBysubSessionUserProfile(subSessionId, language);
+        if (famalarityData) {
+          famalarity_Data.push({
+            subSessionId: subSessionId,
+            createdAt: createdAt,
+            score: famalarityData || []
+          })
+        }
+        const targetData = await this.scoresService.getTargetsBysubSessionUserProfile(subSessionId, language);
+        if (targetData) {
+          target_Data.push({
+            subSessionId: subSessionId,
+            createdAt: createdAt,
+            score: targetData || []
+          })
+        }
+      }
+      const finalResponse = {
+        Target: target_Data,
+        Famalarity: famalarity_Data
+      };
+      return response.status(HttpStatus.OK).send(finalResponse);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: "error",
