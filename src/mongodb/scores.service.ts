@@ -1025,7 +1025,7 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFamiliarityByUser(userId: string) {
+  async getFamiliarityByUser(userId: string, language: string) {
     const threshold = 0.7;
     const isRetry = false;
 
@@ -1042,7 +1042,8 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.isRetry': isRetry,
+          'sessions.language':language,
+          'sessions.isRetry': isRetry
         },
       },
       {
