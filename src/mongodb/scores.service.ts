@@ -1781,7 +1781,6 @@ export class ScoresService {
     ]);
     return RecordData;
   }
-
   async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
 
@@ -1804,9 +1803,9 @@ export class ScoresService {
             {
               $project: {
                 _id: 0,
-                user_id: 1,
                 date: '$sessions.createdAt',
-                session_id: '$sessions.session_id',
+                original_text: '$sessions.original_text',
+                response_text: '$sessions.response_text',
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
               }
@@ -1824,9 +1823,9 @@ export class ScoresService {
             {
               $project: {
                 _id: 0,
-                user_id: 1,
-                session_id: '$sessions.session_id',
                 date: '$sessions.createdAt',
+                original_text: '$sessions.original_text',
+                response_text: '$sessions.response_text',
                 character: '$sessions.missing_token_scores.token',
                 score: '$sessions.missing_token_scores.confidence_score'
               }
@@ -1856,8 +1855,8 @@ export class ScoresService {
       },
       {
         $project: {
-          user_id: "$user_id",
-          sessionId: '$session_id',
+          original_text: '$original_text',
+          response_text: '$response_text',
           date: '$date',
           token: '$character',
           score: '$score'
@@ -1874,7 +1873,11 @@ export class ScoresService {
             token: "$token"
           },
           scores: {
-            $push: '$score'
+            $push: {
+              score: '$score',
+              original_text: '$original_text',
+              response_text: '$response_text'
+            }
           }
         }
       },
@@ -1895,7 +1898,7 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $lt: ['$$score', threshold]
+                  $lt: ['$$score.score', threshold]
                 }
               }
             }
@@ -1906,25 +1909,34 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $gte: ['$$score', threshold]
+                  $gte: ['$$score.score', threshold]
                 }
               }
             }
           },
-          avgScore: { $avg: "$latestScores" }
+          avgScore: { $avg: '$latestScores.score' }
+        }
+      },
+      {
+        $project: {
+          character: 1,
+          countBelowThreshold: 1,
+          countAboveThreshold: 1,
+          avgScore: 1,
+          latestScores: 1
         }
       },
       {
         $match: {
           $expr: {
-            $gt: ['$countBelowThreshold', '$countAboveThreshold'],
-
+            $lt: ['$countBelowThreshold', '$countAboveThreshold']
           }
         }
       }
     ]);
+
     return RecordData;
-  }
+}
 
 
   async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
@@ -1950,11 +1962,11 @@ export class ScoresService {
             {
               $project: {
                 _id: 0,
-                user_id: 1,
                 date: '$sessions.createdAt',
-                session_id: '$sessions.session_id',
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
+                original_text: '$sessions.original_text',
+                response_text: '$sessions.response_text'
               }
             },
             {
@@ -1970,11 +1982,11 @@ export class ScoresService {
             {
               $project: {
                 _id: 0,
-                user_id: 1,
-                session_id: '$sessions.session_id',
                 date: '$sessions.createdAt',
                 character: '$sessions.missing_token_scores.token',
-                score: '$sessions.missing_token_scores.confidence_score'
+                score: '$sessions.missing_token_scores.confidence_score',
+                original_text: '$sessions.original_text',
+                response_text: '$sessions.response_text'
               }
             },
             {
@@ -2002,11 +2014,11 @@ export class ScoresService {
       },
       {
         $project: {
-          user_id: "$user_id",
-          sessionId: '$session_id',
           date: '$date',
           token: '$character',
-          score: '$score'
+          score: '$score',
+          original_text: '$original_text',
+          response_text: '$response_text'
         }
       },
       {
@@ -2020,7 +2032,11 @@ export class ScoresService {
             token: "$token"
           },
           scores: {
-            $push: '$score'
+            $push: {
+              score: '$score',
+              original_text: '$original_text',
+              response_text: '$response_text'
+            }
           }
         }
       },
@@ -2041,7 +2057,7 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $lt: ['$$score', threshold]
+                  $lt: ['$$score.score', threshold]
                 }
               }
             }
@@ -2052,10 +2068,13 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $gte: ['$$score', threshold]
+                  $gte: ['$$score.score', threshold]
                 }
               }
             }
+          },
+          avg: {
+            $avg: '$latestScores.score'
           }
         }
       },
@@ -2069,5 +2088,6 @@ export class ScoresService {
     ]);
 
     return RecordData;
-  }
+}
+
 }
