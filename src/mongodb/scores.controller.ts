@@ -1785,11 +1785,37 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
+      const targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+      );
+      const targetsByContent = await this.scoresService.getTargetsByContentId(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+        CreateLearnerProfileDto.contentId,
+      );
+
+      const totalTargets = targets.length;
+      const totalContentTargets = targetsByContent.length;
+
+      const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
         createScoreData: createScoreData,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
       console.log(err);
