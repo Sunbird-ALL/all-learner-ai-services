@@ -15,7 +15,7 @@ import {
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
-import { query } from 'express';
+
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
