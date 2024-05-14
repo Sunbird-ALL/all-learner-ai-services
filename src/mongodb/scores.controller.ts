@@ -4461,8 +4461,8 @@ export class ScoresController {
 
         recordData.push({
           user_id: userId,
-          famalarityData: familiarityRecord,
-          famalarityCount: familiarityRecord.length
+          familiarityData: familiarityRecord,
+          familiarityCount: familiarityRecord.length
         })
       }
       return response.status(HttpStatus.OK).send(recordData);
