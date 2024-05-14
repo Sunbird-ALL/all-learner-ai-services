@@ -15,6 +15,7 @@ import {
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
+
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
@@ -3151,11 +3152,12 @@ export class ScoresController {
   })
   async GetFamiliarityByUser(
     @Param('userId') id: string,
+    @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const familiarityResult = await this.scoresService.getFamiliarityByUser(
-        id,
+        id,language
       );
       return response.status(HttpStatus.OK).send(familiarityResult);
     } catch (err) {
@@ -4541,18 +4543,18 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
-  @Post('/getUsersFamalarity')
-  async GetUsersFamalarity(@Res() response: FastifyReply, @Body() data: any) {
+  @Post('/getUsersFamiliarity')
+  async GetUsersFamiliarity(@Res() response: FastifyReply, @Body() data: any) {
     try {
-      const { userIds } = data;
+      const { userIds, language } = data;
       let recordData = []
       for (const userId of userIds) {
-        const famalarityRecord = await this.scoresService.getFamiliarityByUser(userId);
+        const familiarityRecord = await this.scoresService.getFamiliarityByUser(userId, language);
 
         recordData.push({
           user_id: userId,
-          famalarityData: famalarityRecord,
-          famalarityCount: famalarityRecord.length
+          familiarityData: familiarityRecord,
+          familiarityCount: familiarityRecord.length
         })
       }
       return response.status(HttpStatus.OK).send(recordData);
