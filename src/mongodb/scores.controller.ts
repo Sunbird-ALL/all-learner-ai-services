@@ -4451,18 +4451,18 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
-  @Post('/getUsersFamalarity')
-  async GetUsersFamalarity(@Res() response: FastifyReply, @Body() data: any) {
+  @Post('/getUsersFamiliarity')
+  async GetUsersFamiliarity(@Res() response: FastifyReply, @Body() data: any) {
     try {
       const { userIds, language } = data;
       let recordData = []
       for (const userId of userIds) {
-        const famalarityRecord = await this.scoresService.getFamiliarityByUser(userId, language);
+        const familiarityRecord = await this.scoresService.getFamiliarityByUser(userId, language);
 
         recordData.push({
           user_id: userId,
-          famalarityData: famalarityRecord,
-          famalarityCount: famalarityRecord.length
+          famalarityData: familiarityRecord,
+          famalarityCount: familiarityRecord.length
         })
       }
       return response.status(HttpStatus.OK).send(recordData);
