@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ScoreDocument } from './schemas/scores.schema';
 import {
   hexcodeMappingDocument,
@@ -10,6 +10,7 @@ import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema'
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
+import { CacheService } from './cache/cache.service';
 
 @Injectable()
 export class ScoresService {
@@ -20,6 +21,7 @@ export class ScoresService {
     @InjectModel('assessmentInput')
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
     @InjectModel('denoiserOutputLogs') private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    private readonly cacheService: CacheService,
   ) { }
 
   async create(createScoreDto: any): Promise<any> {
@@ -1213,10 +1215,21 @@ export class ScoresService {
     return UserRecordData;
   }
 
-  async gethexcodeMapping(language: string) {
-    const recordData = await this.hexcodeMappingModel
-      .find({ language: language })
-      .exec();
+  async gethexcodeMapping(language: string): Promise<any> {
+
+    const cacheKey = 'hexcode_data_' + language;
+    let recordData = await this.cacheService.get(cacheKey);
+
+    if (!recordData) {
+      recordData = await this.hexcodeMappingModel
+        .find({ language: language })
+        .exec();
+
+      await this.cacheService.set(cacheKey, recordData, 360000);
+    } else {
+      console.log("data from cache");
+    }
+
     return recordData;
   }
 
@@ -1925,7 +1938,6 @@ export class ScoresService {
     return RecordData;
   }
 
-
   async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
     let RecordData = [];
@@ -2068,5 +2080,44 @@ export class ScoresService {
     ]);
 
     return RecordData;
+  }
+
+  async getTextSimilarity(s1: string, s2: string) {
+    let longer = s1;
+    let shorter = s2;
+    if (s1.length < s2.length) {
+      longer = s2;
+      shorter = s1;
+    }
+    const longerLength: any = longer.length;
+    if (longerLength == 0) {
+      return 1.0;
+    }
+
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+
+    const costs = [];
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i == 0) costs[j] = j;
+        else {
+          if (j > 0) {
+            let newValue = costs[j - 1];
+            if (s1.charAt(i - 1) != s2.charAt(j - 1))
+              newValue =
+                Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+            costs[j - 1] = lastValue;
+            lastValue = newValue;
+          }
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue;
+    }
+    return (
+      (longerLength - costs[s2.length]) /
+      parseFloat(longerLength)
+    );
   }
 }

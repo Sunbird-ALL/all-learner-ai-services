@@ -123,6 +123,9 @@ export class ScoresController {
       let nonDenoisedresponseText;
       let DenoisedresponseText;
       let asrOutBeforeDenoised;
+      let similarityNonDenoisedText;
+      let similarityDenoisedText;
+      let similarityresponseText;
 
       const correctTokens = [];
       let missingTokens = [];
@@ -152,7 +155,6 @@ export class ScoresController {
       let isPrevVowel = false;
 
       const originalTokenArr = [];
-      const responseTokenArr = [];
       const constructTokenArr = [];
 
       // This code block used to create tamil compound consonents from text strings
@@ -195,7 +197,10 @@ export class ScoresController {
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
 
-          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
+          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
+
+          if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
             DenoisedresponseText = asrOutDenoised[0]?.source;
             nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
@@ -219,6 +224,7 @@ export class ScoresController {
         const anomaly_scoreArr = [];
 
         responseText = CreateLearnerProfileDto.output[0].source;
+        similarityresponseText = await this.scoresService.getTextSimilarity(originalText, responseText);
         let constructText = '';
 
         // Get All hexcode for this selected language
@@ -241,12 +247,12 @@ export class ScoresController {
         )) {
           let originalRepCount = 0;
           for (const sourceEle of responseText.split(' ')) {
-            const similarityScore = similarity(originalEle, sourceEle);
+            const similarityScore = await this.scoresService.getTextSimilarity(originalEle, sourceEle);
             if (similarityScore >= 0.4) {
               compareCharArr.push({
                 original_text: originalEle,
                 response_text: sourceEle,
-                score: similarity(originalEle, sourceEle),
+                score: await this.scoresService.getTextSimilarity(originalEle, sourceEle),
               });
               //break;
             }
@@ -280,48 +286,6 @@ export class ScoresController {
           constructText += constructTextSetEle + ' ';
         }
         constructText = constructText.trim();
-
-        function similarity(s1, s2) {
-          let longer = s1;
-          let shorter = s2;
-          if (s1.length < s2.length) {
-            longer = s2;
-            shorter = s1;
-          }
-          const longerLength = longer.length;
-          if (longerLength == 0) {
-            return 1.0;
-          }
-          return (
-            (longerLength - editDistance(longer, shorter)) /
-            parseFloat(longerLength)
-          );
-        }
-
-        function editDistance(s1, s2) {
-          s1 = s1.toLowerCase();
-          s2 = s2.toLowerCase();
-
-          const costs = [];
-          for (let i = 0; i <= s1.length; i++) {
-            let lastValue = i;
-            for (let j = 0; j <= s2.length; j++) {
-              if (i == 0) costs[j] = j;
-              else {
-                if (j > 0) {
-                  let newValue = costs[j - 1];
-                  if (s1.charAt(i - 1) != s2.charAt(j - 1))
-                    newValue =
-                      Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
-                  costs[j - 1] = lastValue;
-                  lastValue = newValue;
-                }
-              }
-            }
-            if (i > 0) costs[s2.length] = lastValue;
-          }
-          return costs[s2.length];
-        }
 
         for (const constructTextELE of constructText.split('')) {
           if (constructTextELE != ' ') {
@@ -559,8 +523,8 @@ export class ScoresController {
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
+          let similarityScoreDenoisedResText = similarityDenoisedText;
 
           if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
