@@ -1208,6 +1208,10 @@ export class ScoresController {
       const originalTokenArr = [];
       const responseTokenArr = [];
       const constructTokenArr = [];
+      let asrOutDenoised;
+      let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
 
       const language = 'kn';
 
@@ -1255,7 +1259,18 @@ export class ScoresController {
             decoded,
             'kn'
           );
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1643,6 +1658,33 @@ export class ScoresController {
             ),
         );
 
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
+
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
+
         const wer = textEvalMatrices.wer;
         const cercal = textEvalMatrices.cer * 2;
         const charCount = Math.abs(
@@ -1744,13 +1786,40 @@ export class ScoresController {
         }
       }
 
+      // Cal the subsessionWise and content_id wise target.
+      const targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+      );
+      const targetsByContent = await this.scoresService.getTargetsByContentId(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.contentType,
+        CreateLearnerProfileDto.language,
+        CreateLearnerProfileDto.contentId,
+      );
+
+      const totalTargets = targets.length;
+      const totalContentTargets = targetsByContent.length;
+
+      const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
         createScoreData: createScoreData,
+        subsessionTarget: targets,
+        contentTarget: targetsByContent,
+        subsessionTargetsCount: totalTargets,
+        contentTargetsCount: totalContentTargets,
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
+      console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -2240,6 +2309,10 @@ export class ScoresController {
       let missingTokens = [];
 
       let vowelSignArr = [];
+      let asrOutDenoised;
+      let nonDenoisedresponseText;
+      let DenoisedresponseText;
+      let asrOutBeforeDenoised;
 
 
       let telguVowelSignArr = [
@@ -2305,7 +2378,18 @@ export class ScoresController {
 
           // Send Audio file to ASR to process and provide vector with char and score
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
-          CreateLearnerProfileDto['output'] = audioOutput.output;
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+
+          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          }
 
           if (CreateLearnerProfileDto.output[0].source === "") {
             return response.status(HttpStatus.BAD_REQUEST).send({
@@ -2731,7 +2815,7 @@ export class ScoresController {
 
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API+ "/getTextMatrices";
+        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
@@ -2752,6 +2836,33 @@ export class ScoresController {
             }),
           )
         );
+
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
+
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+            improved = true;
+          }
+
+          let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        }
 
         let wer = textEvalMatrices.wer;
         let cercal = textEvalMatrices.cer * 2;
@@ -2810,9 +2921,16 @@ export class ScoresController {
               count: textEvalMatrices.pause_count,
             },
             reptitionsCount: reptitionCount,
-            asrOutput: JSON.stringify(CreateLearnerProfileDto.output)
+            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false
           }
         };
+
+        // For retry attempt detection
+        const retryAttempt = await this.scoresService.getRetryStatus(
+          CreateLearnerProfileDto.user_id,
+          CreateLearnerProfileDto.contentId,
+        );
 
         // Store Array to DB
         let data = this.scoresService.create(createScoreData);
@@ -4015,7 +4133,7 @@ export class ScoresController {
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-        }else {
+        } else {
           if (
             getSetResult.language === 'ta' &&
             getSetResult.collectionId !== '' &&
