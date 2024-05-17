@@ -652,7 +652,7 @@ export class ScoresController {
           },
         };
 
-        // For retry attempt detection
+        // For retry attempt detection code 
         const retryAttempt = await this.scoresService.getRetryStatus(
           CreateLearnerProfileDto.user_id,
           CreateLearnerProfileDto.contentId,
