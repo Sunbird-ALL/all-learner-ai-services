@@ -252,7 +252,16 @@ export class ScoresService {
           language: '$sessions.language',
           character: '$sessions.confidence_scores.token',
           score: '$sessions.confidence_scores.confidence_score',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
     ]);
 
@@ -496,8 +505,7 @@ export class ScoresService {
   ) {
     const threshold = 0.7;
     let RecordData = [];
-    const isRetry = false;
-
+    
     RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
@@ -505,8 +513,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language,
-          'sessions.isRetry': isRetry,
+          'sessions.language': language
         },
       },
       {
@@ -575,7 +582,16 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
       {
         $sort: {
@@ -642,7 +658,7 @@ export class ScoresService {
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
     let RecordData = [];
-    const isRetry = false;
+    
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -654,8 +670,7 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.language': language,
-          'sessions.isRetry': isRetry,
+          'sessions.language': language
         },
       },
       {
@@ -724,7 +739,16 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
       {
         $sort: {
@@ -880,8 +904,7 @@ export class ScoresService {
     language: string,
   ) {
     const threshold = 0.7;
-    const isRetry = false;
-
+    
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
@@ -891,8 +914,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language,
-          'sessions.isRetry': isRetry,
+          'sessions.language': language
         },
       },
       {
@@ -961,7 +983,16 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
       {
         $sort: {
@@ -1027,8 +1058,6 @@ export class ScoresService {
 
   async getFamiliarityByUser(userId: string, language: string) {
     const threshold = 0.7;
-    const isRetry = false;
-
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
@@ -1042,8 +1071,7 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.language':language,
-          'sessions.isRetry': isRetry
+          'sessions.language':language
         },
       },
       {
@@ -1112,7 +1140,16 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
       {
         $sort: {
@@ -1178,7 +1215,6 @@ export class ScoresService {
   }
 
   async getFluencyBysubSession(subSessionId: string, language: string) {
-    const isRetry = false;
     const RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
@@ -1186,8 +1222,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language,
-          'sessions.isRetry': isRetry,
+          'sessions.language': language
         },
       },
       {
@@ -1202,7 +1237,16 @@ export class ScoresService {
         $project: {
           _id: 0,
           fluencyScore: '$fluencyScore',
-        },
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
+        }
       },
     ]);
 
@@ -1746,6 +1790,7 @@ export class ScoresService {
       return err;
     }
   }
+
   async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1781,6 +1826,7 @@ export class ScoresService {
     ]);
     return RecordData;
   }
+
   async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
 
@@ -1859,7 +1905,16 @@ export class ScoresService {
           response_text: '$response_text',
           date: '$date',
           token: '$character',
-          score: '$score'
+          score: '$score',
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
         }
       },
       {
@@ -1937,7 +1992,6 @@ export class ScoresService {
 
     return RecordData;
 }
-
 
   async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
@@ -2018,7 +2072,16 @@ export class ScoresService {
           token: '$character',
           score: '$score',
           original_text: '$original_text',
-          response_text: '$response_text'
+          response_text: '$response_text',
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false }, 
+            { 'sessions.isRetry': false }
+          ]
         }
       },
       {
