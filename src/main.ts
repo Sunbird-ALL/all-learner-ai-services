@@ -43,6 +43,4 @@ async function bootstrap() {
   await app.listen(process.env.PORT, '0.0.0.0');
 }
 
-bootstrap();
-
-//AppClusterService.clusterize(bootstrap);
+AppClusterService.clusterize(bootstrap);

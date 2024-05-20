@@ -15,6 +15,9 @@ import {
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
+
+import ta_config from "./config/language/ta"
+
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
@@ -117,66 +120,35 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const originalText = CreateLearnerProfileDto.original_text;
-      let createScoreData;
-      let asrOutDenoised;
-      let nonDenoisedresponseText;
-      let DenoisedresponseText;
-      let asrOutBeforeDenoised;
-      let similarityNonDenoisedText;
-      let similarityDenoisedText;
-      let similarityresponseText;
 
-      const correctTokens = [];
+      const vowelSignArr = ta_config.vowel;
+      const language = ta_config.language_code;
+      let createScoreData;
+
+      let asrOutDenoised;
+      let asrOutBeforeDenoised;
+
+      let nonDenoisedresponseText = "";
+      let DenoisedresponseText = "";
+
+      let similarityNonDenoisedText = 0;
+      let similarityDenoisedText = 0;
+      let similarityresponseText = 0;
+
+      let constructTokenArr = [];
+      let correctTokens = [];
       let missingTokens = [];
 
-      let vowelSignArr = [];
+      let reptitionCount = 0;
 
-      const taVowelSignArr = [
-        'ா',
-        'ி',
-        'ீ',
-        'ு',
-        'ூ',
-        'ெ',
-        'ே',
-        'ை',
-        'ொ',
-        'ோ',
-        'ௌ',
-        '்',
-      ];
+      let confidence_scoresArr = [];
+      let missing_token_scoresArr = [];
+      let anomaly_scoreArr = [];
 
-      const language = 'ta';
-      vowelSignArr = taVowelSignArr;
-
+      const originalText = CreateLearnerProfileDto.original_text;
+      let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
-      let prevEle = '';
-      let isPrevVowel = false;
-
-      const originalTokenArr = [];
-      const constructTokenArr = [];
-
-      // This code block used to create tamil compound consonents from text strings
-      for (const originalTextELE of originalText.split('')) {
-        if (originalTextELE != ' ') {
-          if (vowelSignArr.includes(originalTextELE)) {
-            if (isPrevVowel) {
-              // let prevEleArr = prevEle.split("");
-              // prevEle = prevEleArr[0] + originalTextELE;
-              // originalTokenArr.push(prevEle);
-            } else {
-              prevEle = prevEle + originalTextELE;
-              originalTokenArr.push(prevEle);
-            }
-            isPrevVowel = true;
-          } else {
-            originalTokenArr.push(originalTextELE);
-            prevEle = originalTextELE;
-            isPrevVowel = false;
-          }
-        }
-      }
+      let constructText = '';
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -219,98 +191,21 @@ export class ScoresController {
           }
         }
 
-        const confidence_scoresArr = [];
-        const missing_token_scoresArr = [];
-        const anomaly_scoreArr = [];
-
         responseText = CreateLearnerProfileDto.output[0].source;
         similarityresponseText = await this.scoresService.getTextSimilarity(originalText, responseText);
-        let constructText = '';
 
         // Get All hexcode for this selected language
-        const tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
-        let tokenHexcodeDataArr = [];
+        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
+        // End Get All hexcode for this selected language
 
-        await tokenHexcodeData.then((tokenHexcodedata: any) => {
-          tokenHexcodeDataArr = tokenHexcodedata;
-        });
-
-        // Prepare Constructed Text
-        const compareCharArr = [];
-
-        const constructTextSet = new Set();
-
-        let reptitionCount = 0;
-
-        for (const originalEle of CreateLearnerProfileDto.original_text.split(
-          ' ',
-        )) {
-          let originalRepCount = 0;
-          for (const sourceEle of responseText.split(' ')) {
-            const similarityScore = await this.scoresService.getTextSimilarity(originalEle, sourceEle);
-            if (similarityScore >= 0.4) {
-              compareCharArr.push({
-                original_text: originalEle,
-                response_text: sourceEle,
-                score: await this.scoresService.getTextSimilarity(originalEle, sourceEle),
-              });
-              //break;
-            }
-            if (similarityScore >= 0.6) {
-              originalRepCount++;
-            }
-          }
-          if (originalRepCount >= 2) {
-            reptitionCount++;
-          }
-        }
-
-        for (const compareCharArrEle of compareCharArr) {
-          let score = 0;
-          let word = '';
-          for (const compareCharArrCmpEle of compareCharArr) {
-            if (
-              compareCharArrEle.original_text ===
-              compareCharArrCmpEle.original_text
-            ) {
-              if (compareCharArrCmpEle.score > score) {
-                score = compareCharArrCmpEle.score;
-                word = compareCharArrCmpEle.response_text;
-              }
-            }
-          }
-          constructTextSet.add(word);
-        }
-
-        for (const constructTextSetEle of constructTextSet) {
-          constructText += constructTextSetEle + ' ';
-        }
-        constructText = constructText.trim();
-
-        for (const constructTextELE of constructText.split('')) {
-          if (constructTextELE != ' ') {
-            if (vowelSignArr.includes(constructTextELE)) {
-              if (isPrevVowel) {
-                // let prevEleArr = prevEle.split("");
-                // prevEle = prevEleArr[0] + responseTextELE;
-                // responseTokenArr.push(prevEle);
-              } else {
-                prevEle = prevEle + constructTextELE;
-                constructTokenArr.push(prevEle);
-              }
-              isPrevVowel = true;
-            } else {
-              constructTokenArr.push(constructTextELE);
-              prevEle = constructTextELE;
-              isPrevVowel = false;
-            }
-          }
-        }
-
+        // Constructed Logic starts from here
+        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
+        constructText = constructedTextRepCountData.constructText;
+        reptitionCount = constructedTextRepCountData.reptitionCount;
+        constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
         // End Constructed Text Logic
 
-        // Comparison Logic
-
+        // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
           if (constructTokenArr.includes(originalTokenArrEle)) {
             correctTokens.push(originalTokenArrEle);
@@ -318,207 +213,17 @@ export class ScoresController {
             missingTokens.push(originalTokenArrEle);
           }
         }
-
         const missingTokenSet = new Set(missingTokens);
-
         missingTokens = Array.from(missingTokenSet);
+        // End Comparison Logic for identify correct and missing tokens
 
-        const filteredTokenArr = [];
+        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
 
-        //token list for ai4bharat response
-        const tokenArr = [];
-        const anamolyTokenArr = [];
+        confidence_scoresArr = identifyTokens.confidence_scoresArr;
+        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
+        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        // Create Single Array from AI4bharat tokens array
-        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-          element.tokens.forEach((token) => {
-            const key = Object.keys(token)[0];
-            const value = Object.values(token)[0];
-
-            let insertObj = {};
-            insertObj[key] = value;
-            tokenArr.push(insertObj);
-
-            const key1 = Object.keys(token)[1];
-            const value1 = Object.values(token)[1];
-            insertObj = {};
-            insertObj[key1] = value1;
-            anamolyTokenArr.push(insertObj);
-          });
-        });
-
-        const uniqueChar = new Set();
-        prevEle = '';
-        isPrevVowel = false;
-
-        // Create Unique token array
-        for (const tokenArrEle of tokenArr) {
-          const tokenString = Object.keys(tokenArrEle)[0];
-          for (const keyEle of tokenString.split('')) {
-            if (vowelSignArr.includes(keyEle)) {
-              if (isPrevVowel) {
-                const prevEleArr = prevEle.split('');
-                prevEle = prevEleArr[0] + keyEle;
-                uniqueChar.add(prevEle);
-              } else {
-                prevEle = prevEle + keyEle;
-                uniqueChar.add(prevEle);
-              }
-              isPrevVowel = true;
-            } else {
-              uniqueChar.add(keyEle);
-              isPrevVowel = false;
-              prevEle = keyEle;
-            }
-          }
-        }
-
-        //unique token list for ai4bharat response
-        const uniqueCharArr = Array.from(uniqueChar);
-        isPrevVowel = false;
-
-        // Get best score for Each Char
-        for (const char of uniqueCharArr) {
-          let score = 0.0;
-          let prevChar = '';
-          let isPrevVowel = false;
-
-          for (const tokenArrEle of tokenArr) {
-            const tokenString = Object.keys(tokenArrEle)[0];
-            const tokenValue = Object.values(tokenArrEle)[0];
-
-            for (const keyEle of tokenString.split('')) {
-              const scoreVal: any = tokenValue;
-              let charEle: any = keyEle;
-
-              if (vowelSignArr.includes(charEle)) {
-                if (isPrevVowel) {
-                  const prevCharArr = prevChar.split('');
-                  prevChar = prevCharArr[0] + charEle;
-                  charEle = prevChar;
-                } else {
-                  prevChar = prevChar + charEle;
-                  charEle = prevChar;
-                }
-                isPrevVowel = true;
-              } else {
-                prevChar = charEle;
-                isPrevVowel = false;
-              }
-
-              if (char === charEle) {
-                if (scoreVal > score) {
-                  score = scoreVal;
-                }
-              }
-            }
-          }
-
-          filteredTokenArr.push({ charkey: char, charvalue: score });
-        }
-
-        // Create confidence score array and anomoly array
-        for (const value of filteredTokenArr) {
-          const score: any = value.charvalue;
-
-          let identification_status = 0;
-          if (score >= 0.9) {
-            identification_status = 1;
-          } else if (score >= 0.4) {
-            identification_status = -1;
-          } else {
-            identification_status = 0;
-          }
-
-          if (value.charkey !== '' && value.charkey !== '▁') {
-            if (correctTokens.includes(value.charkey)) {
-              const hexcode = getTokenHexcode(value.charkey);
-
-              if (hexcode !== '') {
-                confidence_scoresArr.push({
-                  token: value.charkey,
-                  hexcode: hexcode,
-                  confidence_score: value.charvalue,
-                  identification_status: identification_status,
-                });
-              } else {
-                if (
-                  !missingTokens.includes(value.charkey) &&
-                  !constructTokenArr.includes(value.charkey)
-                ) {
-                  anomaly_scoreArr.push({
-                    token: value.charkey.replaceAll('_', ''),
-                    hexcode: hexcode,
-                    confidence_score: value.charvalue,
-                    identification_status: identification_status,
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        for (const missingTokensEle of missingTokenSet) {
-          const hexcode = getTokenHexcode(missingTokensEle);
-
-          if (hexcode !== '') {
-            if (taVowelSignArr.includes(missingTokensEle)) {
-            } else {
-              if (!uniqueChar.has(missingTokensEle)) {
-                missing_token_scoresArr.push({
-                  token: missingTokensEle,
-                  hexcode: hexcode,
-                  confidence_score: 0.1,
-                  identification_status: 0,
-                });
-              }
-            }
-          }
-        }
-
-        for (const anamolyTokenArrEle of anamolyTokenArr) {
-          const tokenString = Object.keys(anamolyTokenArrEle)[0];
-          const tokenValue = Object.values(anamolyTokenArrEle)[0];
-
-          if (tokenString != '') {
-            const hexcode = getTokenHexcode(tokenString);
-            if (hexcode !== '') {
-              if (taVowelSignArr.includes(tokenString)) {
-              } else {
-                anomaly_scoreArr.push({
-                  token: tokenString.replaceAll('_', ''),
-                  hexcode: hexcode,
-                  confidence_score: tokenValue,
-                  identification_status: 0,
-                });
-              }
-            }
-          }
-        }
-
-        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
-        const textData = {
-          reference: CreateLearnerProfileDto.original_text,
-          hypothesis: CreateLearnerProfileDto.output[0].source,
-          language: 'ta',
-          base64_string: audioFile.toString('base64'),
-        };
-
-        const textEvalMatrices = await lastValueFrom(
-          this.httpService
-            .post(url, JSON.stringify(textData), {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            .pipe(
-              map((resp) => resp.data),
-              catchError((error: AxiosError) => {
-                throw 'Error from text Eval service' + error;
-              }),
-            ),
-        );
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, audioFile)
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -547,17 +252,7 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
-        let wer = textEvalMatrices.wer;
-        let cercal = textEvalMatrices.cer * 2;
-        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
-        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
-        let repetitions = reptitionCount;
-        let pauseCount = textEvalMatrices.pause_count;
-        let ins = textEvalMatrices.insertion.length;
-        let del = textEvalMatrices.deletion.length;
-        let sub = textEvalMatrices.substitution.length;
-
-        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText);
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
@@ -623,13 +318,6 @@ export class ScoresController {
 
         // Store Array to DB
         const data = await this.scoresService.create(createScoreData);
-
-        function getTokenHexcode(token: string) {
-          const result = tokenHexcodeDataArr.find(
-            (item) => item.token === token,
-          );
-          return result?.hexcode || '';
-        }
       }
 
       // Cal the subsessionWise and content_id wise target.
@@ -1516,7 +1204,7 @@ export class ScoresController {
           filteredTokenArr.push({ charkey: char, charvalue: score });
         }
 
-        // Create confidence score array and anomoly array
+        // Create confidence token, Missing token array and anomoly token array
         for (const value of filteredTokenArr) {
           const score: any = value.charvalue;
 
