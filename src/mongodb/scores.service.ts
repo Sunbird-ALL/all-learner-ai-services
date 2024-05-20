@@ -2170,7 +2170,7 @@ export class ScoresService {
           compareCharArr.push({
             original_text: originalEle,
             response_text: sourceEle,
-            score: await this.getTextSimilarity(originalEle, sourceEle),
+            score: similarityScore,
           });
         }
         if (similarityScore >= 0.6) {
@@ -2248,6 +2248,8 @@ export class ScoresService {
     let ins = textEvalMetrics.insertion.length;
     let del = textEvalMetrics.deletion.length;
     let sub = textEvalMetrics.substitution.length;
+
+    console.log(wer + " " + cercal + " " + charCount + " " + wordCount + " " + repetitions + " " + pauseCount + " " + ins + " " + ' ' + del + " " + sub);
 
     let fluencyScore = ((wer * fluencyCalPerc.wer) + (cercal * fluencyCalPerc.cercal) + (charCount * fluencyCalPerc.charCount) + (wordCount * 10) + (repetitions * fluencyCalPerc.repetitions) + (pauseCount * fluencyCalPerc.pauseCount) + (ins * fluencyCalPerc.ins) + (del * fluencyCalPerc.del) + (sub * fluencyCalPerc.sub)) / 100;
 
@@ -2449,5 +2451,26 @@ export class ScoresService {
     }
 
     return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
+  }
+
+  async processText(text: string) {
+    // Convert the text to lowercase
+    text = text.toLowerCase();
+
+    // Split the text into sentences based on '. and ,'
+    const sentences = text.split(/[.,]/);
+
+    // Process each sentence
+    const processedSentences = sentences.map((sentence) => {
+      // Apply special character logic
+      const cleanedSentence = sentence.replace(/[^\w\s]/g, '');
+
+      return cleanedSentence.trim(); // Trim any extra spaces
+    });
+
+    // Join the processed sentences back together with spaces and without the dot and comma
+    const processedText = processedSentences.join(' ').trim();
+
+    return processedText;
   }
 }

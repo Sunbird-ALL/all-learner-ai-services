@@ -16,7 +16,8 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 
-import ta_config from "./config/language/ta"
+import ta_config from "./config/language/ta";
+import en_config from "./config/language/en"
 
 @ApiTags('scores')
 @Controller('scores')
@@ -133,7 +134,6 @@ export class ScoresController {
 
       let similarityNonDenoisedText = 0;
       let similarityDenoisedText = 0;
-      let similarityresponseText = 0;
 
       let constructTokenArr = [];
       let correctTokens = [];
@@ -192,7 +192,6 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
-        similarityresponseText = await this.scoresService.getTextSimilarity(originalText, responseText);
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
@@ -1572,10 +1571,10 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const originalText = processText(CreateLearnerProfileDto.original_text);
+      const originalText = await this.scoresService.processText(CreateLearnerProfileDto.original_text);
 
       let createScoreData;
-      let language = "en";
+      let language = en_config.language_code;
       let reptitionCount = 0;
       let responseText = "";
       let confidence_scoresArr = [];
@@ -1583,10 +1582,13 @@ export class ScoresController {
       let missing_token_scoresArr = [];
 
       let asrOutDenoised;
-      let nonDenoisedresponseText;
-      let DenoisedresponseText;
       let asrOutBeforeDenoised;
 
+      let nonDenoisedresponseText = "";
+      let DenoisedresponseText = "";
+
+      let similarityNonDenoisedText = 0;
+      let similarityDenoisedText = 0;
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1607,14 +1609,17 @@ export class ScoresController {
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
 
-          if (similarity(originalText, processText(asrOutDenoised[0]?.source || "")) <= similarity(originalText, processText(asrOutBeforeDenoised[0]?.source || ""))) {
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
+          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
+
+          if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
-            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source);
           } else {
             CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = processText(asrOutDenoised[0]?.source);
-            nonDenoisedresponseText = processText(asrOutBeforeDenoised[0]?.source);
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source);
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source);
           }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
@@ -1627,41 +1632,14 @@ export class ScoresController {
         }
 
         // Get All hexcode for this selected language
-        const tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
-        let tokenHexcodeDataArr = [];
+        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
 
-        await tokenHexcodeData.then((tokenHexcodedata: any) => {
-          tokenHexcodeDataArr = tokenHexcodedata;
-        });
+        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
 
-        responseText = processText(CreateLearnerProfileDto.output[0].source);
-
-        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
-        const textData = {
-          reference: originalText,
-          hypothesis: responseText,
-          language: 'en',
-          base64_string: audioFile.toString('base64'),
-        };
-
-        const textEvalMatrices = await lastValueFrom(
-          this.httpService
-            .post(url, JSON.stringify(textData), {
-              headers: {
-                'Content-Type': 'application/json',
-              },
-            })
-            .pipe(
-              map((resp) => resp.data),
-              catchError((error: AxiosError) => {
-                throw 'Error from text Eval service' + error;
-              }),
-            ),
-        );
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
-          const hexcode = getTokenHexcode(confidence_char);
+          const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
 
           if (hexcode !== '') {
             confidence_scoresArr.push({
@@ -1681,7 +1659,7 @@ export class ScoresController {
         }
 
         for (const missing_char of textEvalMatrices.missing_char_list) {
-          const hexcode = getTokenHexcode(missing_char);
+          const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, missing_char);
 
           if (hexcode !== '') {
             missing_token_scoresArr.push({
@@ -1700,12 +1678,11 @@ export class ScoresController {
           }
         }
 
-
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
+          let similarityScoreDenoisedResText = similarityDenoisedText;
 
           if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
@@ -1728,17 +1705,12 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
-        let wer = textEvalMatrices.wer;
-        let cercal = textEvalMatrices.cer * 2;
-        let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
-        let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
-        let repetitions = reptitionCount;
-        let pauseCount = textEvalMatrices.pause_count;
-        let ins = textEvalMatrices.insertion.length;
-        let del = textEvalMatrices.deletion.length;
-        let sub = textEvalMatrices.substitution.length;
+        // Constructed Logic starts from here
+        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
+        let repetitions = constructedTextRepCountData.reptitionCount;
+        // End Constructed Text Logic
 
-        let fluencyScore = ((wer * 5) + (cercal * 10) + (charCount * 10) + (wordCount * 10) + (repetitions * 10) + (pauseCount * 10) + (ins * 20) + (del * 15) + (sub * 5)) / 100;
+        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText);
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
@@ -1800,13 +1772,6 @@ export class ScoresController {
 
         // Store Array to DB
         const data = await this.scoresService.create(createScoreData);
-
-        function getTokenHexcode(token: string) {
-          const result = tokenHexcodeDataArr.find(
-            (item) => item.token === token,
-          );
-          return result?.hexcode || '';
-        }
       }
 
       // Cal the subsessionWise and content_id wise target.
@@ -1829,68 +1794,6 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
-      function processText(text) {
-        // Convert the text to lowercase
-        text = text.toLowerCase();
-
-        // Split the text into sentences based on '. and ,'
-        const sentences = text.split(/[.,]/);
-
-        // Process each sentence
-        const processedSentences = sentences.map((sentence) => {
-          // Apply special character logic
-          const cleanedSentence = sentence.replace(/[^\w\s]/g, '');
-
-          return cleanedSentence.trim(); // Trim any extra spaces
-        });
-
-        // Join the processed sentences back together with spaces and without the dot and comma
-        const processedText = processedSentences.join(' ').trim();
-
-        return processedText;
-      }
-
-      function similarity(s1, s2) {
-        var longer = s1;
-        var shorter = s2;
-        if (s1.length < s2.length) {
-          longer = s2;
-          shorter = s1;
-        }
-        var longerLength = longer.length;
-        if (longerLength == 0) {
-          return 1.0;
-        }
-        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
-      }
-
-      function editDistance(s1, s2) {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
-
-        var costs = new Array();
-        for (var i = 0; i <= s1.length; i++) {
-          var lastValue = i;
-          for (var j = 0; j <= s2.length; j++) {
-            if (i == 0)
-              costs[j] = j;
-            else {
-              if (j > 0) {
-                var newValue = costs[j - 1];
-                if (s1.charAt(i - 1) != s2.charAt(j - 1))
-                  newValue = Math.min(Math.min(newValue, lastValue),
-                    costs[j]) + 1;
-                costs[j - 1] = lastValue;
-                lastValue = newValue;
-              }
-            }
-          }
-          if (i > 0)
-            costs[s2.length] = lastValue;
-        }
-        return costs[s2.length];
-      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
