@@ -15,17 +15,22 @@ async function bootstrap() {
     new FastifyAdapter({ logger: true, bodyLimit: 30 * 1024 * 1024 }),
   );
 
+  await app.register(compression,{
+    global: true,
+    zlibOptions: {
+      level: 6,
+    },
+    threshold: 512,
+    encodings: ['gzip', 'deflate']
+  }); 
+
   await app.register(fastifyMultipart, {
     attachFieldsToBody: 'keyValues',
     limits: {
       fileSize: 102400000,
     },
   });
-  await app.register(compression, {
-     encodings: ['gzip', 'deflate'],
-     threshold: 512 
-    });
-
+  
   const config = new DocumentBuilder()
     .setTitle('ALL Learner AI')
     .setDescription(
