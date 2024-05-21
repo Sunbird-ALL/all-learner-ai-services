@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ScoreDocument } from './schemas/scores.schema';
 import {
   hexcodeMappingDocument,
@@ -10,6 +10,11 @@ import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema'
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
+import { catchError, lastValueFrom, map } from 'rxjs';
+import { HttpService } from '@nestjs/axios';
+import { AxiosError } from 'axios';
+import { CacheService } from './cache/cache.service';
+import lang_common_config from "./config/language/common/commonConfig"
 
 @Injectable()
 export class ScoresService {
@@ -20,6 +25,8 @@ export class ScoresService {
     @InjectModel('assessmentInput')
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
     @InjectModel('denoiserOutputLogs') private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    private readonly cacheService: CacheService,
+    private readonly httpService: HttpService,
   ) { }
 
   async create(createScoreDto: any): Promise<any> {
@@ -76,6 +83,7 @@ export class ScoresService {
     let asrOutDenoisedOutput: any;
     let asrOutBeforeDenoised: any;
     let audio: any = data;
+    let pause_count: number = 0;
 
     let serviceId = '';
     switch (language) {
@@ -102,28 +110,32 @@ export class ScoresService {
       asrOutBeforeDenoised = await asrCall();
     }
 
-    if (process.env.denoiserEnabled === "true") {
 
-      let denoiserConfig =
-      {
-        method: 'post',
-        url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        data: {
-          "audio_base64": audio
-        }
+
+    let denoiserConfig =
+    {
+      method: 'post',
+      url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: {
+        "base64_string": audio,
+        "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
+        "enablePauseCount": true
       }
+    }
 
-      await axios.request(denoiserConfig)
-        .then((response) => {
-          audio = response.data.denoised_audio_base64;
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    await axios.request(denoiserConfig)
+      .then((response) => {
+        audio = response.data.denoised_audio_base64;
+        pause_count = response.data.pause_count;
+      })
+      .catch((error) => {
+        console.log(error);
+      });
 
+    if (process.env.denoiserEnabled === "true") {
       asrOutDenoisedOutput = await asrCall();
     }
 
@@ -176,7 +188,7 @@ export class ScoresService {
       return output;
     }
 
-    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised };
+    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count };
   }
 
   async findAll(): Promise<any> {
@@ -258,7 +270,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -505,7 +517,7 @@ export class ScoresService {
   ) {
     const threshold = 0.7;
     let RecordData = [];
-    
+
     RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
@@ -588,7 +600,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -658,7 +670,7 @@ export class ScoresService {
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
     let RecordData = [];
-    
+
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
@@ -745,7 +757,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -904,7 +916,7 @@ export class ScoresService {
     language: string,
   ) {
     const threshold = 0.7;
-    
+
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
@@ -989,7 +1001,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -1071,7 +1083,7 @@ export class ScoresService {
       },
       {
         $match: {
-          'sessions.language':language
+          'sessions.language': language
         },
       },
       {
@@ -1146,7 +1158,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -1243,7 +1255,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -1258,10 +1270,21 @@ export class ScoresService {
     return UserRecordData;
   }
 
-  async gethexcodeMapping(language: string) {
-    const recordData = await this.hexcodeMappingModel
-      .find({ language: language })
-      .exec();
+  async gethexcodeMapping(language: string): Promise<any> {
+
+    const cacheKey = 'hexcode_data_' + language;
+    let recordData = await this.cacheService.get(cacheKey);
+
+    if (!recordData) {
+      recordData = await this.hexcodeMappingModel
+        .find({ language: language })
+        .exec();
+
+      await this.cacheService.set(cacheKey, recordData, 360000);
+    } else {
+      console.log("data from cache");
+    }
+
     return recordData;
   }
 
@@ -1912,7 +1935,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -1991,7 +2014,7 @@ export class ScoresService {
     ]);
 
     return RecordData;
-}
+  }
 
   async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
@@ -2079,7 +2102,7 @@ export class ScoresService {
       {
         $match: {
           $or: [
-            { isRetryExists: false }, 
+            { isRetryExists: false },
             { 'sessions.isRetry': false }
           ]
         }
@@ -2151,6 +2174,390 @@ export class ScoresService {
     ]);
 
     return RecordData;
-}
+  }
 
+  async getTextSimilarity(s1: string, s2: string) {
+    let longer = s1;
+    let shorter = s2;
+    if (s1.length < s2.length) {
+      longer = s2;
+      shorter = s1;
+    }
+    const longerLength: any = longer.length;
+    if (longerLength == 0) {
+      return 1.0;
+    }
+
+    s1 = s1.toLowerCase();
+    s2 = s2.toLowerCase();
+
+    const costs = [];
+    for (let i = 0; i <= s1.length; i++) {
+      let lastValue = i;
+      for (let j = 0; j <= s2.length; j++) {
+        if (i == 0) costs[j] = j;
+        else {
+          if (j > 0) {
+            let newValue = costs[j - 1];
+            if (s1.charAt(i - 1) != s2.charAt(j - 1))
+              newValue =
+                Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+            costs[j - 1] = lastValue;
+            lastValue = newValue;
+          }
+        }
+      }
+      if (i > 0) costs[s2.length] = lastValue;
+    }
+    return (
+      (longerLength - costs[s2.length]) /
+      parseFloat(longerLength)
+    );
+  }
+
+  async getSyllablesFromString(text: string, vowelSignArr: string[], language: string): Promise<string[]> {
+    let prevEle = '';
+    let isPrevVowel = false;
+    let syllableArr = []
+
+    // This code block used to create syllable list from text strings
+    if (language === "ta") {
+      for (const textELE of text.split('')) {
+        if (textELE != ' ') {
+          if (vowelSignArr.includes(textELE)) {
+            if (isPrevVowel) {
+            } else {
+              prevEle = prevEle + textELE;
+              syllableArr.push(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            syllableArr.push(textELE);
+            prevEle = textELE;
+            isPrevVowel = false;
+          }
+        }
+      }
+    }
+
+    return syllableArr;
+  }
+
+  async getConstructedText(original_text: string, response_text: string) {
+    let constructText = '';
+    const compareCharArr = [];
+    const constructTextSet = new Set();
+    let reptitionCount = 0;
+
+    for (const originalEle of original_text.split(
+      ' ',
+    )) {
+      let originalRepCount = 0;
+      for (const sourceEle of response_text.split(' ')) {
+        const similarityScore = await this.getTextSimilarity(originalEle, sourceEle);
+        if (similarityScore >= 0.4) {
+          compareCharArr.push({
+            original_text: originalEle,
+            response_text: sourceEle,
+            score: similarityScore,
+          });
+        }
+        if (similarityScore >= 0.6) {
+          originalRepCount++;
+        }
+      }
+      if (originalRepCount >= 2) {
+        reptitionCount++;
+      }
+    }
+
+    for (const compareCharArrEle of compareCharArr) {
+      let score = 0;
+      let word = '';
+      for (const compareCharArrCmpEle of compareCharArr) {
+        if (
+          compareCharArrEle.original_text ===
+          compareCharArrCmpEle.original_text
+        ) {
+          if (compareCharArrCmpEle.score > score) {
+            score = compareCharArrCmpEle.score;
+            word = compareCharArrCmpEle.response_text;
+          }
+        }
+      }
+      constructTextSet.add(word);
+    }
+
+    for (const constructTextSetEle of constructTextSet) {
+      constructText += constructTextSetEle + ' ';
+    }
+
+    constructText = constructText.trim();
+
+    return { constructText, reptitionCount }
+  }
+
+  async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
+    const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
+
+    const textData = {
+      reference: original_text,
+      hypothesis: response_text,
+      language: language,
+      base64_string: base64_string.toString('base64'),
+    };
+
+    const textEvalMatrices = await lastValueFrom(
+      this.httpService
+        .post(url, JSON.stringify(textData), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        .pipe(
+          map((resp) => resp.data),
+          catchError((error: AxiosError) => {
+            throw 'Error from text Eval service' + error;
+          }),
+        ),
+    );
+
+    return textEvalMatrices;
+  }
+
+  async getCalculatedFluency(textEvalMetrics, repetitionCount, original_text, response_text, pause_count) {
+    let fluencyCalPerc = lang_common_config.fluencyCalPerc;
+
+    let wer = textEvalMetrics.wer;
+    let cercal = textEvalMetrics.cer * 2;
+    let charCount = Math.abs(original_text.length - response_text.length);
+    let wordCount = Math.abs(original_text.split(' ').length - response_text.split(' ').length);
+    let repetitions = repetitionCount;
+    let pauseCount = pause_count;
+    let ins = textEvalMetrics.insertion.length;
+    let del = textEvalMetrics.deletion.length;
+    let sub = textEvalMetrics.substitution.length;
+
+    let fluencyScore = ((wer * fluencyCalPerc.wer) + (cercal * fluencyCalPerc.cercal) + (charCount * fluencyCalPerc.charCount) + (wordCount * 10) + (repetitions * fluencyCalPerc.repetitions) + (pauseCount * fluencyCalPerc.pauseCount) + (ins * fluencyCalPerc.ins) + (del * fluencyCalPerc.del) + (sub * fluencyCalPerc.sub)) / 100;
+
+    return fluencyScore;
+  }
+
+  async getTokenHexcode(hexcodeTokenArr, token) {
+    const result = hexcodeTokenArr.find(
+      (item) => item.token === token,
+    );
+    return result?.hexcode || '';
+  }
+
+  async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
+    let confidence_scoresArr = [];
+    let missing_token_scoresArr = [];
+    let anomaly_scoreArr = [];
+    let prevEle = '';
+    let isPrevVowel = false;
+    const tokenArr = [];
+    const anamolyTokenArr = [];
+    const filteredTokenArr = [];
+
+    // Create Single Array from AI4bharat tokens array
+    bestTokens.forEach((element) => {
+      element.tokens.forEach((token) => {
+        if (Object.keys(token).length > 0) {
+          const key = Object.keys(token)[0];
+          const value = Object.values(token)[0];
+
+          let insertObj = {};
+          insertObj[key] = value;
+          tokenArr.push(insertObj);
+
+          if (Object.keys(token).length == 2) {
+            const key1 = Object.keys(token)[1];
+            const value1 = Object.values(token)[1];
+            insertObj = {};
+            insertObj[key1] = value1;
+            anamolyTokenArr.push(insertObj);
+          }
+        }
+      });
+    });
+
+    const uniqueChar = new Set();
+
+    // Create Unique token array
+    for (const tokenArrEle of tokenArr) {
+      const tokenString = Object.keys(tokenArrEle)[0];
+      for (const keyEle of tokenString.split('')) {
+        if (vowelSignArr.includes(keyEle)) {
+          if (isPrevVowel) {
+            const prevEleArr = prevEle.split('');
+            prevEle = prevEleArr[0] + keyEle;
+            uniqueChar.add(prevEle);
+          } else {
+            prevEle = prevEle + keyEle;
+            uniqueChar.add(prevEle);
+          }
+          isPrevVowel = true;
+        } else {
+          uniqueChar.add(keyEle);
+          isPrevVowel = false;
+          prevEle = keyEle;
+        }
+      }
+    }
+
+    //unique token list for ai4bharat response
+    const uniqueCharArr = Array.from(uniqueChar);
+
+    // Get best score for Each Char
+    for (const char of uniqueCharArr) {
+      let score = 0.0;
+      prevEle = '';
+      isPrevVowel = false;
+
+      for (const tokenArrEle of tokenArr) {
+        const tokenString = Object.keys(tokenArrEle)[0];
+        const tokenValue = Object.values(tokenArrEle)[0];
+
+        for (const keyEle of tokenString.split('')) {
+          const scoreVal: any = tokenValue;
+          let charEle: any = keyEle;
+
+          if (vowelSignArr.includes(charEle)) {
+            if (isPrevVowel) {
+              const prevCharArr = prevEle.split('');
+              prevEle = prevCharArr[0] + charEle;
+              charEle = prevEle;
+            } else {
+              prevEle = prevEle + charEle;
+              charEle = prevEle;
+            }
+            isPrevVowel = true;
+          } else {
+            prevEle = charEle;
+            isPrevVowel = false;
+          }
+
+          if (char === charEle) {
+            if (scoreVal > score) {
+              score = scoreVal;
+            }
+          }
+        }
+      }
+
+      filteredTokenArr.push({ charkey: char, charvalue: score });
+    }
+
+    // Create confidence score array and anomoly array
+    for (const value of filteredTokenArr) {
+      const score: any = value.charvalue;
+
+      let identification_status = 0;
+      if (score >= 0.9) {
+        identification_status = 1;
+      } else if (score >= 0.4) {
+        identification_status = -1;
+      } else {
+        identification_status = 0;
+      }
+
+      if (value.charkey !== '' && value.charkey !== '▁') {
+        if (correctTokens.includes(value.charkey)) {
+          const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, value.charkey);
+          if (hexcode !== '') {
+            confidence_scoresArr.push({
+              token: value.charkey,
+              hexcode: hexcode,
+              confidence_score: value.charvalue,
+              identification_status: identification_status,
+            });
+          } else {
+            if (
+              !missingTokens.includes(value.charkey)
+            ) {
+              anomaly_scoreArr.push({
+                token: value.charkey.replaceAll('_', ''),
+                hexcode: hexcode,
+                confidence_score: value.charvalue,
+                identification_status: identification_status,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    for (const missingTokensEle of missingTokens) {
+      const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, missingTokensEle);
+
+      if (hexcode !== '') {
+        if (vowelSignArr.includes(missingTokensEle)) {
+        } else {
+          if (!uniqueChar.has(missingTokensEle)) {
+            missing_token_scoresArr.push({
+              token: missingTokensEle,
+              hexcode: hexcode,
+              confidence_score: 0.1,
+              identification_status: 0,
+            });
+          }
+        }
+      } else {
+        if (
+          !correctTokens.includes(missingTokensEle)
+        ) {
+          anomaly_scoreArr.push({
+            token: missingTokensEle.replaceAll('_', ''),
+            hexcode: hexcode,
+            confidence_score: 0.1,
+            identification_status: 0,
+          });
+        }
+      }
+    }
+
+    for (const anamolyTokenArrEle of anamolyTokenArr) {
+      const tokenString = Object.keys(anamolyTokenArrEle)[0];
+      const tokenValue = Object.values(anamolyTokenArrEle)[0];
+
+      if (tokenString != '') {
+        const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, tokenString);
+        if (hexcode !== '') {
+          if (vowelSignArr.includes(tokenString)) {
+          } else {
+            anomaly_scoreArr.push({
+              token: tokenString.replaceAll('_', ''),
+              hexcode: hexcode,
+              confidence_score: tokenValue,
+              identification_status: 0,
+            });
+          }
+        }
+      }
+    }
+
+    return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
+  }
+
+  async processText(text: string) {
+    // Convert the text to lowercase
+    text = text.toLowerCase();
+
+    // Split the text into sentences based on '. and ,'
+    const sentences = text.split(/[.,]/);
+
+    // Process each sentence
+    const processedSentences = sentences.map((sentence) => {
+      // Apply special character logic
+      const cleanedSentence = sentence.replace(/[^\w\s]/g, '');
+
+      return cleanedSentence.trim(); // Trim any extra spaces
+    });
+
+    // Join the processed sentences back together with spaces and without the dot and comma
+    const processedText = processedSentences.join(' ').trim();
+
+    return processedText;
+  }
 }
