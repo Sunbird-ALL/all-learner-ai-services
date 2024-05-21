@@ -83,6 +83,7 @@ export class ScoresService {
     let asrOutDenoisedOutput: any;
     let asrOutBeforeDenoised: any;
     let audio: any = data;
+    let pause_count: number = 0;
 
     let serviceId = '';
     switch (language) {
@@ -109,28 +110,32 @@ export class ScoresService {
       asrOutBeforeDenoised = await asrCall();
     }
 
-    if (process.env.denoiserEnabled === "true") {
 
-      let denoiserConfig =
-      {
-        method: 'post',
-        url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        data: {
-          "audio_base64": audio
-        }
+
+    let denoiserConfig =
+    {
+      method: 'post',
+      url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      data: {
+        "base64_string": audio,
+        "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
+        "enablePauseCount": true
       }
+    }
 
-      await axios.request(denoiserConfig)
-        .then((response) => {
-          audio = response.data.denoised_audio_base64;
-        })
-        .catch((error) => {
-          console.log(error);
-        });
+    await axios.request(denoiserConfig)
+      .then((response) => {
+        audio = response.data.denoised_audio_base64;
+        pause_count = response.data.pause_count;
+      })
+      .catch((error) => {
+        console.log(error);
+      });
 
+    if (process.env.denoiserEnabled === "true") {
       asrOutDenoisedOutput = await asrCall();
     }
 
@@ -183,7 +188,7 @@ export class ScoresService {
       return output;
     }
 
-    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised };
+    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count };
   }
 
   async findAll(): Promise<any> {
@@ -2236,7 +2241,7 @@ export class ScoresService {
     return textEvalMatrices;
   }
 
-  async getCalculatedFluency(textEvalMetrics, repetitionCount, original_text, response_text) {
+  async getCalculatedFluency(textEvalMetrics, repetitionCount, original_text, response_text, pause_count) {
     let fluencyCalPerc = lang_common_config.fluencyCalPerc;
 
     let wer = textEvalMetrics.wer;
@@ -2244,12 +2249,10 @@ export class ScoresService {
     let charCount = Math.abs(original_text.length - response_text.length);
     let wordCount = Math.abs(original_text.split(' ').length - response_text.split(' ').length);
     let repetitions = repetitionCount;
-    let pauseCount = textEvalMetrics.pause_count;
+    let pauseCount = pause_count;
     let ins = textEvalMetrics.insertion.length;
     let del = textEvalMetrics.deletion.length;
     let sub = textEvalMetrics.substitution.length;
-
-    console.log(wer + " " + cercal + " " + charCount + " " + wordCount + " " + repetitions + " " + pauseCount + " " + ins + " " + ' ' + del + " " + sub);
 
     let fluencyScore = ((wer * fluencyCalPerc.wer) + (cercal * fluencyCalPerc.cercal) + (charCount * fluencyCalPerc.charCount) + (wordCount * 10) + (repetitions * fluencyCalPerc.repetitions) + (pauseCount * fluencyCalPerc.pauseCount) + (ins * fluencyCalPerc.ins) + (del * fluencyCalPerc.del) + (sub * fluencyCalPerc.sub)) / 100;
 

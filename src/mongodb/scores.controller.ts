@@ -150,6 +150,8 @@ export class ScoresController {
       let responseText = '';
       let constructText = '';
 
+      let pause_count = 0;
+
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
@@ -168,6 +170,7 @@ export class ScoresController {
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
           similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
           similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
@@ -251,7 +254,7 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText);
+        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
@@ -301,7 +304,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: textEvalMatrices.pause_count,
+              count: pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
@@ -897,6 +900,8 @@ export class ScoresController {
       let isPrevVowel = false;
       let createScoreData: any;
 
+      let pause_count = 0;
+
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
         if (
@@ -911,6 +916,7 @@ export class ScoresController {
           );
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
           if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -1346,7 +1352,7 @@ export class ScoresController {
           CreateLearnerProfileDto.output[0].source.split(' ').length,
         );
         const repetitions = reptitionCount;
-        const pauseCount = textEvalMatrices.pause_count;
+        const pauseCount = pause_count;
         const ins = textEvalMatrices.insertion.length;
         const del = textEvalMatrices.deletion.length;
         const sub = textEvalMatrices.substitution.length;
@@ -1411,7 +1417,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: textEvalMatrices.pause_count,
+              count: pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
@@ -1590,6 +1596,8 @@ export class ScoresController {
       let similarityNonDenoisedText = 0;
       let similarityDenoisedText = 0;
 
+      let pause_count = 0;
+
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
@@ -1608,18 +1616,19 @@ export class ScoresController {
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
           similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
           similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
 
           if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source);
-            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source);
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
           } else {
             CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source);
-            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source);
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
           }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
@@ -1710,7 +1719,7 @@ export class ScoresController {
         let repetitions = constructedTextRepCountData.reptitionCount;
         // End Constructed Text Logic
 
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText);
+        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
@@ -1756,7 +1765,7 @@ export class ScoresController {
             fluencyScore: fluencyScore.toFixed(3),
             silence_Pause: {
               total_duration: 0,
-              count: textEvalMatrices.pause_count,
+              count: pause_count,
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
@@ -1807,6 +1816,7 @@ export class ScoresController {
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
+      console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -1899,6 +1909,8 @@ export class ScoresController {
       let responseTokenArr = [];
       let constructTokenArr = [];
 
+      let pause_count = 0;
+
       // This code block used to create tamil compound consonents from text strings
       for (let originalTextELE of originalText.split("")) {
         if (originalTextELE != ' ') {
@@ -1934,6 +1946,7 @@ export class ScoresController {
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
           if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -2423,7 +2436,7 @@ export class ScoresController {
         let charCount = Math.abs(CreateLearnerProfileDto.original_text.length - CreateLearnerProfileDto.output[0].source.length);
         let wordCount = Math.abs(CreateLearnerProfileDto.original_text.split(' ').length - CreateLearnerProfileDto.output[0].source.split(' ').length);
         let repetitions = reptitionCount;
-        let pauseCount = textEvalMatrices.pause_count;
+        let pauseCount = pause_count;
         let ins = textEvalMatrices.insertion.length;
         let del = textEvalMatrices.deletion.length;
         let sub = textEvalMatrices.substitution.length;
