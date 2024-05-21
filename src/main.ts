@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { fastifyMultipart } from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppClusterService } from './app-cluster.service';
+import compression from '@fastify/compress';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -20,6 +21,10 @@ async function bootstrap() {
       fileSize: 102400000,
     },
   });
+  await app.register(compression, {
+     encodings: ['gzip', 'deflate'],
+     threshold: 512 
+    });
 
   const config = new DocumentBuilder()
     .setTitle('ALL Learner AI')
@@ -42,5 +47,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT, '0.0.0.0');
 }
-
 AppClusterService.clusterize(bootstrap);
