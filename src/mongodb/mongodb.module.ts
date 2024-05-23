@@ -8,7 +8,9 @@ import { assessmentInputSchema } from './schemas/assessmentInput.schema';
 import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema'
 import { ScoresController } from './scores.controller';
 import { ScoresService } from './scores.service';
+import { CacheService } from './cache/cache.service';
 import { HttpModule } from '@nestjs/axios';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
@@ -25,8 +27,9 @@ import { HttpModule } from '@nestjs/axios';
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema }
     ]),
+    CacheModule.register()
   ],
   controllers: [ScoresController],
-  providers: [ScoresService],
+  providers: [ScoresService, CacheService],
 })
 export class MongodbModule { }
