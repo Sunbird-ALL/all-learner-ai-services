@@ -7,12 +7,22 @@ import { AppModule } from './app.module';
 import { fastifyMultipart } from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppClusterService } from './app-cluster.service';
+import compression from '@fastify/compress';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.forRoot(process.env.DATABASE),
     new FastifyAdapter({ logger: true, bodyLimit: 30 * 1024 * 1024 }),
   );
+
+  await app.register(compression,{
+    global: true,
+    zlibOptions: {
+      level: 6,
+    },
+    threshold: 512,
+    encodings: ['gzip', 'deflate']
+  });
 
   await app.register(fastifyMultipart, {
     attachFieldsToBody: 'keyValues',
