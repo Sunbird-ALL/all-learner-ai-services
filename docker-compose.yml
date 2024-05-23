@@ -1,0 +1,30 @@
+version: '3'
+services:
+  nestjs-app:
+    build:
+      context: .
+    ports:
+      - '3001:3001'
+    container_name: learner-ai
+    restart: always
+    networks:
+      - ai-network
+    environment:
+      - MONGO_URL=mongodb://MONGO:27017/lais_db
+      - AI4BHARAT_API_KEY=5Tctp7ruxRG_XPWHcXqdH9b2lOrxThUKZ_roIgtxVSeFDBHIc1tLRDoT6BFMyRrm
+      - AI4BHARAT_URL=https://api.dhruva.ekstep.ai/services/inference/asr
+      - SERVER_URL=http://localhost:3001/lais/
+      - ALL_CONTENT_SERVICE_API=https://all-learnerai-tn-dev.theall.ai/content-service/v1/content/getContent
+      - ALL_TEXT_EVAL_API=https://all-learnerai-tn-dev.theall.ai/text-eval
+      - PORT=3001
+      - DATABASE=mongodb
+
+networks:
+  ai-network:
+    driver: bridge
+
+
+
+
+
+
