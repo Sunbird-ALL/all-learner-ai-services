@@ -20,7 +20,7 @@ async function bootstrap() {
       fileSize: 102400000,
     },
   });
-
+  
   const config = new DocumentBuilder()
     .setTitle('ALL Learner AI')
     .setDescription(
@@ -42,5 +42,4 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT, '0.0.0.0');
 }
-
 AppClusterService.clusterize(bootstrap);
