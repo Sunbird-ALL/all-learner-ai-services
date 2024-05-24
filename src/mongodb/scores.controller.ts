@@ -3575,7 +3575,15 @@ export class ScoresController {
       if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + famalarity.length;
       } else {
-        totalSyllables = getSetResult.totalSyllableCount
+        if (getSetResult.language === "en") {
+          if (getSetResult.totalSyllableCount > 50) {
+            totalSyllables = 50;
+          } else {
+            totalSyllables = getSetResult.totalSyllableCount;
+          }
+        } else {
+          totalSyllables = getSetResult.totalSyllableCount
+        }
       }
 
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
