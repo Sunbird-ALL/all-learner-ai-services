@@ -166,7 +166,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -446,7 +446,8 @@ export class ScoresController {
         const decoded = audioFile.toString('base64');
         const audioOutput = await this.scoresService.audioFileToAsrOutput(
           decoded,
-          'hi'
+          'hi',
+          CreateLearnerProfileDto['contentType']
         );
         CreateLearnerProfileDto['output'] = audioOutput.output;
 
@@ -912,7 +913,8 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
           const audioOutput = await this.scoresService.audioFileToAsrOutput(
             decoded,
-            'kn'
+            'kn',
+            CreateLearnerProfileDto['contentType']
           );
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -1612,7 +1614,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -1943,7 +1945,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;

@@ -79,7 +79,7 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(data: any, language: string): Promise<any> {
+  async audioFileToAsrOutput(data: any, language: string, contentType: string): Promise<any> {
     let asrOutDenoisedOutput: any;
     let asrOutBeforeDenoised: any;
     let audio: any = data;
@@ -122,7 +122,8 @@ export class ScoresService {
       data: {
         "base64_string": audio,
         "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
-        "enablePauseCount": true
+        "enablePauseCount": true,
+        "contentType": contentType
       }
     }
 
