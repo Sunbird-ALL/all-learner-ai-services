@@ -3575,14 +3575,14 @@ export class ScoresController {
       if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + famalarity.length;
       } else {
-        if (getSetResult.language !== "en") {
-          totalSyllables = getSetResult.totalSyllableCount
-        } else {
+        if (getSetResult.language === "en") {
           if (getSetResult.totalSyllableCount > 50) {
             totalSyllables = 50;
           } else {
             totalSyllables = getSetResult.totalSyllableCount;
           }
+        } else {
+          totalSyllables = getSetResult.totalSyllableCount
         }
       }
 
