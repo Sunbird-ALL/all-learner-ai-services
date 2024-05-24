@@ -1263,7 +1263,7 @@ export class ScoresService {
       },
     ]);
 
-    return RecordData[0]?.fluencyScore;
+    return RecordData[0]?.fluencyScore || 0;
   }
 
   async findbyUser(id: string) {
