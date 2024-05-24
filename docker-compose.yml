@@ -10,14 +10,15 @@ services:
     networks:
       - ai-network
     environment:
-      - .env
+      - MONGO_URL=
+      - AI4BHARAT_API_KEY=
+      - AI4BHARAT_URL=
+      - SERVER_URL=
+      - ALL_CONTENT_SERVICE_API=
+      - ALL_TEXT_EVAL_API=
+      - PORT=3001
+      - DATABASE=mongodb
 
 networks:
   ai-network:
     driver: bridge
-
-
-
-
-
-
