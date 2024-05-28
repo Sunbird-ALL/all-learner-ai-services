@@ -58,4 +58,4 @@ jobs:
               docker rmi ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
               cd /home/allstaginguser/all-services/all-learner-ai-services
-              docker-compose up -d --force-recreate --no-deps
+              sudo docker-compose up -d --force-recreate --no-deps
