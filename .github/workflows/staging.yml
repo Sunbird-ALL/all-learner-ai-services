@@ -1,0 +1,61 @@
+
+name: STAGING DEPLOYMENT
+
+on:
+  push:
+    branches: [ all-1.1-staging ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME_DEVOPS }}
+          password: ${{ secrets.DOCKERHUB_TOKEN_DEVOPS }}
+
+      -
+        name: Load .env from GitHub Secret
+        run: echo "${{ secrets.MY_ENV_VARS_STAGING }}" > .env
+
+      -
+        name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags:  ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
+        env:
+          MY_ENV_VARS: ${{ secrets.MY_ENV_VARS_STAGING }}
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build]
+    steps:
+    -
+      name: Checkout
+      uses: actions/checkout@v2
+    -
+      name: Deploy Stack
+      uses: appleboy/ssh-action@master
+      with:
+          host: ${{ secrets.HOST_STAGING }}
+          username: ${{ secrets.USERNAME_STAGING }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_STAGING }}
+          port: ${{ secrets.PORT }}
+          script: |
+
+              docker login
+
+              docker container stop ${{ secrets.CONTAINER_NAME }}
+
+              docker rm ${{ secrets.CONTAINER_NAME }}
+              docker rmi ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
+              docker pull ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
+              cd /home/allstaginguser/all-services/all-learner-ai-services
+              docker-compose up -d --force-recreate --no-deps
