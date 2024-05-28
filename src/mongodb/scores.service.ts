@@ -248,12 +248,15 @@ export class ScoresService {
   }
 
   // Target Query 
-  async getTargetsBySession(sessionId: string, language: string = null) {
-    const threshold = 0.9;
-    const result = await this.scoreModel.aggregate([
+  async getTargetsBySession(sessionId: string,language:string) {
+    const threshold = 0.7;
+    let RecordData = [];
+
+    RecordData = await this.scoreModel.aggregate([
       {
         $match: {
           'sessions.session_id': sessionId,
+          'sessions.language':language
         },
       },
       {
@@ -268,123 +271,15 @@ export class ScoresService {
             {
               $project: {
                 _id: 0,
-                language: '$sessions.language',
-                character: '$sessions.confidence_scores.token',
-                score: '$sessions.confidence_scores.confidence_score',
-                isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-              },
-            },
-            {
-              $match: {
-                $or: [
-                  { isRetryExists: false },
-                  { 'sessions.isRetry': false }
-                ],
-              },
-            },
-          ],
-          missingTokenScores: [
-            {
-              $unwind: '$sessions.missing_token_scores',
-            },
-            {
-              $project: {
-                _id: 0,
-                language: '$sessions.language',
-                character: '$sessions.missing_token_scores.token',
-                score: '$sessions.missing_token_scores.confidence_score',
-              },
-            },
-          ],
-        },
-      },
-    ]);
-    const RecordData = result[0].confidenceScores;
-    const MissingRecordData = result[0].missingTokenScores;
-    const charScoreData = [];
-    const uniqueChar = new Set();
-    for (const RecordDataele of RecordData) {
-      if (language != null && RecordDataele.language === language) {
-        uniqueChar.add(RecordDataele.character);
-      } else if (language === null) {
-        uniqueChar.add(RecordDataele.character);
-      }
-    }
-    for (const char of uniqueChar) {
-      let score = 0;
-      let count = 0;
-      for (const checkRecordDataele of RecordData) {
-        if (
-          char === checkRecordDataele.character &&
-          checkRecordDataele.score >= score
-        ) {
-          score += checkRecordDataele.score;
-          count++;
-        }
-      }
-      const avgScore = score / count;
-      if (avgScore < threshold && count > 0) {
-        charScoreData.push({ character: char, score: avgScore });
-      }
-    }
-    const missingUniqueChar = new Set();
-    for (const MissingRecordDataEle of MissingRecordData) {
-      if (
-        !uniqueChar.has(MissingRecordDataEle.character) &&
-        !missingUniqueChar.has(MissingRecordDataEle.character) &&
-        language != null &&
-        MissingRecordDataEle.language === language
-      ) {
-        charScoreData.push({
-          character: MissingRecordDataEle.character,
-          score: MissingRecordDataEle.score,
-        });
-        missingUniqueChar.add(MissingRecordDataEle.character);
-      } else if (
-        !uniqueChar.has(MissingRecordDataEle.character) &&
-        !missingUniqueChar.has(MissingRecordDataEle.character)
-      ) {
-        charScoreData.push({
-          character: MissingRecordDataEle.character,
-          score: MissingRecordDataEle.score,
-        });
-        missingUniqueChar.add(MissingRecordDataEle.character);
-      }
-    }
-    return charScoreData.sort((a, b) => a.score - b.score);
-  }
-
-  async getTargetsByContentId(
-    subSessionId: string,
-    contentType: string,
-    language: string,
-    contentId: string,
-  ) {
-    const threshold = 0.7;
-  
-    const RecordData = await this.scoreModel.aggregate([
-      {
-        $match: {
-          'sessions.sub_session_id': subSessionId,
-          'sessions.language': language,
-          'sessions.contentId': contentId,
-        },
-      },
-      {
-        $unwind: '$sessions',
-      },
-      {
-        $facet: {
-          confidenceScores: [
-            {
-              $unwind: '$sessions.confidence_scores',
-            },
-            {
-              $project: {
-                _id: 0,
+                date: '$sessions.createdAt',
                 session_id: '$sessions.session_id',
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
+              },
+            },
+            {
+              $sort: {
+                date: -1,
               },
             },
           ],
@@ -396,8 +291,14 @@ export class ScoresService {
               $project: {
                 _id: 0,
                 session_id: '$sessions.session_id',
+                date: '$sessions.createdAt',
                 character: '$sessions.missing_token_scores.token',
                 score: '$sessions.missing_token_scores.confidence_score',
+              },
+            },
+            {
+              $sort: {
+                date: -1,
               },
             },
           ],
@@ -419,8 +320,32 @@ export class ScoresService {
         },
       },
       {
+        $project: {
+          sessionId: '$session_id',
+          date: '$date',
+          token: '$character',
+          score: '$score',
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
+        }
+      },
+      {
+        $match: {
+          $or: [
+            { isRetryExists: false },
+            { 'sessions.isRetry': false }
+          ]
+        }
+      },
+      {
+        $sort: {
+          date: -1,
+        },
+      },
+      {
         $group: {
-          _id: '$character',
+          _id: {
+            token: '$token',
+          },
           scores: {
             $push: '$score',
           },
@@ -429,7 +354,7 @@ export class ScoresService {
       {
         $project: {
           _id: 0,
-          character: '$_id',
+          character: '$_id.token',
           latestScores: {
             $slice: ['$scores', -5],
           },
@@ -469,7 +394,7 @@ export class ScoresService {
         },
       },
     ]);
-  
+
     return RecordData;
   }
 
