@@ -2670,11 +2670,12 @@ export class ScoresController {
   })
   async GetFamiliarityBysession(
     @Param('sessionId') id: string,
+    @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const familiarityResult =
-        await this.scoresService.getFamiliarityBySession(id);
+        await this.scoresService.getFamiliarityBySession(id, language);
       return response.status(HttpStatus.OK).send(familiarityResult);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
