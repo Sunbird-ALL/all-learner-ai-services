@@ -338,8 +338,6 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
@@ -1450,8 +1448,6 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
@@ -1780,8 +1776,6 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
@@ -2493,8 +2487,6 @@ export class ScoresController {
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
@@ -3921,7 +3913,7 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          targets: targets,
+          //targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
