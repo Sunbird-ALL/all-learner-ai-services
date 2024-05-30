@@ -21,8 +21,9 @@ async function bootstrap() {
       level: 6,
     },
     threshold: 512,
-    encodings: ['gzip', 'deflate']
-  });
+    encodings: ['gzip', 'deflate','br']
+  }
+);
 
   await app.register(fastifyMultipart, {
     attachFieldsToBody: 'keyValues',
