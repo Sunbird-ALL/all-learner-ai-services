@@ -2580,7 +2580,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('/GetTargets/subsession/:subsessionId/:contentType')
+  @Get('/GetTargets/subsession/:subsessionId')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
     status: 200,
