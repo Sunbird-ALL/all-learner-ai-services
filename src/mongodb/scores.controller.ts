@@ -325,19 +325,10 @@ export class ScoresController {
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
         CreateLearnerProfileDto.language,
       );
-      const targetsByContent = await this.scoresService.getTargetsByContentId(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
-        CreateLearnerProfileDto.language,
-        CreateLearnerProfileDto.contentId,
-      );
-
       const totalTargets = targets.length;
-      const totalContentTargets = targetsByContent.length;
-
+      
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -347,11 +338,7 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
-        contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
-        contentTargetsCount: totalContentTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
@@ -1447,19 +1434,11 @@ export class ScoresController {
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
         CreateLearnerProfileDto.language,
       );
-      const targetsByContent = await this.scoresService.getTargetsByContentId(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
-        CreateLearnerProfileDto.language,
-        CreateLearnerProfileDto.contentId,
-      );
-
+     
       const totalTargets = targets.length;
-      const totalContentTargets = targetsByContent.length;
-
+    
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1469,11 +1448,7 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
-        contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
-        contentTargetsCount: totalContentTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
@@ -1788,19 +1763,10 @@ export class ScoresController {
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
-        CreateLearnerProfileDto.language,
+        CreateLearnerProfileDto.language
       );
-      const targetsByContent = await this.scoresService.getTargetsByContentId(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
-        CreateLearnerProfileDto.language,
-        CreateLearnerProfileDto.contentId,
-      );
-
       const totalTargets = targets.length;
-      const totalContentTargets = targetsByContent.length;
-
+     
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1810,11 +1776,7 @@ export class ScoresController {
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
-        contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
-        contentTargetsCount: totalContentTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
@@ -2512,18 +2474,9 @@ export class ScoresController {
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
         CreateLearnerProfileDto.language,
       );
-      const targetsByContent = await this.scoresService.getTargetsByContentId(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.contentType,
-        CreateLearnerProfileDto.language,
-        CreateLearnerProfileDto.contentId,
-      );
-
       const totalTargets = targets.length;
-      const totalContentTargets = targetsByContent.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
@@ -2534,11 +2487,7 @@ export class ScoresController {
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
-        createScoreData: createScoreData,
-        subsessionTarget: targets,
-        contentTarget: targetsByContent,
         subsessionTargetsCount: totalTargets,
-        contentTargetsCount: totalContentTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
@@ -2569,10 +2518,11 @@ export class ScoresController {
   @ApiOperation({ summary: 'Get Targets character by session id' })
   async GetTargetsbySession(
     @Param('sessionId') id: string,
+    @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
-      const targetResult = await this.scoresService.getTargetsBySession(id);
+      const targetResult = await this.scoresService.getTargetsBySession(id, language);
       return response.status(HttpStatus.OK).send(targetResult);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -2622,7 +2572,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('/GetTargets/subsession/:subsessionId/:contentType')
+  @Get('/GetTargets/subsession/:subsessionId')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
     status: 200,
@@ -2637,15 +2587,13 @@ export class ScoresController {
   })
   async GetTargetsbysubsession(
     @Param('subsessionId') id: string,
-    @Param('contentType') contentType: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const targetResult = await this.scoresService.getTargetsBysubSession(
         id,
-        contentType,
-        language,
+        language
       );
       return response.status(HttpStatus.OK).send(targetResult);
     } catch (err) {
@@ -2714,11 +2662,12 @@ export class ScoresController {
   })
   async GetFamiliarityBysession(
     @Param('sessionId') id: string,
+    @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const familiarityResult =
-        await this.scoresService.getFamiliarityBySession(id);
+        await this.scoresService.getFamiliarityBySession(id, language);
       return response.status(HttpStatus.OK).send(familiarityResult);
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -3567,7 +3516,7 @@ export class ScoresController {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
       let totalSyllables = 0;
-      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language);
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.contentType, getSetResult.language)
       let totalTargets = targets.length;
@@ -3964,7 +3913,7 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          targets: targets,
+          //targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
