@@ -12,6 +12,7 @@ import { CacheService } from './cache/cache.service';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 
+
 @Module({
   imports: [
     HttpModule.register({
@@ -20,7 +21,19 @@ import { CacheModule } from '@nestjs/cache-manager';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    MongooseModule.forRoot(process.env.MONGO_URL),
+
+    MongooseModule.forRootAsync({
+      useFactory: async () => ({
+        uri: process.env.MONGO_URL,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        connectionFactory: (connection) => {
+          connection.set('poolSize', process.env.POOL_SIZE);
+          return connection;
+        },
+      }),
+    }),
+    
     MongooseModule.forFeature([
       { name: 'Score', schema: ScoreSchema },
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
@@ -31,5 +44,6 @@ import { CacheModule } from '@nestjs/cache-manager';
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService],
+  
 })
 export class MongodbModule { }
