@@ -254,13 +254,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.session_id': sessionId,
           'sessions.language':language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -405,15 +405,15 @@ export class ScoresService {
     const threshold = 0.7;
     let RecordData = [];
 
-    RecordData = await this.scoreModel.aggregate([
+    RecordData = await this.scoreModel.aggregate([ 
+      {
+        $unwind: '$sessions',
+      },
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -550,6 +550,7 @@ export class ScoresService {
 
     return RecordData;
   }
+
 
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
@@ -726,13 +727,13 @@ export class ScoresService {
 
     const RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions'
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         }
-      },
-      {
-        $unwind: '$sessions'
       },
       {
         $facet: {
@@ -894,13 +895,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.session_id': sessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -1045,13 +1046,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -1344,13 +1345,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions'
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         }
-      },
-      {
-        $unwind: '$sessions'
       },
       {
         $facet: {
@@ -1501,13 +1502,13 @@ export class ScoresService {
   async getFluencyBysubSession(subSessionId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $group: {
