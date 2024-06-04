@@ -3,16 +3,16 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class hexcodeMapping extends Document {
-  @Prop({ required: true })
+  @Prop({ required: true, index:true})
   token: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, index:true })
   hexcode: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, index:true})
   language: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, index:true })
   graphemes: [string];
 }
 

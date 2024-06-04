@@ -3,22 +3,22 @@ import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class denoiserOutputLogs extends Document {
-    @Prop({ required: true })
+    @Prop({ required: true, index:true})
     user_id: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index:true})
     session_id: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true , index:true})
     sub_session_id: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index:true })
     contentId: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index:true })
     contentType: string;
 
-    @Prop({ required: true })
+    @Prop({ required: true, index:true })
     language: string;
 
     @Prop({ required: true })
