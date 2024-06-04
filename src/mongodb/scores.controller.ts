@@ -328,7 +328,7 @@ export class ScoresController {
         CreateLearnerProfileDto.language,
       );
       const totalTargets = targets.length;
-      
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1436,9 +1436,9 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-     
+
       const totalTargets = targets.length;
-    
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1766,7 +1766,7 @@ export class ScoresController {
         CreateLearnerProfileDto.language
       );
       const totalTargets = targets.length;
-     
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -2937,6 +2937,9 @@ export class ScoresController {
   })
   async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
+
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
@@ -2945,20 +2948,15 @@ export class ScoresController {
         id,
         language,
       );
-      const validations = await this.scoresService.getAssessmentRecordsUserid(
-        id,
-      );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
 
       let currentLevel = 'm0';
       currentLevel = recordData[0]?.milestone_level || 'm0';
       const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
 
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -2967,48 +2965,31 @@ export class ScoresController {
           return charData.character;
         });
 
-      let contentLevel = '';
-      let complexityLevel = [];
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
-
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
@@ -3052,17 +3033,6 @@ export class ScoresController {
         contentForTokenArr = newContent.data.contentForToken;
       } else {
         contentForTokenArr = [];
-      }
-
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
       }
 
       // Total Syllable count added
@@ -3116,26 +3086,26 @@ export class ScoresController {
   })
   async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
-      let currentLevel = 'm0';
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
+
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
-      currentLevel = recordData[0]?.milestone_level || 'm0';
-
       const getGetTarget = await this.scoresService.getTargetsByUser(
         id,
         language,
       );
-      const validations = await this.scoresService.getAssessmentRecordsUserid(
-        id,
-      );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
+
+      let currentLevel = 'm0';
+      currentLevel = recordData[0]?.milestone_level || 'm0';
+      const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
+
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -3144,51 +3114,31 @@ export class ScoresController {
           return charData.character;
         });
 
-      const totalTargets = getGetTarget.length;
-      const totalValidation = validations.length;
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      let contentLevel = '';
-      let complexityLevel = [];
-
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
-
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
@@ -3201,7 +3151,7 @@ export class ScoresController {
         "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
-        "graphemesMappedObj": graphemesMappedObj
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -3234,20 +3184,8 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
-      }
-
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-
       if (language === 'en') {
         contentArr.forEach((contentObject) => {
           totalSyllableCount +=
@@ -3297,25 +3235,26 @@ export class ScoresController {
   })
   async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
-      let currentLevel = 'm0';
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
 
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
-      currentLevel = recordData[0]?.milestone_level || 'm0';
-
       const getGetTarget = await this.scoresService.getTargetsByUser(
         id,
         language,
       );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
+
+      let currentLevel = 'm0';
+      currentLevel = recordData[0]?.milestone_level || 'm0';
+      const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
 
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -3324,51 +3263,33 @@ export class ScoresController {
           return charData.character;
         });
 
-      const totalTargets = getGetTarget.length;
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
-      let contentLevel = '';
-      let complexityLevel = [];
-
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
@@ -3379,7 +3300,7 @@ export class ScoresController {
         "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
-        "graphemesMappedObj": graphemesMappedObj
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -3412,20 +3333,8 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
-      }
-
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-
       if (language === 'en') {
         contentArr.forEach((contentObject) => {
           totalSyllableCount +=
@@ -3537,6 +3446,8 @@ export class ScoresController {
 
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
+      targetsPercentage = targetsPercentage < 0 ? 0 : targetsPercentage;
+      passingPercentage = passingPercentage < 0 ? 0 : passingPercentage;
 
       let sessionResult = 'No Result';
 
