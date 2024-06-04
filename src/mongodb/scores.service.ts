@@ -259,7 +259,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.session_id': sessionId,
-          'sessions.language':language
+          'sessions.language': language
         },
       },
       {
@@ -2501,5 +2501,42 @@ export class ScoresService {
     const processedText = processedSentences.join(' ').trim();
 
     return processedText;
+  }
+
+  async getMilestoneBasedContentComplexity(milestone_level: string) {
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (milestone_level === 'm0') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm1') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1'];
+    } else if (milestone_level === 'm3') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1', 'C2'];
+    } else if (milestone_level === 'm4') {
+      contentLevel = 'L3';
+      complexityLevel = ['C1', 'C2', 'C3'];
+    } else if (milestone_level === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm6') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3', 'C4'];
+    } else if (milestone_level === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ['C3', 'C4'];
+    } else if (milestone_level === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ['C3', 'C4'];
+    }
+
+    return { contentLevel: contentLevel, complexityLevel }
   }
 }
