@@ -57,5 +57,5 @@ jobs:
               docker rm ${{ secrets.CONTAINER_NAME }}
               docker rmi ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
               docker pull ${{ secrets.CONTAINER_REGISTRY_STAGING }}:${{ secrets.IMAGE_TAG }}
-              cd /home/allstaginguser/all-services/all-learner-ai-services
+              cd /home/all-staging-user/all-services/all-lais
               sudo docker-compose up -d --force-recreate --no-deps
