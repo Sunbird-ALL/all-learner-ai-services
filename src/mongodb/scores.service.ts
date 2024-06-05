@@ -254,13 +254,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
-        $match: {
-          'sessions.session_id': sessionId,
-          'sessions.language':language
-        },
+        $unwind: '$sessions',
       },
       {
-        $unwind: '$sessions',
+        $match: {
+          'sessions.session_id': sessionId,
+          'sessions.language': language
+        },
       },
       {
         $facet: {
@@ -405,15 +405,15 @@ export class ScoresService {
     const threshold = 0.7;
     let RecordData = [];
 
-    RecordData = await this.scoreModel.aggregate([
+    RecordData = await this.scoreModel.aggregate([ 
+      {
+        $unwind: '$sessions',
+      },
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -550,6 +550,7 @@ export class ScoresService {
 
     return RecordData;
   }
+
 
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
@@ -726,13 +727,13 @@ export class ScoresService {
 
     const RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions'
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         }
-      },
-      {
-        $unwind: '$sessions'
       },
       {
         $facet: {
@@ -894,13 +895,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.session_id': sessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -1045,13 +1046,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $facet: {
@@ -1344,13 +1345,13 @@ export class ScoresService {
 
     RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions'
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         }
-      },
-      {
-        $unwind: '$sessions'
       },
       {
         $facet: {
@@ -1501,13 +1502,13 @@ export class ScoresService {
   async getFluencyBysubSession(subSessionId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
+        $unwind: '$sessions',
+      },
+      {
         $match: {
           'sessions.sub_session_id': subSessionId,
           'sessions.language': language
         },
-      },
-      {
-        $unwind: '$sessions',
       },
       {
         $group: {
@@ -2500,5 +2501,42 @@ export class ScoresService {
     const processedText = processedSentences.join(' ').trim();
 
     return processedText;
+  }
+
+  async getMilestoneBasedContentComplexity(milestone_level: string) {
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (milestone_level === 'm0') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm1') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1'];
+    } else if (milestone_level === 'm3') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1', 'C2'];
+    } else if (milestone_level === 'm4') {
+      contentLevel = 'L3';
+      complexityLevel = ['C1', 'C2', 'C3'];
+    } else if (milestone_level === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm6') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3', 'C4'];
+    } else if (milestone_level === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ['C3', 'C4'];
+    } else if (milestone_level === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ['C3', 'C4'];
+    }
+
+    return { contentLevel: contentLevel, complexityLevel }
   }
 }
