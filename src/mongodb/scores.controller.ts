@@ -3401,7 +3401,7 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on sub session id we will calculate targets and contenttype will prepare result.
@@ -3869,7 +3869,7 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
@@ -4247,7 +4247,7 @@ export class ScoresController {
     }
   }
 
-  
+  @ApiExcludeEndpoint(true)
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will send the profile related data.`,
