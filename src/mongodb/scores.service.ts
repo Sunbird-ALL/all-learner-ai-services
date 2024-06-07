@@ -1038,7 +1038,6 @@ export class ScoresService {
 
   async getFamiliarityBysubSession(
     subSessionId: string,
-    contentType: string,
     language: string,
   ) {
     const threshold = 0.7;
