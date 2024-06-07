@@ -4011,7 +4011,7 @@ export class ScoresController {
     return this.scoresService.getAllSessions(id, limit);
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will calculate targets.`,
@@ -4095,7 +4095,7 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will calculate familirity.`,
@@ -4183,7 +4183,7 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will send the milestone level.`,
@@ -4247,7 +4247,7 @@ export class ScoresController {
     }
   }
 
-  @ApiExcludeEndpoint(true)
+  
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will send the profile related data.`,
