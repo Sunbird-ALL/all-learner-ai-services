@@ -14,7 +14,8 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import { CacheService } from './cache/cache.service';
-import lang_common_config from "./config/language/common/commonConfig"
+import lang_common_config from "./config/language/common/commonConfig";
+import * as splitGraphemes from 'split-graphemes';
 
 @Injectable()
 export class ScoresService {
@@ -247,7 +248,7 @@ export class ScoresService {
     }
   }
 
-  // Target Query 
+  // Target Query
   async getTargetsBySession(sessionId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
@@ -405,7 +406,7 @@ export class ScoresService {
     const threshold = 0.7;
     let RecordData = [];
 
-    RecordData = await this.scoreModel.aggregate([ 
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
       },
@@ -889,7 +890,7 @@ export class ScoresService {
   }
 
   // Familiarity Query
-  async getFamiliarityBySession(sessionId: string,language:string) {
+  async getFamiliarityBySession(sessionId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
 
@@ -2537,5 +2538,40 @@ export class ScoresService {
     }
 
     return { contentLevel: contentLevel, complexityLevel }
+  }
+
+  async getSubsessionOriginalTextSyllables(sub_session_id: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions',
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': sub_session_id
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          original_text: '$sessions.original_text'
+        }
+      }
+    ]);
+
+    let syllables = [];
+
+    for (let RecordDataEle of RecordData) {
+      let splitGraphemesData = splitGraphemes.splitGraphemes(
+        RecordDataEle.original_text.replace(
+          /[\u200B\u200C\u200D\uFEFF\s!@#$%^&*()_+{}\[\]:;<>,.?\/\\|~'"-=]/g,
+          '',
+        ),
+      )
+      syllables = syllables.concat(splitGraphemesData);
+    }
+
+    syllables = [...new Set(syllables)];
+
+    return syllables;
   }
 }
