@@ -1,6 +1,7 @@
+import exp from 'constants';
 import { Score } from '../mysql/entities/score.entity';
 
-export default {
+const mySql_config = {
   type: 'mysql',
   host: 'localhost',
   port: 3310,
@@ -10,3 +11,5 @@ export default {
   synchronize: true,
   entities: [Score],
 };
+
+export default mySql_config;

@@ -135,12 +135,12 @@ export class ScoresController {
 
           if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            DenoisedresponseText = asrOutDenoised[0]?.source || '';
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source || '';
           } else {
             CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            DenoisedresponseText = asrOutDenoised[0]?.source || '';
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source || '';
           }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
@@ -4228,6 +4228,14 @@ export class ScoresController {
   async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
     try {
       const { userIds, language } = data;
+
+      if (!userIds || !Array.isArray(userIds) || userIds.length === 0 || !language) {
+        return response.status(HttpStatus.BAD_REQUEST).send({
+          status: "error",
+          message: "Invalid request data",
+        });
+      }
+
       let recordData = [];
       for (const userId of userIds) {
         let milestoneData: any = await this.scoresService.getlatestmilestone(userId, language);
