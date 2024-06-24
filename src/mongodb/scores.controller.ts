@@ -281,12 +281,15 @@ export class ScoresController {
       }
 
       // Cal the subsessionWise and content_id wise target.
-      const targets = await this.scoresService.getTargetsBysubSession(
+      let targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
+      let originalTextSyllables = [];
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
-      
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -297,7 +300,7 @@ export class ScoresController {
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2)),
+        subsessionFluency: parseFloat(fluency.toFixed(2))
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -323,7 +326,7 @@ export class ScoresController {
         contentType: { type: 'string', example: 'Sentence' },
       },
     },
-  }) 
+  })
   @ApiResponse({
     status: 201,
     description: 'Success message when data is stored to the learner profile',
@@ -1344,13 +1347,17 @@ export class ScoresController {
       }
 
       // Cal the subsessionWise and content_id wise target.
-      const targets = await this.scoresService.getTargetsBysubSession(
+      let targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-     
+
+      let originalTextSyllables = [];
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+
       const totalTargets = targets.length;
-    
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1377,7 +1384,7 @@ export class ScoresController {
     schema: {
       type: 'object',
       properties: {
-        original_text: { type: 'string', example:  'assisted language learning' },
+        original_text: { type: 'string', example: 'assisted language learning' },
         audio: { type: 'string', example: 'Add english Wav file base64 string here' },
         user_id: { type: 'string', example: '8819167684' },
         session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
@@ -1637,7 +1644,7 @@ export class ScoresController {
         CreateLearnerProfileDto.language
       );
       const totalTargets = targets.length;
-     
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
@@ -1664,7 +1671,7 @@ export class ScoresController {
     schema: {
       type: 'object',
       properties: {
-        original_text: { type: 'string', example:  'షాపు దగ్గరే ఆకాశ ఇల్లు' },
+        original_text: { type: 'string', example: 'షాపు దగ్గరే ఆకాశ ఇల్లు' },
         audio: { type: 'string', example: 'Add telgu Wav file base64 string here' },
         user_id: { type: 'string', example: '8819167684' },
         session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
@@ -1684,7 +1691,7 @@ export class ScoresController {
       properties: {
         status: { type: 'string', example: 'success' },
         msg: { type: 'string', example: 'Successfully stored data to learner profile' },
-        responseText: { type: 'string', example:'షాపు దగ్గరే ఆకాశ ఇల్లు'},
+        responseText: { type: 'string', example: 'షాపు దగ్గరే ఆకాశ ఇల్లు' },
         subsessionTargetsCount: { type: 'number', example: 17 },
         subsessionFluency: { type: 'number', example: 1.54 },
       },
@@ -2348,10 +2355,14 @@ export class ScoresController {
         }
       }
       // Cal the subsessionWise and content_id wise target.
-      const targets = await this.scoresService.getTargetsBysubSession(
+      let targets = await this.scoresService.getTargetsBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
+      let originalTextSyllables = [];
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -2885,6 +2896,9 @@ export class ScoresController {
   })
   async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
+
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
@@ -2893,20 +2907,15 @@ export class ScoresController {
         id,
         language,
       );
-      const validations = await this.scoresService.getAssessmentRecordsUserid(
-        id,
-      );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
 
       let currentLevel = 'm0';
       currentLevel = recordData[0]?.milestone_level || 'm0';
       const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
 
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -2915,48 +2924,31 @@ export class ScoresController {
           return charData.character;
         });
 
-      let contentLevel = '';
-      let complexityLevel = [];
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
-
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
@@ -3000,17 +2992,6 @@ export class ScoresController {
         contentForTokenArr = newContent.data.contentForToken;
       } else {
         contentForTokenArr = [];
-      }
-
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
       }
 
       // Total Syllable count added
@@ -3064,26 +3045,26 @@ export class ScoresController {
   })
   async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
-      let currentLevel = 'm0';
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
+
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
-      currentLevel = recordData[0]?.milestone_level || 'm0';
-
       const getGetTarget = await this.scoresService.getTargetsByUser(
         id,
         language,
       );
-      const validations = await this.scoresService.getAssessmentRecordsUserid(
-        id,
-      );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
+
+      let currentLevel = 'm0';
+      currentLevel = recordData[0]?.milestone_level || 'm0';
+      const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
+
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -3092,51 +3073,31 @@ export class ScoresController {
           return charData.character;
         });
 
-      const totalTargets = getGetTarget.length;
-      const totalValidation = validations.length;
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      let contentLevel = '';
-      let complexityLevel = [];
-
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
-
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
@@ -3149,7 +3110,7 @@ export class ScoresController {
         "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
-        "graphemesMappedObj": graphemesMappedObj
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -3182,20 +3143,8 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
-      }
-
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-
       if (language === 'en') {
         contentArr.forEach((contentObject) => {
           totalSyllableCount +=
@@ -3245,25 +3194,26 @@ export class ScoresController {
   })
   async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
     try {
-      let currentLevel = 'm0';
+      const graphemesMappedObj = {};
+      const graphemesMappedArr = [];
 
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
-      currentLevel = recordData[0]?.milestone_level || 'm0';
-
       const getGetTarget = await this.scoresService.getTargetsByUser(
         id,
         language,
       );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
+
+      let currentLevel = 'm0';
+      currentLevel = recordData[0]?.milestone_level || 'm0';
+      const totalTargets = getGetTarget.length;
+      let targetsLimit = gettargetlimit * 2;
 
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
-          if (gettargetlimit > 0 && index >= gettargetlimit) {
+          if (targetsLimit > 0 && index >= targetsLimit) {
             return false;
           }
           return true;
@@ -3272,51 +3222,33 @@ export class ScoresController {
           return charData.character;
         });
 
-      const totalTargets = getGetTarget.length;
+      let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
 
-      const graphemesMappedObj = {};
-      const graphemesMappedArr = [];
+      let contentLevel = contentComplexityLevel.contentLevel;
+      let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
+
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
+          language,
+        );
+
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
           graphemesMappedObj[getGetTargetCharArrEle] = tokenGraphemes;
           graphemesMappedArr.push(...tokenGraphemes);
         });
+
+        getGetTargetCharArr = graphemesMappedArr;
+
+        function getTokenGraphemes(token: string) {
+          const result = tokenHexcodeData.find(
+            (item) => item.token.trim() === token.trim(),
+          );
+          return result?.graphemes || '';
+        }
       }
 
-      let contentLevel = '';
-      let complexityLevel = [];
-
-      if (currentLevel === 'm0') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm1') {
-        contentLevel = 'L1';
-      } else if (currentLevel === 'm2') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1'];
-      } else if (currentLevel === 'm3') {
-        contentLevel = 'L2';
-        complexityLevel = ['C1', 'C2'];
-      } else if (currentLevel === 'm4') {
-        contentLevel = 'L3';
-        complexityLevel = ['C1', 'C2', 'C3'];
-      } else if (currentLevel === 'm5') {
-        contentLevel = 'L3';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm6') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3'];
-      } else if (currentLevel === 'm7') {
-        contentLevel = 'L4';
-        complexityLevel = ['C2', 'C3', 'C4'];
-      } else if (currentLevel === 'm8') {
-        contentLevel = 'L5';
-        complexityLevel = ['C3', 'C4'];
-      } else if (currentLevel === 'm9') {
-        contentLevel = 'L6';
-        complexityLevel = ['C3', 'C4'];
-      }
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       const textData = {
@@ -3327,7 +3259,7 @@ export class ScoresController {
         "tags": tags || [],
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
-        "graphemesMappedObj": graphemesMappedObj
+        "graphemesMappedObj": graphemesMappedObj,
       };
 
       const newContent = await lastValueFrom(
@@ -3360,20 +3292,8 @@ export class ScoresController {
         contentForTokenArr = [];
       }
 
-      if (language === 'en') {
-        getGetTargetCharArr = graphemesMappedArr;
-      }
-
-      function getTokenGraphemes(token: string) {
-        const result = tokenHexcodeData.find(
-          (item) => item.token.trim() === token.trim(),
-        );
-        return result?.graphemes || '';
-      }
-
-      // Total syllablul count added
+      // Total Syllable count added
       let totalSyllableCount = 0;
-
       if (language === 'en') {
         contentArr.forEach((contentObject) => {
           totalSyllableCount +=
@@ -3401,7 +3321,7 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on sub session id we will calculate targets and contenttype will prepare result.
@@ -3466,17 +3386,32 @@ export class ScoresController {
       let totalSyllables = 0;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let famalarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let originalTextSyllables = [];
+      if (getSetResult.language != 'en') {
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
+        targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+      }
       let totalTargets = targets.length;
 
       if (getSetResult.totalSyllableCount == undefined) {
-        totalSyllables = totalTargets + famalarity.length;
+        totalSyllables = totalTargets + familiarity.length;
       } else {
-        totalSyllables = getSetResult.totalSyllableCount
+        if (getSetResult.language === "en") {
+          if (getSetResult.totalSyllableCount > 50) {
+            totalSyllables = 50;
+          } else {
+            totalSyllables = getSetResult.totalSyllableCount;
+          }
+        } else {
+          totalSyllables = getSetResult.totalSyllableCount
+        }
       }
 
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
+      targetsPercentage = targetsPercentage < 0 ? 0 : targetsPercentage;
+      passingPercentage = passingPercentage < 0 ? 0 : passingPercentage;
 
       let sessionResult = 'No Result';
 
@@ -3853,7 +3788,6 @@ export class ScoresController {
           totalTargets: totalTargets,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          //targets: targets,
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
@@ -3869,7 +3803,7 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
@@ -4010,7 +3944,7 @@ export class ScoresController {
     return this.scoresService.getAllSessions(id, limit);
   }
 
-  
+
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will calculate targets.`,
@@ -4094,7 +4028,7 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will calculate familirity.`,
@@ -4182,14 +4116,14 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will send the milestone level.`,
     schema: {
       type: 'object',
       properties: {
-        user_ids: { type: 'array' , example: ['8635444062','8635444063'] },
+        user_ids: { type: 'array', example: ['8635444062', '8635444063'] },
         language: { type: 'string', example: "ta" }
       },
     },
@@ -4201,9 +4135,11 @@ export class ScoresController {
       type: 'object',
       properties: {
         user_id: { type: 'string', example: '8591582684' },
-        data: { type: 'object', example: {
-          milestone_level: {type: 'string', example:'m0'}
-        }}
+        data: {
+          type: 'object', example: {
+            milestone_level: { type: 'string', example: 'm0' }
+          }
+        }
       },
     },
   })
@@ -4254,12 +4190,13 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will send the profile related data.`,
-    schema: { type: 'object',properties: {
-        user_id: { type: 'string' , example: '8635444062'},
+    schema: {
+      type: 'object', properties: {
+        user_id: { type: 'string', example: '8635444062' },
         language: { type: 'string', example: "ta" }
       },
     },
@@ -4271,13 +4208,15 @@ export class ScoresController {
       type: 'object',
       properties: {
         user_id: { type: 'string', example: 'pass' },
-        Target: { type: 'array',
+        Target: {
+          type: 'array',
           items: {
             type: 'object',
             properties: {
               subSessionId: { type: 'string', example: '8635444062' },
               createdAt: { type: 'string', format: 'date-time', example: '2023-10-16T08:25:43.934Z' },
-              score: { type: 'array',
+              score: {
+                type: 'array',
                 items: {
                   type: 'object',
                   properties: {

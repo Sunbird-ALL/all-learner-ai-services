@@ -14,7 +14,8 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import { CacheService } from './cache/cache.service';
-import lang_common_config from "./config/language/common/commonConfig"
+import lang_common_config from "./config/language/common/commonConfig";
+import * as splitGraphemes from 'split-graphemes';
 
 @Injectable()
 export class ScoresService {
@@ -247,7 +248,7 @@ export class ScoresService {
     }
   }
 
-  // Target Query 
+  // Target Query
   async getTargetsBySession(sessionId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
@@ -259,7 +260,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.session_id': sessionId,
-          'sessions.language':language
+          'sessions.language': language
         },
       },
       {
@@ -405,7 +406,7 @@ export class ScoresService {
     const threshold = 0.7;
     let RecordData = [];
 
-    RecordData = await this.scoreModel.aggregate([ 
+    RecordData = await this.scoreModel.aggregate([
       {
         $unwind: '$sessions',
       },
@@ -889,7 +890,7 @@ export class ScoresService {
   }
 
   // Familiarity Query
-  async getFamiliarityBySession(sessionId: string,language:string) {
+  async getFamiliarityBySession(sessionId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
 
@@ -2500,5 +2501,77 @@ export class ScoresService {
     const processedText = processedSentences.join(' ').trim();
 
     return processedText;
+  }
+
+  async getMilestoneBasedContentComplexity(milestone_level: string) {
+    let contentLevel = '';
+    let complexityLevel = [];
+
+    if (milestone_level === 'm0') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm1') {
+      contentLevel = 'L1';
+    } else if (milestone_level === 'm2') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1'];
+    } else if (milestone_level === 'm3') {
+      contentLevel = 'L2';
+      complexityLevel = ['C1', 'C2'];
+    } else if (milestone_level === 'm4') {
+      contentLevel = 'L3';
+      complexityLevel = ['C1', 'C2', 'C3'];
+    } else if (milestone_level === 'm5') {
+      contentLevel = 'L3';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm6') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3'];
+    } else if (milestone_level === 'm7') {
+      contentLevel = 'L4';
+      complexityLevel = ['C2', 'C3', 'C4'];
+    } else if (milestone_level === 'm8') {
+      contentLevel = 'L5';
+      complexityLevel = ['C3', 'C4'];
+    } else if (milestone_level === 'm9') {
+      contentLevel = 'L6';
+      complexityLevel = ['C3', 'C4'];
+    }
+
+    return { contentLevel: contentLevel, complexityLevel }
+  }
+
+  async getSubsessionOriginalTextSyllables(sub_session_id: string) {
+    const RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions',
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': sub_session_id
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          original_text: '$sessions.original_text'
+        }
+      }
+    ]);
+
+    let syllables = [];
+
+    for (let RecordDataEle of RecordData) {
+      let splitGraphemesData = splitGraphemes.splitGraphemes(
+        RecordDataEle.original_text.replace(
+          /[\u200B\u200C\u200D\uFEFF\s!@#$%^&*()_+{}\[\]:;<>,.?\/\\|~'"-=]/g,
+          '',
+        ),
+      )
+      syllables = syllables.concat(splitGraphemesData);
+    }
+
+    syllables = [...new Set(syllables)];
+
+    return syllables;
   }
 }
