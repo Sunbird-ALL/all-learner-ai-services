@@ -10,5 +10,16 @@ module.exports = {
         expand: true,
       }]
     ],
+    coveragePathIgnorePatterns: [
+      '/node_modules/', 
+      '/dist/',         
+      '/src/config/',
+      '/src/main.ts',
+      '/src/app.module.ts',
+      '/src/app-cluster.service.ts',
+      '/src/mysql/mysql.module.ts',
+      '/src/mysql/scores.controller.ts',
+      '/src/mysql/scores.service.ts'
+    ],
   };
   

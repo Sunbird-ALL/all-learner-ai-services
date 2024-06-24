@@ -3916,7 +3916,6 @@ export class ScoresController {
     const data = await this.scoresService.getMissingChars(
       storyData.storyLanguage,
     );
-
     const storyString = storyData.storyString;
 
     const tokenArr = storyString.split('');
@@ -4362,11 +4361,12 @@ export class ScoresController {
       let target_Data: any = []
       let famalarity_Data: any = [];
       const subsessionData: any = await this.scoresService.getSubessionIds(userId);
-
+  
       for (const subsession of subsessionData) {
         const subSessionId = subsession.sub_session_id;
         const createdAt = subsession.createdAt
         const famalarityData = await this.scoresService.getFamiliarityBysubSessionUserProfile(subSessionId, language);
+        
         if (famalarityData) {
           famalarity_Data.push({
             subSessionId: subSessionId,

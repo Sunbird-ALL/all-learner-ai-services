@@ -31,7 +31,7 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/mongoose": "^10.0.1",
     "@nestjs/platform-express": "^10.0.0",
-    "@nestjs/platform-fastify": "^10.1.3",
+    "@nestjs/platform-fastify": "^10.3.9",
     "@nestjs/swagger": "^7.1.12",
     "@nestjs/typeorm": "^10.0.0",
     "axios": "^1.6.2",
@@ -73,11 +73,14 @@
   "jest": {
     "reporters": [
       "default",
-      ["jest-html-reporters", {
-        "publicPath": "./jest-coverage",
-        "filename": "coverage-report.html",
-        "expand": true
-      }]
+      [
+        "jest-html-reporters",
+        {
+          "publicPath": "./jest-coverage",
+          "filename": "coverage-report.html",
+          "expand": true
+        }
+      ]
     ],
     "moduleFileExtensions": [
       "js",
@@ -93,6 +96,17 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/src/config/",
+      "/src/app-cluster.service.ts",
+      "/src/app.module.ts",
+      "/src/main.ts",
+      "/src/mysql/mysql.module.ts",
+      "/src/mysql/scores.controller.ts",
+      "/src/mysql/scores.service.ts"
+    ]
   }
 }

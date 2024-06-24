@@ -6,7 +6,8 @@ import { CacheService } from './cache/cache.service';
 import { HttpService } from '@nestjs/axios';
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
+import { FastifyReply, FastifyRequest } from 'fastify';
+
 
 
 describe('ScoresController', () => {
@@ -35,6 +36,7 @@ describe('ScoresController', () => {
         { provide: getModelToken('denoiserOutputLogs'), useValue: mockDenoiserOutputLogsModel },
         { provide: CacheService, useValue: {} },
         { provide: HttpService, useValue: {} },
+
       ],
     }).compile();
 
@@ -54,99 +56,13 @@ describe('ScoresController', () => {
     expect(service).toBeDefined();
   });
 
-  // Update Learner profile ta
+  // Mock response object
+  const mockResponse = {
+    status: jest.fn().mockReturnThis(),
+    send: jest.fn(),
+  } as unknown as FastifyReply;
 
-  // describe('updateLearnerProfile', () => {
-  //   it('should successfully update the learner profile', async () => {
-  //     const updateProfileDto: CreateLearnerProfileDto = {
-  //       original_text: 'இப்பாடலின்',
-  //       user_id: '9054461392',
-  //       session_id: 'gQG5rPPquMWhmfVBzP6ajFkl5fvjWG6n',
-  //       language: 'ta',
-  //       sub_session_id: 'UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA',
-  //       contentId: '42d02538-0326-4f56-9dec-d49b6fb017ce',
-  //       contentType: 'Word',
-  //       audio: Buffer.from(''),
-  //       output: [],
-  //       date: undefined
-  //     };
-
-  //     const expectedResponse = {
-  //       status: "success",
-  //       msg: "Successfully stored data to learner profile",
-  //       responseText: "ஈ பாடலேந்",
-  //       subsessionTargetsCount: 8,
-  //       subsessionFluency: 1.1
-  //     };
-
-  //     // Mock all service methods used in updateLearnerProfile
-  //     jest.spyOn(service, 'getSyllablesFromString').mockResolvedValue([])
-  //     jest.spyOn(service, 'audioFileToAsrOutput').mockResolvedValue({
-  //       asrOutDenoisedOutput: { output: [{ source: 'sourceText' }] },
-  //       asrOutBeforeDenoised: { output: [{ source: 'sourceText' }] },
-  //       pause_count: 0,
-  //     });
-  //     jest.spyOn(service, 'getTextSimilarity').mockResolvedValue(1);
-  //     jest.spyOn(service, 'getSyllablesFromString').mockResolvedValue(['syllable1']);
-  //     jest.spyOn(service, 'gethexcodeMapping').mockResolvedValue([]);
-  //     jest.spyOn(service, 'getConstructedText').mockResolvedValue({
-  //       constructText: 'constructedText',
-  //       reptitionCount: 0,
-  //     });
-  //     jest.spyOn(service, 'identifyTokens').mockResolvedValue({
-  //       confidence_scoresArr: [],
-  //       missing_token_scoresArr: [],
-  //       anomaly_scoreArr: [],
-  //     });
-  //     jest.spyOn(service, 'getTextMetrics').mockResolvedValue({
-  //       cer: 0,
-  //       wer: 0,
-  //       insertion: [],
-  //       deletion: [],
-  //       substitution: [],
-  //     });
-  //     jest.spyOn(service, 'getCalculatedFluency').mockResolvedValue(1.1);
-  //     jest.spyOn(service, 'addDenoisedOutputLog').mockResolvedValue({});
-  //     jest.spyOn(service, 'create').mockResolvedValue({});
-  //     jest.spyOn(service, 'getRetryStatus').mockResolvedValue(1);
-  //     jest.spyOn(service, 'getTargetsBysubSession').mockResolvedValue([]);
-  //     jest.spyOn(service, 'getFluencyBysubSession').mockResolvedValue(1.1);
-
-  //     const response = await request(app.getHttpServer())
-  //       .post('/scores/updateLearnerProfile/ta')
-  //       .send(updateProfileDto)
-  //       .expect(HttpStatus.INTERNAL_SERVER_ERROR);
-
-  //     console.log(response.body);
-      
-  //     expect(response.body).toEqual(expectedResponse);
-  //   });
-
-  //   it('should handle validation errors', async () => {
-  //     const invalidUpdateProfileDto = {
-  //       original_text: '',
-  //       user_id: '',
-  //       session_id: '',
-  //       language: '',
-  //       sub_session_id: '',
-  //       contentId: '',
-  //       contentType: '',
-  //       audio: Buffer.from(''),
-  //       date: '',
-  //       output: []
-  //     };
-
-  //     const response = await request(app.getHttpServer())
-  //       .post('/scores/updateLearnerProfile/ta')
-  //       .send(invalidUpdateProfileDto)
-  //       .expect(HttpStatus.BAD_REQUEST);
-
-  //     expect(response.body.statusCode).toBe(HttpStatus.BAD_REQUEST);
-  //   });
-  // });
-
-
-  // Api Name : 
+  // Api Name : getUsersMilestones
   describe('getUsersMilestones', () => {
     it('should successfully get users milestones', async () => {
       const requestBody = {
@@ -169,7 +85,7 @@ describe('ScoresController', () => {
         },
       ];
 
-      jest.spyOn(service, 'getlatestmilestone').mockImplementation((userId, language) => {
+      jest.spyOn(service, 'getlatestmilestone').mockImplementation(() => {
         return Promise.resolve([{ milestone_level: 'm0' }]);
       });
 
@@ -183,7 +99,6 @@ describe('ScoresController', () => {
 
     it('should handle validation errors', async () => {
       const invalidRequestBody = {
-        // Missing required fields
         userIds: [],
         language: '',
       };
@@ -197,4 +112,391 @@ describe('ScoresController', () => {
       expect(response.body.message).toBe('Invalid request data');
     });
   });
-});
+
+  // Api Name : getUsersFamilirity
+
+  it('should successfully get users familiarity', async () => {
+    const requestBody = {
+      userIds: ['8591582684', '7568010954'],
+      language: 'ta',
+    };
+
+    const expectedResponse = [
+      {
+        user_id: '8591582684',
+        familiarityCount: 1,
+        familiarityData: [
+          {
+            character: 'aɪ',
+            latestScores: [0.99, 0.99],
+            countBelowThreshold: 0,
+            countAboveThreshold: 2,
+            score: 0.99,
+          },
+        ],
+      },
+      {
+        user_id: '7568010954',
+        familiarityCount: 0,
+        familiarityData: [],
+      },
+    ];
+
+    // Mock the service method to return expected data
+    jest.spyOn(service, 'getFamiliarityByUser').mockImplementation((userId) => {
+      if (userId === '8591582684') {
+        return Promise.resolve([
+          {
+            character: 'aɪ',
+            latestScores: [0.99, 0.99],
+            countBelowThreshold: 0,
+            countAboveThreshold: 2,
+            score: 0.99,
+          },
+        ]);
+      } else if (userId === '7568010954') {
+        return Promise.resolve([]);
+      } else {
+        return Promise.resolve([]);
+      }
+    });
+
+    // Send request and assert response
+    const response = await request(app.getHttpServer())
+      .post('/scores/getUsersFamiliarity')
+      .send(requestBody)
+      .expect(HttpStatus.OK);
+
+    expect(response.body).toEqual(expectedResponse);
+  });
+
+  it('should handle validation errors', async () => {
+    const invalidRequestBody = {
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/scores/getUsersFamiliarity')
+      .send(invalidRequestBody)
+      .expect(HttpStatus.INTERNAL_SERVER_ERROR);
+
+    expect(response.body.status).toBe('error');
+    expect(response.body.message).toBe('Server error - TypeError: userIds is not iterable');
+  });
+
+
+  // Api name : getUserProfile
+
+  it('should return user profile data', async () => {
+
+    const mockData = {
+      userId: '12567654356',
+      language: 'en',
+    };
+
+    const mockSubsessionData = [
+      {
+        sub_session_id: 'UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA',
+        createdAt: '2024-06-22T06:52:44.389Z'
+      },
+    ];
+
+    const mockFamiliarityData = [
+      {
+        "character": "ட",
+        "latestScores": [
+          {
+            "score": 0.993,
+            "original_text": "இப்பாடலின்",
+            "response_text": "ஈ பாடலேந்"
+          },
+          {
+            "score": 0.993,
+            "original_text": "இப்பாடலின்",
+            "response_text": "ஈ பாடலேந்"
+          }
+        ],
+        "countBelowThreshold": 0,
+        "countAboveThreshold": 5,
+        "avg": 0.993
+      },
+    ];
+
+    const mockTargetData = [
+      {
+        "character": "ப",
+        "latestScores": [
+          {
+            "score": 0.9,
+            "original_text": "இப்பாடலின்",
+            "response_text": "ஈ பாடலேந்"
+          },
+          {
+            "score": 0.9,
+            "original_text": "இப்பாடலின்",
+            "response_text": "ஈ பாடலேந்"
+          }
+        ],
+        "countBelowThreshold": 0,
+        "countAboveThreshold": 5,
+        "avgScore": 0.9
+      }
+    ];
+
+    jest.spyOn(service, 'getSubessionIds').mockResolvedValue(mockSubsessionData);
+    jest.spyOn(service, 'getFamiliarityBysubSessionUserProfile').mockResolvedValue(mockFamiliarityData);
+    jest.spyOn(service, 'getTargetsBysubSessionUserProfile').mockResolvedValue(mockTargetData);
+
+    await controller.GetUserProfile(mockResponse, mockData);
+
+    expect(service.getSubessionIds).toHaveBeenCalledWith(mockData.userId);
+    expect(service.getFamiliarityBysubSessionUserProfile).toHaveBeenCalledWith('UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA', mockData.language);
+    expect(service.getTargetsBysubSessionUserProfile).toHaveBeenCalledWith('UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA', mockData.language);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      Target: [
+        { subSessionId: 'UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA', createdAt: mockSubsessionData[0].createdAt, score: mockTargetData },
+      ],
+      Famalarity: [
+        { subSessionId: 'UJoRJ7sbVnvT0QGVeTsJwAp4wa5FSmNA', createdAt: mockSubsessionData[0].createdAt, score: mockFamiliarityData },
+      ]
+    });
+  });
+
+  it('should handle errors', async () => {
+    const mockData = {
+      userId: 'testUserId',
+      language: 'en',
+    };
+    jest.spyOn(service, 'getSubessionIds').mockRejectedValue(new Error('Test error'));
+
+    await controller.GetUserProfile(mockResponse, mockData);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Server error - Error: Test error',
+    });
+  });
+
+
+  // Api Name : getUsersTargets
+
+  const mockData = {
+    userIds: ['12345678', '87654321'],
+    language: 'en',
+  };
+
+  it('should return the user target data', async () => {
+
+    const mockUserRecord = [
+      {
+        "character": "ளி",
+        "score": 0.1
+      },
+      {
+        "character": "வெ",
+        "score": 0.1
+      },
+    ]
+    jest.spyOn(service, 'getTargetsByUser').mockResolvedValue(mockUserRecord);
+
+    await controller.GetUsersTargets(mockResponse, mockData);
+
+    expect(service.getTargetsByUser).toHaveBeenCalledWith('12345678', mockData.language);
+    expect(service.getTargetsByUser).toHaveBeenCalledWith('87654321', mockData.language);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(200);
+    expect(mockResponse.send).toHaveBeenCalledWith([
+      {
+        user_id: '12345678',
+        targetData: mockUserRecord,
+        targetCount: mockUserRecord.length,
+      },
+      {
+        user_id: '87654321',
+        targetData: mockUserRecord,
+        targetCount: mockUserRecord.length,
+      },
+    ]);
+  })
+
+  it('should handle errors', async () => {
+    jest.spyOn(service, 'getTargetsByUser').mockRejectedValue(new Error('Test error'));
+
+    await controller.GetUsersTargets(mockResponse, mockData);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(500);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Server error - Error: Test error',
+    })
+  })
+
+  // Api Name : GetSessionIdsByUser
+
+  it('should return session ids for a user with default limit', async () => {
+    const mockSessionData = [
+      { sessionId: 'session1', createdAt: new Date() },
+      { sessionId: 'session2', createdAt: new Date() },
+    ];
+    jest.spyOn(service, 'getAllSessions').mockResolvedValue(mockSessionData);
+
+    const userId = 'testUserId';
+    const limit = 5;
+
+    const result = await controller.GetSessionIdsByUser(userId, { limit });
+
+    expect(service.getAllSessions).toHaveBeenCalledWith(userId, limit);
+    expect(result).toEqual(mockSessionData);
+  });
+
+  // Api Name : assessmentInputCreate
+
+  const mockAssessmentInput = {
+    user_id: '123456',
+    session_id: "UJoRJ7sbVnvT0QGVeT",
+    token: 'a',
+    feedback: 1
+  };
+
+  it('should add assessment input and return success response', async () => {
+    jest.spyOn(service, 'assessmentInputCreate').mockResolvedValue(mockAssessmentInput);
+
+    await controller.AddAssessmentInput(mockResponse, mockAssessmentInput);
+
+    expect(service.assessmentInputCreate).toHaveBeenCalledWith(mockAssessmentInput);
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'success',
+      msg: 'Successfully stored data to Assessment Input',
+    });
+  });
+
+  it('should handle errors', async () => {
+
+    jest.spyOn(service, 'assessmentInputCreate').mockRejectedValue(new Error('Test error'));
+    try {
+      await controller.AddAssessmentInput(mockResponse, mockAssessmentInput);
+    } catch (error) {
+      expect(error.message).toBe('Test error');
+    }
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Server error - Error: Test error',
+    });
+  });
+
+
+  // Api Name : GetMissingChars
+  const mockStoryData = {
+    storyLanguage: 'ta',
+    storyString: 'க்ஷ்ா',
+  };
+  const mockMissingChars = ['க', '்', 'ஷ', 'ா'];
+
+  it('should return missing characters for a given story', async () => {
+    
+    jest.spyOn(service, 'getMissingChars').mockResolvedValue(mockMissingChars);
+
+    await controller.GetMissingChars(mockResponse, mockStoryData);
+
+    const expectedUniqueCharArr = ['s', 'o', 'm', 'e', ' ', 's', 'a', 'm', 'p', 'l', 'e', ' ', 's', 't', 'o', 'r', 'y', ' ', 's', 't', 'r', 'i', 'n', 'g', ' ', 'i', 'n', ' ', 'T', 'a', 'm', 'i', 'l'];
+    const expectedMatched = [];
+    const expectedNotIncluded = mockMissingChars;
+    const expectedMatchtedTotal = expectedMatched.length;
+    const expectedNotIncludedTotal = expectedNotIncluded.length;
+
+    expect(service.getMissingChars).toHaveBeenCalledWith(mockStoryData.storyLanguage);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'success',
+      matched: expectedMatched,
+      matchtedTotal: expectedMatchtedTotal,
+      notIncluded: expectedNotIncluded,
+      notIncludedTotal: expectedNotIncludedTotal,
+    });
+  });
+
+  it('should handle errors', async () => {
+    jest.spyOn(service, 'getMissingChars').mockRejectedValue(new Error('Test error'));
+   
+    try {
+      await controller.GetMissingChars(mockResponse, mockStoryData);
+    } catch (error) {
+      expect(error.message).toBe('Test error');
+    }
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Server error - Error: Test error',
+    });
+  });
+
+
+  // Api Name : getlatestmilestone
+
+  const userId = 'testUserId';
+  const language = 'en';
+  const mockRecordData = [
+    { milestone_level: 'm2' },
+  ];
+  it('should return the latest milestone level for a user', async () => {
+   
+
+    jest.spyOn(service, 'getlatestmilestone').mockResolvedValue(mockRecordData);
+
+    await controller.getMilestone(userId, language, mockResponse);
+
+    expect(service.getlatestmilestone).toHaveBeenCalledWith(userId, language);
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'success',
+      data: { milestone_level: 'm2' },
+    });
+  });
+
+  it('should return m0 if no milestone level is found', async () => {
+    const mockResponse = {
+      status: jest.fn().mockReturnThis(),
+      send: jest.fn(),
+    } as unknown as FastifyReply;
+
+    const userId = 'testUserId';
+    const language = 'en';
+    const mockRecordData = [];
+
+    jest.spyOn(service, 'getlatestmilestone').mockResolvedValue(mockRecordData);
+
+    await controller.getMilestone(userId, language, mockResponse);
+
+    expect(service.getlatestmilestone).toHaveBeenCalledWith(userId, language);
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.CREATED);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'success',
+      data: { milestone_level: 'm0' },
+    });
+  });
+
+  it('should handle errors', async () => {
+   
+    jest.spyOn(service, 'getlatestmilestone').mockRejectedValue(new Error('Test error'));
+
+    await controller.getMilestone(userId, language, mockResponse);
+
+    expect(mockResponse.status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(mockResponse.send).toHaveBeenCalledWith({
+      status: 'error',
+      message: 'Server error - Error: Test error',
+    });
+  });
+
+
+  // Api Name : GetSetResult 
+
+  
+})
