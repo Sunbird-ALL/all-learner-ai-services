@@ -1500,7 +1500,13 @@ export class ScoresController {
 
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
+        // Constructed Logic starts from here
+        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
+        let constructText = constructedTextRepCountData.constructText;
+        let repetitions = constructedTextRepCountData.reptitionCount;
+        // End Constructed Text Logic
+
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, constructText)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -1568,11 +1574,6 @@ export class ScoresController {
 
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
-
-        // Constructed Logic starts from here
-        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        let repetitions = constructedTextRepCountData.reptitionCount;
-        // End Constructed Text Logic
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
 

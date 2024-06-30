@@ -2188,23 +2188,67 @@ export class ScoresService {
   async getConstructedText(original_text: string, response_text: string) {
     let constructText = '';
     const compareCharArr = [];
-    const constructTextSet = new Set();
+    const constructTextSet = [];
     let reptitionCount = 0;
 
-    for (const originalEle of original_text.split(
-      ' ',
-    )) {
+    const original_text_arr = original_text.split(' ');
+    const response_text_arr = response_text.split(' ');
+
+    for (const [originalEleindex, originalEle] of original_text_arr.entries()) {
+      let originalSplitText = '';
+      if (originalEleindex < original_text_arr.length - 1 && originalEle.length > 2) {
+        originalSplitText = originalEle + original_text_arr[originalEleindex + 1];
+      }
       let originalRepCount = 0;
-      for (const sourceEle of response_text.split(' ')) {
+
+      let similiaritythreshold = 0.85;
+
+      for (const [sourceEleindex, sourceEle] of response_text_arr.entries()) {
+        let responseSplitText = '';
+        if (sourceEleindex < response_text_arr.length - 1 && sourceEle.length > 2) {
+          responseSplitText = sourceEle + response_text_arr[sourceEleindex + 1];
+        }
         const similarityScore = await this.getTextSimilarity(originalEle, sourceEle);
-        if (similarityScore >= 0.4) {
+        if (similarityScore >= similiaritythreshold) {
           compareCharArr.push({
             original_text: originalEle,
             response_text: sourceEle,
             score: similarityScore,
           });
+          break;
         }
-        if (similarityScore >= 0.6) {
+
+        const originalSimilarityScoreSplit = await this.getTextSimilarity(originalSplitText, sourceEle);
+
+        if (originalSimilarityScoreSplit >= similiaritythreshold) {
+          compareCharArr.push({
+            original_text: originalEle,
+            response_text: originalEle,
+            score: originalSimilarityScoreSplit,
+          });
+
+          compareCharArr.push({
+            original_text: originalSplitText,
+            response_text: original_text_arr[originalEleindex + 1],
+            score: originalSimilarityScoreSplit,
+          });
+
+          break;
+
+        }
+
+        const responseSimilarityScoreSplit = await this.getTextSimilarity(originalEle, responseSplitText);
+
+        if (responseSimilarityScoreSplit >= similiaritythreshold) {
+          compareCharArr.push({
+            original_text: originalEle,
+            response_text: responseSplitText,
+            score: responseSimilarityScoreSplit,
+          });
+          break;
+        }
+
+        if (similarityScore >= similiaritythreshold) {
           originalRepCount++;
         }
       }
@@ -2217,17 +2261,14 @@ export class ScoresService {
       let score = 0;
       let word = '';
       for (const compareCharArrCmpEle of compareCharArr) {
-        if (
-          compareCharArrEle.original_text ===
-          compareCharArrCmpEle.original_text
-        ) {
+        if (compareCharArrEle.original_text === compareCharArrCmpEle.original_text) {
           if (compareCharArrCmpEle.score > score) {
             score = compareCharArrCmpEle.score;
             word = compareCharArrCmpEle.response_text;
           }
         }
       }
-      constructTextSet.add(word);
+      constructTextSet.push(word);
     }
 
     for (const constructTextSetEle of constructTextSet) {
@@ -2239,14 +2280,14 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
+  async getTextMetrics(original_text: string, response_text: string, language: string, construct_text: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
-      base64_string: base64_string.toString('base64'),
+      construct_text: construct_text
     };
 
     const textEvalMatrices = await lastValueFrom(
