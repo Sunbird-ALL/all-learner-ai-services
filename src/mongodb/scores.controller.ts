@@ -183,7 +183,7 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, audioFile)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, language, constructText)
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1197,10 +1197,9 @@ export class ScoresController {
         const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
         const textData = {
-          reference: CreateLearnerProfileDto.original_text,
-          hypothesis: CreateLearnerProfileDto.output[0].source,
-          language: 'kn',
-          base64_string: audioFile.toString('base64'),
+          "reference": CreateLearnerProfileDto.original_text,
+          "construct_text": constructText,
+          language: 'kn'
         };
 
         const textEvalMatrices = await lastValueFrom(
@@ -1506,7 +1505,7 @@ export class ScoresController {
         let repetitions = constructedTextRepCountData.reptitionCount;
         // End Constructed Text Logic
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, constructText)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, language, constructText)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -2234,9 +2233,8 @@ export class ScoresController {
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
-          "hypothesis": CreateLearnerProfileDto.output[0].source,
+          "construct_text": constructText,
           "language": "te",
-          "base64_string": audioFile.toString('base64')
         };
 
         const textEvalMatrices = await lastValueFrom(
