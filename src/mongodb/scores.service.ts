@@ -2574,4 +2574,137 @@ export class ScoresService {
 
     return syllables;
   }
+  async processTokens(nBestTokens) {
+    let data_arr = [];
+  
+    nBestTokens.forEach((element) => {
+        element.tokens.forEach((token) => {
+            let insertObj = {}; // Create an empty object for each iteration
+            
+            // Add the first key-value pair if valid
+            let key = Object.keys(token)[0]; 
+            if (key && key.trim() !== '') { 
+                let value = Object.values(token)[0];
+                insertObj[key] = value; 
+            }
+  
+            // Add the second key-value pair if valid
+            if (Object.keys(token).length > 1) { 
+                let key1 = Object.keys(token)[1];
+                if (key1 && key1.trim() !== '') { 
+                    let value1 = Object.values(token)[1];
+                    insertObj[key1] = value1; 
+                }
+            }
+  
+            // Only push to data_arr if there's at least one valid key-value pair
+            if (Object.keys(insertObj).length > 0) { 
+                data_arr.push(insertObj);
+            }
+        });
+    });
+  
+    return data_arr;
+  }
+   /*  Function for generating the constructed text without  missing the sequence and for every constructed text
+    we are storing used chars and that are not used we are storing it in unused char array  */
+  async generateWords(dataArr) {
+    const generateRecursive = (currentWord, usedKeyValueArr,unusedKeyValueArr, index) => {
+      if (index === dataArr.length) {
+        return [[currentWord, usedKeyValueArr,unusedKeyValueArr]];
+      }
+      const possibleWords = [];
+      const currentObject = dataArr[index];
+      for (const key in currentObject) {
+        if (currentObject.hasOwnProperty(key)) {
+          const newWord = currentWord + key;
+          const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
+          const newUnusedKeyValueArr = unusedKeyValueArr.filter(pair => !pair.hasOwnProperty(key));
+          possibleWords.push(
+            ...generateRecursive(newWord, newUsedKeyValueArr,newUnusedKeyValueArr, index + 1)
+          );
+        }
+      }
+      return possibleWords;
+    };
+    const initialUnusedKeyValueArr = dataArr.flatMap(data => Object.entries(data).map(([key, value]) => ({ [key]: value })));
+    return generateRecursive("", [], initialUnusedKeyValueArr, 0);
+  }
+    /* Function for generating the simnilarities for each and every word with the
+    original word and sort it in descending order */
+    async findAllSimilarities(words_with_values, wordArray) {
+      let highestScore = -Infinity;
+      let highestScoreArr = null;
+  
+      for (const word of wordArray) {
+        for (const wordWithVal of words_with_values) {
+          const constructedWord = wordWithVal[0];
+          const usedArr = wordWithVal[1];
+          const unusedArr = wordWithVal[2];
+          const score = await this.getTextSimilarity(word, constructedWord);
+          
+          if (score > highestScore) {
+            highestScore = score;
+            highestScoreArr = [constructedWord, usedArr, unusedArr, score];
+          }
+        }
+      }
+      return highestScoreArr;
+    }
+  
+
+  async replaceCharacters(word) {  // Agreeable Substitutes word generation
+    let outcomes = new Set();
+
+    // Function to perform the replacements
+    function performReplacements(w) {
+        let transformations = [];
+        
+        // Process 'ం' at the end of the word
+        if (w.endsWith('ం')) {
+            transformations.push(w.slice(0, -1) + 'మ్');
+        }
+
+        // Process 'ం' and 'ర' in the middle of the word
+        
+        for (let i = 0; i < w.length - 1; i++) {
+            if (w[i] === 'ం') {
+                let nextChar = w[i + 1];
+                let inclu_char = '';
+                if (['క', 'ఖ', 'గ', 'ఘ', 'ఙ'].includes(nextChar)) {
+                    inclu_char = 'ఙ్';
+                } else if (['చ', 'ఛ', 'జ', 'ఝ', 'ఞ'].includes(nextChar)) {
+                    inclu_char = 'ఞ్';
+                } else if (['ట', 'ఠ', 'డ', 'ఢ', 'ణ'].includes(nextChar)) {
+                    inclu_char = 'ణ్';
+                } else if (['త', 'థ', 'ద', 'ధ', 'న'].includes(nextChar)) {
+                    inclu_char = 'న్';
+                } else if (['ప', 'ఫ', 'బ', 'భ', 'మ'].includes(nextChar)) {
+                    inclu_char = 'మ్';
+                } else {
+                    inclu_char = 'మ్';
+                }
+                transformations.push(w.slice(0, i) + inclu_char + w.slice(i + 1));
+            }
+            if (w[i] === 'ర') {
+                transformations.push(w.slice(0, i) + 'ఱ' + w.slice(i + 1));
+            }
+        }
+        
+
+        // Apply new transformations
+        transformations.forEach(newWord => {
+            if (!outcomes.has(newWord)) {
+                outcomes.add(newWord);
+                performReplacements(newWord); // Recursively handle new transformations
+            }
+        });
+    }
+
+    // Perform replacements on the original word
+    performReplacements(word);
+
+    // If no transformations were added, return the original word
+    return outcomes.size > 0 ? Array.from(outcomes) : [word];
+  }
 }
