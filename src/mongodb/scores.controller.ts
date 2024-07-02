@@ -1795,7 +1795,7 @@ export class ScoresController {
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
 
-          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+          if (await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "") <= await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
             DenoisedresponseText = asrOutDenoised[0]?.source;
             nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
@@ -1821,103 +1821,46 @@ export class ScoresController {
         let flag = 0;
         let tokenArr = [];
         let anamolyTokenArr = [];
-        const word = CreateLearnerProfileDto.original_text
-        let data_arr = [];// Storing the chars and their scores from the ASR Output for the construvcted text
+        let constructTokens = [];// Storing the chars and their scores from the ASR Output for the constructed text
         if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') {
-          CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-            element.tokens.forEach((token) => {
-              let insertObj = {}; // Create an empty object for each iteration
-              let key = Object.keys(token)[0]; // Check if the first key is valid (non-empty and defined)
-              if (key && key.trim() !== '') { // Ensure key is valid
-                let value = Object.values(token)[0];
-                insertObj[key] = value; // Add the first key-value pair
-              }
-              // Check if there's a second key and if it's valid
-              if (Object.keys(token).length > 1) { // Ensure there's a second key
-                let key1 = Object.keys(token)[1];
-                if (key1 && key1.trim() !== '') { // Ensure key is valid
-                  let value1 = Object.values(token)[1];
-                  insertObj[key1] = value1; // Add the second key-value pair
-                }
-              }
-              if (Object.keys(insertObj).length > 0) { // Only push to data_arr if there's at least one valid key-value pair
-                data_arr.push(insertObj);
-              }
-            });
-          });
-          const response_word = CreateLearnerProfileDto.output[0].source;
-          /*  Function for generating the constructed text without  issing the sequence and for every constructed text
-              we are storing used chars and that are not used we are storing it in unused char array  */
-          function generateWords(dataArr) {
-            const generateRecursive = (currentWord, usedKeyValueArr, index) => {
-              if (index === dataArr.length) {
-                return [[currentWord, usedKeyValueArr]];
-              }
-              const possibleWords = [];
-              const currentObject = dataArr[index];
-              for (const key in currentObject) {
-                if (currentObject.hasOwnProperty(key)) {
-                  const newWord = currentWord + key;
-                  const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
-                  possibleWords.push(
-                    ...generateRecursive(newWord, newUsedKeyValueArr, index + 1)
-                  );
-                }
-              }
-              return possibleWords;
-            };
-            const generatedWords = generateRecursive("", [], 0); // Generate all possible words
-            const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
-              const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
-              const unusedKeyValueArr = []; // Find unused key-value pairs
-              dataArr.forEach(data => {  //fetching the unused char for a particular constructed text and storing it
-                Object.entries(data).forEach(([key, value]) => {
-                  if (!usedKeys.includes(key)) {
-                    unusedKeyValueArr.push({ [key]: value });
-                  }
-                });
-              });
+          
+          // const responseWord = CreateLearnerProfileDto.output[0].source;
+          constructTokens=await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
+          const wordsWithValues =await this.scoresService.generateWords(constructTokens);
 
-              return [word, usedKeyValueArr, unusedKeyValueArr]; // Return an array with word, used key-value pairs, and unused key-value pairs
-            });
-            return results;
+          if (originalText.includes('ం')|| originalText.includes('ర')){
+
+            let agreeableResults = await this.scoresService.replaceCharacters(originalText);
+            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText,...agreeableResults]);
+
+            responseText = agreeableHighestSimilarity[0];
+            tokenArr = agreeableHighestSimilarity[1];
+            anamolyTokenArr = agreeableHighestSimilarity[2];
+
           }
-          const words_with_values = generateWords(data_arr);
-          /* Function for generating the simnilarities for each and every word with the
-            original word and sort it in descending order */
-          function findAllSimilarities(wordArray, s1) {
-            const similarityList = wordArray.map((wordWithVal) => {
-              const word = wordWithVal[0];
-              const usedarr = wordWithVal[1];
-              const unusedarr = wordWithVal[2];
-              const score = similarity(s1, word);
-              return [word, usedarr, unusedarr, score];
-            });
-            similarityList.sort((a, b) => b[3] - a[3]); // Sort the list in descending order based on similarity score
-            return similarityList;
-          }
-          let restext = [...findAllSimilarities(words_with_values, word)][0];
-          /*checks whether the ASR has highest similarity or constructed has highest
-            and assign to the response text*/
-          if (similarity(CreateLearnerProfileDto.output[0].source, word) >= restext[3]) {
-            responseText = CreateLearnerProfileDto.output[0].source;
-            flag = 1;
-          }
-          else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-            responseText = restext[0];
-            tokenArr = restext[1];
-            anamolyTokenArr = restext[2];
+          else {
+
+            let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText])
+            /*checks whether the ASR has highest similarity or constructed has highest
+              and assign to the response text*/
+            let originalSimilarity=await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
+
+            if (originalSimilarity >= constructedHighestSimilarity[3]) {
+              responseText = nonDenoisedresponseText;
+              flag = 1;
+            }
+
+            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+              responseText = constructedHighestSimilarity[0];
+              tokenArr = constructedHighestSimilarity[1];
+              anamolyTokenArr = constructedHighestSimilarity[2];
+            }
           }
         }
         else { //if the response has higher then response will be same as ASR output
           responseText = CreateLearnerProfileDto.output[0].source;
         }
         let constructText = '';
-        let originalTextTokensArr = originalText.split("");
-        let responseTextTokensArr = responseText.split("");
-
-        let originalTextArr = originalText.split(" ");
-        let responseTextArr = responseText.split(" ");
 
         // Get All hexcode for this selected language
         let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
@@ -1937,9 +1880,9 @@ export class ScoresController {
         for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
           let originalRepCount = 0;
           for (let sourceEle of responseText.split(" ")) {
-            let similarityScore = similarity(originalEle, sourceEle)
+            let similarityScore = await this.scoresService.getTextSimilarity(originalEle, sourceEle)
             if (similarityScore >= 0.40) {
-              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
+              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: await this.scoresService.getTextSimilarity(originalEle, sourceEle) });
               //break;
             }
             if (similarityScore >= 0.60) {
@@ -1969,47 +1912,6 @@ export class ScoresController {
           constructText += constructTextSetEle + ' ';
         }
         constructText = constructText.trim();
-
-        function similarity(s1, s2) {
-          var longer = s1;
-          var shorter = s2;
-          if (s1.length < s2.length) {
-            longer = s2;
-            shorter = s1;
-          }
-          var longerLength = longer.length;
-          if (longerLength == 0) {
-            return 1.0;
-          }
-          return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
-        }
-
-        function editDistance(s1, s2) {
-          s1 = s1.toLowerCase();
-          s2 = s2.toLowerCase();
-
-          var costs = new Array();
-          for (var i = 0; i <= s1.length; i++) {
-            var lastValue = i;
-            for (var j = 0; j <= s2.length; j++) {
-              if (i == 0)
-                costs[j] = j;
-              else {
-                if (j > 0) {
-                  var newValue = costs[j - 1];
-                  if (s1.charAt(i - 1) != s2.charAt(j - 1))
-                    newValue = Math.min(Math.min(newValue, lastValue),
-                      costs[j]) + 1;
-                  costs[j - 1] = lastValue;
-                  lastValue = newValue;
-                }
-              }
-            }
-            if (i > 0)
-              costs[s2.length] = lastValue;
-          }
-          return costs[s2.length];
-        }
 
         for (let constructTextELE of constructText.split("")) {
           if (constructTextELE != ' ') {
@@ -2254,8 +2156,8 @@ export class ScoresController {
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+          let similarityScoreNonDenoisedResText = await this.scoresService.getTextSimilarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = await this.scoresService.getTextSimilarity(originalText, DenoisedresponseText);
 
           if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
@@ -2347,7 +2249,7 @@ export class ScoresController {
         );
 
         // Store Array to DB
-        let data = this.scoresService.create(createScoreData);
+        await this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
