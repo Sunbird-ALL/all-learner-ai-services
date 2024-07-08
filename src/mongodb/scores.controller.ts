@@ -208,8 +208,9 @@ export class ScoresController {
             improved: improved,
             comment: ""
           }
-
+  
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+
         }
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
@@ -1241,8 +1242,9 @@ export class ScoresController {
             improved: improved,
             comment: ""
           }
-
+          console.log("addDenoisedOutputLog----Before");
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+          console.log("addDenoisedOutputLog----A")        
         }
 
         const wer = textEvalMatrices.wer;
@@ -1571,6 +1573,7 @@ export class ScoresController {
 
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
+        console.log("constructedTextRepCountData--", constructedTextRepCountData);
         let repetitions = constructedTextRepCountData.reptitionCount;
         // End Constructed Text Logic
 
@@ -3007,7 +3010,7 @@ export class ScoresController {
             contentObject.contentSourceData[0].syllableCount;
         });
       }
-
+      
       return response.status(HttpStatus.OK).send({
         content: contentArr,
         contentForToken: contentForTokenArr,
@@ -3913,7 +3916,7 @@ export class ScoresController {
     });
     const notIncludedTotal = notIncluded.length;
 
-    console.log(uniqueCharArr);
+    //console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({
       status: 'success',
       matched: matched,

@@ -35,6 +35,7 @@ export class ScoresService {
       const recordData = await this.scoreModel
         .find({ user_id: createScoreDto.user_id })
         .exec();
+
       if (recordData.length === 0) {
         const createdScore = new this.scoreModel(createScoreDto);
         const result = await createdScore.save();
@@ -111,8 +112,6 @@ export class ScoresService {
       asrOutBeforeDenoised = await asrCall();
     }
 
-
-
     let denoiserConfig =
     {
       method: 'post',
@@ -184,7 +183,6 @@ export class ScoresService {
           output = response.data;
         })
         .catch((error) => {
-          console.log(error);
         });
 
       return output;
@@ -193,14 +191,17 @@ export class ScoresService {
     return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count };
   }
 
+
   async findAll(): Promise<any> {
     const recordData = await this.scoreModel.find().exec();
     return recordData;
   }
 
+
   findOne(id: number) {
     return `This action returns a #${id} score`;
   }
+
 
   async findbySession(id: string) {
     const UserRecordData = await this.scoreModel
@@ -215,11 +216,13 @@ export class ScoresService {
     return UserRecordData;
   }
 
+
   async findbyUser(id: string) {
     const UserRecordData = await this.scoreModel.find({ user_id: id }).exec();
     return UserRecordData;
   }
 
+  
   async getRetryStatus(userId: string, contentId: string) {
     try {
       const recordData = await this.scoreModel.find({ user_id: userId }).exec();
@@ -243,12 +246,12 @@ export class ScoresService {
       }
       return 1;
     } catch (error) {
-      console.error('Error fetching retry status:', error);
+     // console.error('Error fetching retry status:', error);
       throw error;
     }
   }
 
-  // Target Query
+  
   async getTargetsBySession(sessionId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
@@ -399,6 +402,7 @@ export class ScoresService {
     return RecordData;
   }
 
+  
   async getTargetsBysubSession(
     subSessionId: string,
     language: string,
@@ -552,7 +556,7 @@ export class ScoresService {
     return RecordData;
   }
 
-
+ 
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
     let RecordData = [];
@@ -722,7 +726,8 @@ export class ScoresService {
 
     return RecordData;
   }
-
+ 
+  
   async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
 
@@ -1037,6 +1042,7 @@ export class ScoresService {
     return RecordData;
   }
 
+ 
   async getFamiliarityBysubSession(
     subSessionId: string,
     language: string,
@@ -1187,6 +1193,7 @@ export class ScoresService {
     return RecordData;
   }
 
+ 
   async getFamiliarityByUser(userId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];
@@ -1338,6 +1345,7 @@ export class ScoresService {
 
     return RecordData;
   }
+
 
   async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
     let threshold = 0.70;
@@ -1499,6 +1507,7 @@ export class ScoresService {
     return RecordData;
   }
 
+  
   async getFluencyBysubSession(subSessionId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1538,6 +1547,7 @@ export class ScoresService {
     return RecordData[0]?.fluencyScore || 0;
   }
 
+  
   async gethexcodeMapping(language: string): Promise<any> {
 
     const cacheKey = 'hexcode_data_' + language;
@@ -1556,6 +1566,7 @@ export class ScoresService {
     return recordData;
   }
 
+  
   async getMeanLearnerBySession(sessionId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1604,6 +1615,7 @@ export class ScoresService {
     return RecordData;
   }
 
+  
   async getlatestmilestone(userId: string, language: string) {
     const RecordData = await this.scoreModel
       .aggregate([
@@ -1677,11 +1689,15 @@ export class ScoresService {
             createdAt: -1,
           },
         },
+        {
+          $limit: 1,
+        },
       ])
-      .limit(1);
+      
     return RecordData;
   }
 
+  
   async getMeanLearnerByUser(userId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1724,7 +1740,8 @@ export class ScoresService {
     ]);
     return RecordData;
   }
-
+   
+  
   async getConfidentVectorByUser(userId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1812,6 +1829,7 @@ export class ScoresService {
     return RecordData;
   }
 
+  
   async getConfidentVectorBySession(sessionId: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -1904,6 +1922,7 @@ export class ScoresService {
     return RecordData;
   }
 
+  
   async getMissingChars(language: string) {
     const RecordData = await this.hexcodeMappingModel
       .find(
@@ -1920,6 +1939,7 @@ export class ScoresService {
     return tokenArray;
   }
 
+  
   async assessmentInputCreate(assessmentInputData: any): Promise<any> {
     try {
       const assessmentInput = this.assessmentInputModel.updateMany(
@@ -1937,6 +1957,7 @@ export class ScoresService {
       return err;
     }
   }
+
 
   async getAssessmentRecords(sessionId: string): Promise<any> {
     try {
@@ -1976,6 +1997,7 @@ export class ScoresService {
     }
   }
 
+  
   async getAssessmentRecordsUserid(userId: string): Promise<any> {
     try {
       const AssessmentRecords = await this.assessmentInputModel.aggregate([
@@ -2013,6 +2035,7 @@ export class ScoresService {
       return err;
     }
   }
+
 
   async getAllSessions(
     userId: string,
@@ -2057,8 +2080,11 @@ export class ScoresService {
             totalrecords: '$totalrecords',
           },
         },
+        {
+          $limit: limit,
+        },
       ])
-      .limit(Number(limit));
+      
 
     const sessionIds = RecordData.map((item) => {
       if (calculateMilestone && item.totalrecords < 3) {
@@ -2071,6 +2097,7 @@ export class ScoresService {
 
     return sessionIds;
   }
+
 
   async addDenoisedOutputLog(DenoisedOutputLog: any): Promise<any> {
     try {
@@ -2118,6 +2145,7 @@ export class ScoresService {
     return RecordData;
   }
 
+
   async getTextSimilarity(s1: string, s2: string) {
     let longer = s1;
     let shorter = s2;
@@ -2157,6 +2185,7 @@ export class ScoresService {
     );
   }
 
+  
   async getSyllablesFromString(text: string, vowelSignArr: string[], language: string): Promise<string[]> {
     let prevEle = '';
     let isPrevVowel = false;
@@ -2185,6 +2214,7 @@ export class ScoresService {
     return syllableArr;
   }
 
+  
   async getConstructedText(original_text: string, response_text: string) {
     let constructText = '';
     const compareCharArr = [];
@@ -2239,6 +2269,7 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
+  
   async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
@@ -2267,6 +2298,7 @@ export class ScoresService {
     return textEvalMatrices;
   }
 
+  
   async getCalculatedFluency(textEvalMetrics, repetitionCount, original_text, response_text, pause_count) {
     let fluencyCalPerc = lang_common_config.fluencyCalPerc;
 
@@ -2284,7 +2316,8 @@ export class ScoresService {
 
     return fluencyScore;
   }
-
+  
+  
   async getTokenHexcode(hexcodeTokenArr, token) {
     const result = hexcodeTokenArr.find(
       (item) => item.token === token,
@@ -2292,6 +2325,7 @@ export class ScoresService {
     return result?.hexcode || '';
   }
 
+  
   async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
@@ -2482,6 +2516,7 @@ export class ScoresService {
     return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
   }
 
+  
   async processText(text: string) {
     // Convert the text to lowercase
     text = text.toLowerCase();
@@ -2503,7 +2538,8 @@ export class ScoresService {
     return processedText;
   }
 
-  async getMilestoneBasedContentComplexity(milestone_level: string) {
+  
+   getMilestoneBasedContentComplexity(milestone_level: string) {
     let contentLevel = '';
     let complexityLevel = [];
 
@@ -2540,6 +2576,7 @@ export class ScoresService {
     return { contentLevel: contentLevel, complexityLevel }
   }
 
+  
   async getSubsessionOriginalTextSyllables(sub_session_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
