@@ -1242,9 +1242,8 @@ export class ScoresController {
             improved: improved,
             comment: ""
           }
-          console.log("addDenoisedOutputLog----Before");
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-          console.log("addDenoisedOutputLog----A")        
+          
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);       
         }
 
         const wer = textEvalMatrices.wer;
@@ -1373,7 +1372,7 @@ export class ScoresController {
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -1573,7 +1572,6 @@ export class ScoresController {
 
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        console.log("constructedTextRepCountData--", constructedTextRepCountData);
         let repetitions = constructedTextRepCountData.reptitionCount;
         // End Constructed Text Logic
 
@@ -1661,7 +1659,7 @@ export class ScoresController {
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
-      console.log(err);
+      // console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -3806,7 +3804,6 @@ export class ScoresController {
     }
   }
 
-
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
@@ -3916,7 +3913,6 @@ export class ScoresController {
     });
     const notIncludedTotal = notIncluded.length;
 
-    //console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({
       status: 'success',
       matched: matched,

@@ -1932,7 +1932,6 @@ export class ScoresService {
         { token: 1, _id: 0 },
       )
       .exec();
-    console.log(RecordData);
     const tokenArray = RecordData.map((data) => {
       return data.token;
     });
