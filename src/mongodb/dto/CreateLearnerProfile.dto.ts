@@ -13,6 +13,12 @@ export class CreateLearnerProfileDto {
   audio: Buffer;
 
   @ApiProperty()
+  response_text: string;
+
+  @ApiProperty()
+  mode: string;
+
+  @ApiProperty()
   user_id: string;
 
   @ApiProperty()
