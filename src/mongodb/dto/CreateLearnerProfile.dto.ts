@@ -19,6 +19,9 @@ export class CreateLearnerProfileDto {
   mode: string;
 
   @ApiProperty()
+  pause_count: number;
+
+  @ApiProperty()
   user_id: string;
 
   @ApiProperty()

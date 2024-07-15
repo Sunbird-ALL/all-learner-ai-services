@@ -1501,12 +1501,11 @@ export class ScoresController {
         }
         else {
           responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-       
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language)
-        
         
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -1582,7 +1581,6 @@ export class ScoresController {
         // End Constructed Text Logic
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
-
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
@@ -1635,6 +1633,7 @@ export class ScoresController {
           },
         };
 
+        console.log("createScoreData----", createScoreData);
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
           CreateLearnerProfileDto.user_id,
