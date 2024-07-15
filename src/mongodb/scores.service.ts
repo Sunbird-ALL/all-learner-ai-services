@@ -2239,14 +2239,13 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
+  async getTextMetrics(original_text: string, response_text: string, language: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
 
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
-      base64_string: base64_string.toString('base64'),
     };
 
     const textEvalMatrices = await lastValueFrom(
