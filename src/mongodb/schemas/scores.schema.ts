@@ -3,42 +3,42 @@ import { Document, Mixed } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Score {
-  @Prop({ required: true, unique: true, index:true })
+  @Prop({ required: true, unique: true, index: true })
   user_id: string; // userid sent by client
 
   @Prop({
     type: [
       {
-        session_id: { type: String, required: true,index:true },
-        sub_session_id: { type: String, required: false, index:true  },
+        session_id: { type: String, required: true, index: true },
+        sub_session_id: { type: String, required: false, index: true },
         contentType: { type: String, required: true },
-        contentId: { type: String, required: false , index:true },
+        contentId: { type: String, required: false, index: true },
         createdAt: { type: Date, required: true },
         original_text: { type: String, required: true },
         response_text: { type: String, required: true },
         construct_text: { type: String, required: true },
-        language: { type: String, required: true, index:true },
+        language: { type: String, required: true, index: true },
         confidence_scores: [
           {
-            token: { type: String, required: true, index:true},
+            token: { type: String, required: true, index: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index:true},
+            confidence_score: { type: Number, required: true, index: true },
             identification_status: { type: Number },
           },
         ],
         missing_token_scores: [
           {
-            token: { type: String, required: true, index:true },
+            token: { type: String, required: true, index: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index:true },
+            confidence_score: { type: Number, required: true, index: true },
             identification_status: { type: Number },
           },
         ],
         anamolydata_scores: [
           {
-            token: { type: String, required: true, index:true },
+            token: { type: String, required: true, index: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index:true},
+            confidence_score: { type: Number, required: true, index: true },
             identification_status: { type: Number },
           },
         ],
@@ -70,7 +70,7 @@ export class Score {
             count: { type: Number },
           },
         },
-        fluencyScore: { type: Number , index:true},
+        fluencyScore: { type: Number, index: true },
         silence_Pause: {
           total_duration: { type: Number },
           count: { type: Number },
@@ -78,6 +78,7 @@ export class Score {
         reptitionsCount: { type: Number },
         asrOutput: { type: String, required: true },
         isRetry: { type: Boolean, required: false },
+        mode: { type: String, required: false },
       },
     ],
     required: true,
@@ -142,16 +143,17 @@ export class Score {
     asrOutput: string;
     createdAt: Date;
     isRetry: boolean;
+    mode: string;
   }[];
 
   @Prop({
     type: [
       {
-        session_id: { type: String, required: true, index:true  },
-        sub_session_id: { type: String, required: false, index:true  },
-        milestone_level: { type: String, required: true, index:true },
+        session_id: { type: String, required: true, index: true },
+        sub_session_id: { type: String, required: false, index: true },
+        milestone_level: { type: String, required: true, index: true },
         sub_milestone_level: { type: String, required: false },
-        createdAt: { type: Date, required: true, index:true},
+        createdAt: { type: Date, required: true, index: true },
       },
     ],
     required: false,
