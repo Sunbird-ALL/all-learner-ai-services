@@ -100,6 +100,9 @@ export class ScoresService {
       case 'hi':
         serviceId = 'ai4bharat/conformer-hi--gpu-t4';
         break;
+      case 'gu':
+        serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
+        break;
       case "te":
         serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
         break;
@@ -1913,7 +1916,6 @@ export class ScoresService {
         { token: 1, _id: 0 },
       )
       .exec();
-    console.log(RecordData);
     const tokenArray = RecordData.map((data) => {
       return data.token;
     });
@@ -2163,7 +2165,7 @@ export class ScoresService {
     let syllableArr = []
 
     // This code block used to create syllable list from text strings
-    if (language === "ta") {
+    //if (language === "ta") {
       for (const textELE of text.split('')) {
         if (textELE != ' ') {
           if (vowelSignArr.includes(textELE)) {
@@ -2180,7 +2182,7 @@ export class ScoresService {
           }
         }
       }
-    }
+    
 
     return syllableArr;
   }
@@ -2239,14 +2241,13 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
+  async getTextMetrics(original_text: string, response_text: string, language: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
+  
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
-      base64_string: base64_string.toString('base64'),
     };
 
     const textEvalMatrices = await lastValueFrom(
