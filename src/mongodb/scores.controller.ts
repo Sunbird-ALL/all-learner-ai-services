@@ -105,7 +105,7 @@ export class ScoresController {
 
       const originalText = CreateLearnerProfileDto.original_text;
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      console.log("originalTokenArr---", originalTokenArr);
+      
       let responseText = '';
       let constructText = '';
 
@@ -286,7 +286,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      console.log("targets----", targets);
+      
       let originalTextSyllables = [];
       originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -1877,7 +1877,6 @@ export class ScoresController {
           },
         };
 
-        console.log("createScoreData----", createScoreData);
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
           CreateLearnerProfileDto.user_id,
@@ -4093,7 +4092,6 @@ export class ScoresController {
     });
     const notIncludedTotal = notIncluded.length;
 
-    console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({
       status: 'success',
       matched: matched,
