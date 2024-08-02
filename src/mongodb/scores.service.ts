@@ -2243,8 +2243,8 @@ export class ScoresService {
   }
 
   async getTextMetrics(original_text: string, response_text: string, language: string) {
-    //const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-      const url = 'http://localhost:5003/getTextMatrices';
+    const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
+  
     const textData = {
       reference: original_text,
       hypothesis: response_text,

@@ -319,9 +319,7 @@ export class ScoresController {
   ) {
     try {
       const vowelSignArr = gu_config.vowel;
-      console.log("vowelSignArr----", vowelSignArr);
       const language = gu_config.language_code;
-      console.log("language----", language);
       let createScoreData;
 
       let asrOutDenoised;
@@ -344,10 +342,8 @@ export class ScoresController {
       let anomaly_scoreArr = [];
 
       const originalText = CreateLearnerProfileDto.original_text;
-      console.log("originalText---", originalText);
 
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      console.log("originalTokenArr------", originalTokenArr);
       let responseText = '';
       let constructText = '';
 
@@ -375,8 +371,6 @@ export class ScoresController {
 
           similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
           similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-          console.log("similarityDenoisedText-----", similarityDenoisedText);
-          console.log("similarityNonDenoisedText------", similarityNonDenoisedText);
 
           if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -398,18 +392,15 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
-        console.log("responseText---", responseText);
+
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        console.log("tokenHexcodeDataArr---");
+
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
         reptitionCount = constructedTextRepCountData.reptitionCount;
         constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-        console.log("constructText-----", constructText);
-
-        console.log("constructTokenArr-----", constructTokenArr);
 
         // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
@@ -421,18 +412,18 @@ export class ScoresController {
         }
         const missingTokenSet = new Set(missingTokens);
         missingTokens = Array.from(missingTokenSet);
-        console.log("missingTokens----", missingTokens);
+
         // End Comparison Logic for identify correct and missing tokens
 
         let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
-        console.log("identifyTokens-----", identifyTokens);
+
         confidence_scoresArr = identifyTokens.confidence_scoresArr;
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-        console.log("textEvalMatrices-----", textEvalMatrices);
+
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -462,7 +453,7 @@ export class ScoresController {
 
         // calculate fluencyScore
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
-        console.log("fluencyScore-----", fluencyScore);
+
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
@@ -534,20 +525,21 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      console.log("targets----", targets);
+
       let originalTextSyllables = [];
       originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
-      console.log("totalTargets---", totalTargets);
+
       const fluency = await this.scoresService.getFluencyBysubSession(
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      console.log("fluency---", fluency);
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
+        originalText: originalText,
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2))
@@ -560,7 +552,7 @@ export class ScoresController {
     }
   }
 
-  
+
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
     schema: {
@@ -1708,28 +1700,28 @@ export class ScoresController {
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
-    
+
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
-            
-        if(mode == 'online' || mode == undefined){
+
+        if (mode == 'online' || mode == undefined) {
           if (
             CreateLearnerProfileDto['output'] === undefined &&
             CreateLearnerProfileDto.audio !== undefined
           ) {
             audioFile = CreateLearnerProfileDto.audio;
             const decoded = audioFile.toString('base64');
-  
+
             // Send Audio file to ASR to process and provide vector with char and score
             let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-  
+
             asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
             pause_count = audioOutput.pause_count || 0;
-  
+
             similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
             similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-  
+
             if (similarityDenoisedText <= similarityNonDenoisedText) {
               CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
               DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
@@ -1739,7 +1731,7 @@ export class ScoresController {
               DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
               nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
             }
-  
+
             if (CreateLearnerProfileDto.output[0].source === '') {
               return response.status(HttpStatus.BAD_REQUEST).send({
                 status: 'error',
@@ -1749,7 +1741,7 @@ export class ScoresController {
             }
           }
 
-        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
+          responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
         }
         else {
           responseText = CreateLearnerProfileDto.response_text;
@@ -1758,7 +1750,7 @@ export class ScoresController {
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language)
-        
+
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
 
@@ -1799,16 +1791,16 @@ export class ScoresController {
           }
         }
 
-        if(mode !== 'offline'){
+        if (mode !== 'offline') {
           if (process.env.denoiserEnabled === "true") {
             let improved = false;
             let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
             let similarityScoreDenoisedResText = similarityDenoisedText;
-  
+
             if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
               improved = true;
             }
-  
+
             let createDenoiserOutputLog = {
               user_id: CreateLearnerProfileDto.user_id,
               session_id: CreateLearnerProfileDto.session_id,
@@ -1822,11 +1814,11 @@ export class ScoresController {
               improved: improved,
               comment: ""
             }
-  
+
             await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
           }
         }
-        
+
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         let repetitions = constructedTextRepCountData.reptitionCount;
@@ -2081,15 +2073,15 @@ export class ScoresController {
         let anamolyTokenArr = [];
         let constructTokens = [];// Storing the chars and their scores from the ASR Output for the constructed text
         if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') {
-          
-          // const responseWord = CreateLearnerProfileDto.output[0].source;
-          constructTokens=await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
-          const wordsWithValues =await this.scoresService.generateWords(constructTokens);
 
-          if (originalText.includes('ం')|| originalText.includes('ర')){
+          // const responseWord = CreateLearnerProfileDto.output[0].source;
+          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
+          const wordsWithValues = await this.scoresService.generateWords(constructTokens);
+
+          if (originalText.includes('ం') || originalText.includes('ర')) {
 
             let agreeableResults = await this.scoresService.replaceCharacters(originalText);
-            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText,...agreeableResults]);
+            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, ...agreeableResults]);
 
             responseText = agreeableHighestSimilarity[0];
             tokenArr = agreeableHighestSimilarity[1];
@@ -2101,7 +2093,7 @@ export class ScoresController {
             let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText])
             /*checks whether the ASR has highest similarity or constructed has highest
               and assign to the response text*/
-            let originalSimilarity=await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
+            let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
 
             if (originalSimilarity >= constructedHighestSimilarity[3]) {
               responseText = nonDenoisedresponseText;
@@ -3622,13 +3614,11 @@ export class ScoresController {
       let milestone_level = previous_level;
 
       // For Showcase, We are not sending collectionId based on this are calculating milestone
-      if (
-        !getSetResult.hasOwnProperty('collectionId') ||
-        getSetResult.collectionId === '' ||
-        getSetResult?.collectionId === undefined
-      ) {
+      if (!getSetResult.hasOwnProperty('collectionId') || getSetResult.collectionId === '' || getSetResult?.collectionId === undefined) {
+
         let previous_level_id =
           previous_level === undefined ? 0 : parseInt(previous_level[1]);
+
         if (sessionResult === 'pass') {
           if (previous_level_id === 9) {
             milestone_level = 'm9';
@@ -3638,119 +3628,101 @@ export class ScoresController {
           }
         }
       } else {
-        if (
-          getSetResult.collectionId ===
-          '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
-          getSetResult.collectionId ===
-          'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
-          getSetResult.collectionId ===
-          '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
-          (getSetResult.collectionId ===
-            '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
-            getSetResult.language === 'ta')
-        ) {
+        // This collection_id is for the M0 collection
+        // This collection_id is for the Ta
+        if (getSetResult.collectionId === '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
+          getSetResult.collectionId === 'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
+          getSetResult.collectionId === '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
+          (getSetResult.collectionId === '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
+            getSetResult.language === 'ta')) {
+          milestone_level = 'm0';
+
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
+
+          // This collection_id is for the Kn
+        } else if (getSetResult.collectionId === '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
+          getSetResult.collectionId === '976a7631-3887-4d18-9576-7ca8205b82e8' ||
+          getSetResult.collectionId === '9374ae97-80e4-419b-8e96-784734317e82' ||
+          (getSetResult.collectionId === 'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
+            getSetResult.language === 'kn')) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-        } else if (
-          getSetResult.collectionId ===
-          '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
-          getSetResult.collectionId ===
-          '976a7631-3887-4d18-9576-7ca8205b82e8' ||
-          getSetResult.collectionId ===
-          '9374ae97-80e4-419b-8e96-784734317e82' ||
-          (getSetResult.collectionId ===
-            'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
-            getSetResult.language === 'kn')
-        ) {
+
+          // This collection_id is for the En
+        } else if (getSetResult.collectionId === '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
+          getSetResult.collectionId === 'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
+          getSetResult.collectionId === '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
+          (getSetResult.collectionId === 'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
+            getSetResult.language === 'en')) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-        } else if (
-          getSetResult.collectionId ===
-          '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
-          getSetResult.collectionId ===
-          'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
-          getSetResult.collectionId ===
-          '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
-          (getSetResult.collectionId ===
-            'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
-            getSetResult.language === 'en')
-        ) {
-          milestone_level = 'm0';
-          if (previous_level === undefined) {
-            previous_level = 'm0';
-          }
-        } else if (
-          getSetResult.collectionId === '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
+
+          // This collection_id is for the Te
+        } else if (getSetResult.collectionId === '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
           getSetResult.collectionId === '1df7cb53-4609-4ba0-a0dc-2e4dc188619a' ||
           getSetResult.collectionId === 'cfbd93f9-10f6-4064-ab0f-f2f8d6e45e6a' ||
           (getSetResult.collectionId === 'd6f84966-53fa-44bb-93d9-598c84974f04' &&
-            getSetResult.language === 'te')
-        ) {
+            getSetResult.language === 'te')) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
+
+          // This collection_id is for the Gu
+        } else if (getSetResult.collectionId === '1394ade3-cc95-48cd-98ca-f3288860b0e1' ||
+          getSetResult.collectionId === 'eea19621-ae97-4a5d-9933-882a493c84d8' ||
+          getSetResult.collectionId === '61ef8260-98c5-4bc0-9ccd-43cd34c6ecab' ||
+          (getSetResult.collectionId === '3ac7bf14-4455-4e20-9dd4-2af2a04a8227' &&
+            getSetResult.language === 'gu')) {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
+
         } else {
-          if (
-            getSetResult.language === 'ta' &&
+          if (getSetResult.language === 'ta' && 
             getSetResult.collectionId !== '' &&
             getSetResult.collectionId !== undefined
           ) {
-            if (
-              getSetResult.collectionId ===
-              'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
-              getSetResult.collectionId ===
-              '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
-              getSetResult.collectionId ===
-              '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
-              getSetResult.collectionId ===
-              '55767bfa-0e12-4d8f-999b-e84daf6c7587'
-            ) {
+
+            // this collection id is for M2
+            if (getSetResult.collectionId === 'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
+              getSetResult.collectionId === '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
+              getSetResult.collectionId === '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
+              getSetResult.collectionId === '55767bfa-0e12-4d8f-999b-e84daf6c7587') {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
               } else {
                 milestone_level = 'm1';
               }
-            } else if (
-              getSetResult.collectionId ===
-              '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
-              getSetResult.collectionId ===
-              '85d58650-0771-4b28-b185-d074b5a5982d' ||
-              getSetResult.collectionId ===
-              '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
-              getSetResult.collectionId ===
-              '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
-            ) {
+              // this collection id is for M3
+            } else if (getSetResult.collectionId === '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
+              getSetResult.collectionId === '85d58650-0771-4b28-b185-d074b5a5982d' ||
+              getSetResult.collectionId === '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
+              getSetResult.collectionId === '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b') {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
               } else {
                 milestoneEntry = false;
               }
-            } else if (
-              getSetResult.collectionId ===
-              '67b820f5-096d-42c2-acce-b781d59efe7e' ||
-              getSetResult.collectionId ===
-              '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
-              getSetResult.collectionId ===
-              'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
-              getSetResult.collectionId ===
-              '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
-            ) {
+              // This collection id is for m4
+            } else if (getSetResult.collectionId === '67b820f5-096d-42c2-acce-b781d59efe7e' ||
+              getSetResult.collectionId === '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
+              getSetResult.collectionId === 'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
+              getSetResult.collectionId === '68dfd9cb-a33d-4d15-a3ea-54755f8311c8') {
               milestone_level = 'm4';
-            } else if (
-              getSetResult.collectionId ===
-              '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
-              getSetResult.collectionId ===
-              '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
-              getSetResult.collectionId ===
-              'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
-              getSetResult.collectionId ===
-              'ed47eb63-87c8-41f4-821d-1400fef37b78'
-            ) {
+
+              // This Collection id is for m1
+            } else if (getSetResult.collectionId === '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
+              getSetResult.collectionId === '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
+              getSetResult.collectionId === 'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
+              getSetResult.collectionId === 'ed47eb63-87c8-41f4-821d-1400fef37b78') {
               milestone_level = 'm1';
             }
           } else if (
@@ -3908,6 +3880,53 @@ export class ScoresController {
               getSetResult.collectionId === '74102541-9127-4c2e-aa6f-e19f9b914f42' ||
               getSetResult.collectionId === '34651976-b302-4ddf-b858-236b5e4eb093' ||
               getSetResult.collectionId === '55149fbb-4fb1-4e4d-9b77-16e30e537b21'
+            ) {
+              milestone_level = 'm1';
+            }
+          } else if (
+            getSetResult.language === 'gu' &&
+            getSetResult.collectionId !== '' &&
+            getSetResult.collectionId !== undefined
+
+            // this collection id is for M2
+          ) {
+            if (
+              getSetResult.collectionId === 'e1e87800-f530-4868-aebe-4f2402d29eb8' ||
+              getSetResult.collectionId === '9fa1173e-307f-4c47-af07-482228667f2c' ||
+              getSetResult.collectionId === '3d0a5345-2acb-4ed1-919d-fc6511417ed2' ||
+              getSetResult.collectionId === '42e4140b-4294-424f-b488-f0c53fc376c9'
+            ) {
+              if (sessionResult === 'pass') {
+                milestone_level = 'm2';
+              } else {
+                milestone_level = 'm1';
+              }
+              // this collection id is for M3
+            } else if (
+              getSetResult.collectionId === '6e856dc6-073d-43fe-9086-2bc5869eca86' ||
+              getSetResult.collectionId === '4c7e2f94-25e1-4bd7-a04c-7bfa7a54d187' ||
+              getSetResult.collectionId === '8da5ddf4-8e22-4c69-97bc-2edf1f5d5e18' ||
+              getSetResult.collectionId === 'f70b2c60-f321-4ddf-90c9-5038a23b6595'
+            ) {
+              if (sessionResult === 'fail') {
+                milestone_level = 'm3';
+              } else {
+                milestoneEntry = false;
+              }
+              // This collection id is for m4
+            } else if (
+              getSetResult.collectionId === '0601c390-01a8-4887-8029-1cd9852abac6' ||
+              getSetResult.collectionId === '85e45847-bdc1-4421-b9d0-b3592b9a068a' ||
+              getSetResult.collectionId === '4299a52a-0932-4ebd-b33f-5dab9ecb7e76' ||
+              getSetResult.collectionId === 'c78fdc09-11d9-4209-acd1-3e4d550857bf'
+            ) {
+              milestone_level = 'm4';
+              // This Collection id is for m1
+            } else if (
+              getSetResult.collectionId === '24d4b913-1f5a-45cd-8b72-7e7125f56920' ||
+              getSetResult.collectionId === '5eb9babf-2ec1-4760-9e6e-d515ddb8f405' ||
+              getSetResult.collectionId === 'b8830bb6-dee3-46f9-b7e3-09aca044ceef' ||
+              getSetResult.collectionId === '14209021-7373-42ac-b02d-a32f0ee89ef9'
             ) {
               milestone_level = 'm1';
             }
