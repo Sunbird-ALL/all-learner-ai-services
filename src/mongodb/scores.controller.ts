@@ -105,7 +105,7 @@ export class ScoresController {
 
       const originalText = CreateLearnerProfileDto.original_text;
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      
+
       let responseText = '';
       let constructText = '';
 
@@ -286,7 +286,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       let originalTextSyllables = [];
       originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -341,7 +341,11 @@ export class ScoresController {
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
 
-      const originalText = CreateLearnerProfileDto.original_text;
+      let originalText = CreateLearnerProfileDto.original_text;
+      
+      if(originalText.endsWith('.')) {
+        originalText = originalText.slice(0, -1);
+      }
 
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
@@ -3685,7 +3689,7 @@ export class ScoresController {
           }
 
         } else {
-          if (getSetResult.language === 'ta' && 
+          if (getSetResult.language === 'ta' &&
             getSetResult.collectionId !== '' &&
             getSetResult.collectionId !== undefined
           ) {
