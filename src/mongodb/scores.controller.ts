@@ -341,12 +341,9 @@ export class ScoresController {
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
 
-      let originalText = CreateLearnerProfileDto.original_text;
+      const originalText = await this.scoresService.processText(CreateLearnerProfileDto.original_text);
       
-      if(originalText.endsWith('.')) {
-        originalText = originalText.slice(0, -1);
-      }
-
+     
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
       let constructText = '';
@@ -416,8 +413,6 @@ export class ScoresController {
         }
         const missingTokenSet = new Set(missingTokens);
         missingTokens = Array.from(missingTokenSet);
-
-        // End Comparison Logic for identify correct and missing tokens
 
         let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
 
