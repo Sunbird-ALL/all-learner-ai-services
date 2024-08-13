@@ -313,6 +313,53 @@ export class ScoresController {
     }
   }
 
+  @ApiBody({
+    description: 'Request body for storing data to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        original_text: { type: 'string', example: 'ગોલુને ફરવુ ગમે છે.' },
+        audio: { type: 'string', example: 'Add gujarati Wav file base64 string here' },
+        user_id: { type: 'string', example: '8819167684' },
+        session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
+        language: { type: 'string', example: 'gu' },
+        date: { type: 'string', format: 'date-time', example: '2024-05-07T12:24:51.779Z' },
+        sub_session_id: { type: 'string', example: '4TsVQ28LWibb8Yi2uJg4DtLK3svIbIHe' },
+        contentId: { type: 'string', example: 'b70af0e5-0d74-4287-9548-4d491c714b0d' },
+        contentType: { type: 'string', example: 'Sentence' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Success message when data is stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'success' },
+        msg: { type: 'string', example: 'Successfully stored data to learner profile' },
+        responseText: { type: 'string', example: 'ગોલુને ફરવુ ગમે' },
+        subsessionTargetsCount: { type: 'number', example: 17 },
+        subsessionFluency: { type: 'number', example: 1.54 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error while data is being stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({
+    summary:
+      'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Gujarati',
+  })
   @Post('/updateLearnerProfile/gu')
   async updateLearnerProfileGu(
     @Res() response: FastifyReply,
@@ -3579,6 +3626,17 @@ export class ScoresController {
             previous_level = 'm0';
           }
 
+          // This collection_id is for the Hi
+        } else if (getSetResult.collectionId === '0d00c89d-5c73-4de1-9153-c300c972ad64' ||
+        getSetResult.collectionId === 'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
+        getSetResult.collectionId === '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
+        (getSetResult.collectionId === '7765ff21-e07a-4a68-9b42-18751f504ef0' &&
+          getSetResult.language === 'hi')) {
+        milestone_level = 'm0';
+        if (previous_level === undefined) {
+          previous_level = 'm0';
+        }
+
         } else {
           if (getSetResult.language === 'ta' &&
             getSetResult.collectionId !== '' &&
@@ -3625,14 +3683,10 @@ export class ScoresController {
             getSetResult.collectionId !== undefined
           ) {
             if (
-              getSetResult.collectionId ===
-              'b755df98-198b-440a-90e0-391579ef4bfb' ||
-              getSetResult.collectionId ===
-              '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
-              getSetResult.collectionId ===
-              'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
-              getSetResult.collectionId ===
-              '6a89f990-8727-49da-b128-b7ea1839d025'
+              getSetResult.collectionId === 'b755df98-198b-440a-90e0-391579ef4bfb' ||
+              getSetResult.collectionId === '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
+              getSetResult.collectionId === 'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
+              getSetResult.collectionId === '6a89f990-8727-49da-b128-b7ea1839d025'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -3640,14 +3694,10 @@ export class ScoresController {
                 milestone_level = 'm1';
               }
             } else if (
-              getSetResult.collectionId ===
-              '29bb9cff-9510-4693-bec5-9436a686b836' ||
-              getSetResult.collectionId ===
-              '5828539f-4b1f-4502-b648-b2843d61f35d' ||
-              getSetResult.collectionId ===
-              '37a406a5-d82e-447d-9762-17c76f5005ef' ||
-              getSetResult.collectionId ===
-              '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
+              getSetResult.collectionId === '29bb9cff-9510-4693-bec5-9436a686b836' ||
+              getSetResult.collectionId === '5828539f-4b1f-4502-b648-b2843d61f35d' ||
+              getSetResult.collectionId === '37a406a5-d82e-447d-9762-17c76f5005ef' ||
+              getSetResult.collectionId === '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -3655,25 +3705,17 @@ export class ScoresController {
                 milestoneEntry = false;
               }
             } else if (
-              getSetResult.collectionId ===
-              'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
-              getSetResult.collectionId ===
-              '390c8719-fc52-42f3-b49d-41547a0639d7' ||
-              getSetResult.collectionId ===
-              'aee5f3f4-213c-4596-8074-0addab60122a' ||
-              getSetResult.collectionId ===
-              'e28d2463-adca-46e6-8159-04c99d6158d3'
+              getSetResult.collectionId === 'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
+              getSetResult.collectionId === '390c8719-fc52-42f3-b49d-41547a0639d7' ||
+              getSetResult.collectionId === 'aee5f3f4-213c-4596-8074-0addab60122a' ||
+              getSetResult.collectionId === 'e28d2463-adca-46e6-8159-04c99d6158d3'
             ) {
               milestone_level = 'm4';
             } else if (
-              getSetResult.collectionId ===
-              'ac930427-4a73-41a8-94d5-be74defd2993' ||
-              getSetResult.collectionId ===
-              '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
-              getSetResult.collectionId ===
-              '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
-              getSetResult.collectionId ===
-              '61b65b9b-94b8-4212-94e5-33ce8e80435a'
+              getSetResult.collectionId === 'ac930427-4a73-41a8-94d5-be74defd2993' ||
+              getSetResult.collectionId === '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
+              getSetResult.collectionId === '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
+              getSetResult.collectionId === '61b65b9b-94b8-4212-94e5-33ce8e80435a'
             ) {
               milestone_level = 'm1';
             }
@@ -3683,14 +3725,10 @@ export class ScoresController {
             getSetResult.collectionId !== undefined
           ) {
             if (
-              getSetResult.collectionId ===
-              '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
-              getSetResult.collectionId ===
-              'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
-              getSetResult.collectionId ===
-              'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
-              getSetResult.collectionId ===
-              '775c974a-4bda-4cfc-bc47-2aff56e39c46'
+              getSetResult.collectionId === '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
+              getSetResult.collectionId === 'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
+              getSetResult.collectionId === 'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
+              getSetResult.collectionId === '775c974a-4bda-4cfc-bc47-2aff56e39c46'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -3698,14 +3736,10 @@ export class ScoresController {
                 milestone_level = 'm1';
               }
             } else if (
-              getSetResult.collectionId ===
-              'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
-              getSetResult.collectionId ===
-              'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
-              getSetResult.collectionId ===
-              'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
-              getSetResult.collectionId ===
-              '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
+              getSetResult.collectionId === 'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
+              getSetResult.collectionId === 'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
+              getSetResult.collectionId === 'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
+              getSetResult.collectionId === '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -3713,25 +3747,17 @@ export class ScoresController {
                 milestoneEntry = false;
               }
             } else if (
-              getSetResult.collectionId ===
-              'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
-              getSetResult.collectionId ===
-              'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
-              getSetResult.collectionId ===
-              'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
-              getSetResult.collectionId ===
-              '809039e5-119d-42ae-925f-b2546b1e3d7b'
+              getSetResult.collectionId === 'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
+              getSetResult.collectionId === 'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
+              getSetResult.collectionId === 'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
+              getSetResult.collectionId === '809039e5-119d-42ae-925f-b2546b1e3d7b'
             ) {
               milestone_level = 'm4';
             } else if (
-              getSetResult.collectionId ===
-              '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
-              getSetResult.collectionId ===
-              '30c5800e-4a02-4259-8328-abf57e4255ca' ||
-              getSetResult.collectionId ===
-              'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
-              getSetResult.collectionId ===
-              'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
+              getSetResult.collectionId === '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
+              getSetResult.collectionId === '30c5800e-4a02-4259-8328-abf57e4255ca' ||
+              getSetResult.collectionId === 'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
+              getSetResult.collectionId === 'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
             ) {
               milestone_level = 'm1';
             }
@@ -3821,6 +3847,54 @@ export class ScoresController {
               getSetResult.collectionId === '5eb9babf-2ec1-4760-9e6e-d515ddb8f405' ||
               getSetResult.collectionId === 'b8830bb6-dee3-46f9-b7e3-09aca044ceef' ||
               getSetResult.collectionId === '14209021-7373-42ac-b02d-a32f0ee89ef9'
+            ) {
+              milestone_level = 'm1';
+            }
+          }
+          else if (
+            getSetResult.language === 'hi' &&
+            getSetResult.collectionId !== '' &&
+            getSetResult.collectionId !== undefined
+
+            // this collection id is for M2
+          ) {
+            if (
+              getSetResult.collectionId === '6f64d4a2-b6e5-4a2b-91e5-f6be9f2d4d8b' ||
+              getSetResult.collectionId === '00644696-a8b6-48fc-b73f-25a0da567a14' ||
+              getSetResult.collectionId === '2a1a6894-d953-4a26-a294-a7f66469b209' ||
+              getSetResult.collectionId === 'e0bdd73c-dd8b-4c2b-92cf-be753fd32c46'
+            ) {
+              if (sessionResult === 'pass') {
+                milestone_level = 'm2';
+              } else {
+                milestone_level = 'm1';
+              }
+              // this collection id is for M3
+            } else if (
+              getSetResult.collectionId === 'ab289254-45b1-40ed-9b84-3e414577120f' ||
+              getSetResult.collectionId === '98a53df5-c4e3-4045-870d-1154f1e5023a' ||
+              getSetResult.collectionId === '8c438757-e35b-4beb-ae5f-015a9ed3f7f6' ||
+              getSetResult.collectionId === 'a8492aad-b904-406a-bae1-e3f6ebda48ca'
+            ) {
+              if (sessionResult === 'fail') {
+                milestone_level = 'm3';
+              } else {
+                milestoneEntry = false;
+              }
+              // This collection id is for m4
+            } else if (
+              getSetResult.collectionId === 'ee548dec-f599-47a4-8767-bddadb20ed70' ||
+              getSetResult.collectionId === 'a1cd9d37-2fe1-429f-8830-dde473b9e87f' ||
+              getSetResult.collectionId === '1da05e37-8ddc-4a5e-b059-abaa3ef45198' ||
+              getSetResult.collectionId === '62fca34f-12da-4017-83f5-ae88bf99c48d'
+            ) {
+              milestone_level = 'm4';
+              // This Collection id is for m1
+            } else if (
+              getSetResult.collectionId === '919aba0b-7443-4d6c-a1dc-e7b42a803496' ||
+              getSetResult.collectionId === 'd95a1672-70d3-437f-92da-9013a4e5e593' ||
+              getSetResult.collectionId === 'dfe36bd6-91d5-436e-b283-0dc3704f19f5' ||
+              getSetResult.collectionId === 'e0021945-8948-4467-a256-13b5bfbbe6af'
             ) {
               milestone_level = 'm1';
             }
