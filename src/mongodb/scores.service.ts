@@ -2347,38 +2347,40 @@ export class ScoresService {
     return result?.hexcode || '';
   }
 
-  async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
+  async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr, tokenArr = [],anamolyTokenArr = []) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
     let anomaly_scoreArr = [];
     let prevEle = '';
     let isPrevVowel = false;
-    const tokenArr = [];
-    const anamolyTokenArr = [];
     const filteredTokenArr = [];
 
     // Create Single Array from AI4bharat tokens array
-    bestTokens.forEach((element) => {
-      element.tokens.forEach((token) => {
-        if (Object.keys(token).length > 0) {
-          const key = Object.keys(token)[0];
-          const value = Object.values(token)[0];
-
-          let insertObj = {};
-          insertObj[key] = value;
-          tokenArr.push(insertObj);
-
-          if (Object.keys(token).length == 2) {
-            const key1 = Object.keys(token)[1];
-            const value1 = Object.values(token)[1];
-            insertObj = {};
-            insertObj[key1] = value1;
-            anamolyTokenArr.push(insertObj);
+    /* If it is a case of agreeable substitue or constructed combinations we will be getting anamolytokenArr and tokenArr from
+    that logic if the constructed or agreeable substitue word has higher similarity, If not the tokenArr and anamolytokenArr will
+    be empty will be calculated here ,By defualt those will be empty until we pass */
+    if(tokenArr.length===0 && anamolyTokenArr.length===0) {
+      bestTokens.forEach((element) => {
+        element.tokens.forEach((token) => {
+          if (Object.keys(token).length > 0) {
+            const key = Object.keys(token)[0];
+            const value = Object.values(token)[0];
+  
+            let insertObj = {};
+            insertObj[key] = value;
+            tokenArr.push(insertObj);
+  
+            if (Object.keys(token).length == 2) {
+              const key1 = Object.keys(token)[1];
+              const value1 = Object.values(token)[1];
+              insertObj = {};
+              insertObj[key1] = value1;
+              anamolyTokenArr.push(insertObj);
+            }
           }
-        }
+        });
       });
-    });
-
+    }
     const uniqueChar = new Set();
 
     // Create Unique token array
@@ -2687,7 +2689,7 @@ export class ScoresService {
   }
   /* Function for generating the simnilarities for each and every word with the
   original word and sort it in descending order */
-  async findAllSimilarities(words_with_values, wordArray) {
+  async findHighestSimilarity(words_with_values, wordArray) {
     let highestScore = -Infinity;
     let highestScoreArr = null;
 
@@ -2725,21 +2727,21 @@ export class ScoresService {
       for (let i = 0; i < w.length - 1; i++) {
         if (w[i] === 'ం') {
           let nextChar = w[i + 1];
-          let inclu_char = '';
+          let includeChar = '';
           if (['క', 'ఖ', 'గ', 'ఘ', 'ఙ'].includes(nextChar)) {
-            inclu_char = 'ఙ్';
+            includeChar = 'ఙ్';
           } else if (['చ', 'ఛ', 'జ', 'ఝ', 'ఞ'].includes(nextChar)) {
-            inclu_char = 'ఞ్';
+            includeChar = 'ఞ్';
           } else if (['ట', 'ఠ', 'డ', 'ఢ', 'ణ'].includes(nextChar)) {
-            inclu_char = 'ణ్';
+            includeChar = 'ణ్';
           } else if (['త', 'థ', 'ద', 'ధ', 'న'].includes(nextChar)) {
-            inclu_char = 'న్';
+            includeChar = 'న్';
           } else if (['ప', 'ఫ', 'బ', 'భ', 'మ'].includes(nextChar)) {
-            inclu_char = 'మ్';
+            includeChar = 'మ్';
           } else {
-            inclu_char = 'మ్';
+            includeChar = 'మ్';
           }
-          transformations.push(w.slice(0, i) + inclu_char + w.slice(i + 1));
+          transformations.push(w.slice(0, i) + includeChar + w.slice(i + 1));
         }
         if (w[i] === 'ర') {
           transformations.push(w.slice(0, i) + 'ఱ' + w.slice(i + 1));
@@ -2761,5 +2763,57 @@ export class ScoresService {
 
     // If no transformations were added, return the original word
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
+  }
+  
+  async getResponseText (wordsWithValues,originalText,outputWord) {
+    let responseWord;
+    let anamolyTokenArray=[];
+    let tokenArray=[];
+    let constructedHighestSimilarity = await this.findHighestSimilarity(wordsWithValues, [originalText])
+    /*checks whether the ASR has highest similarity or constructed has highest
+      and assign to the response text*/
+    let originalSimilarity = await this.getTextSimilarity(outputWord, originalText)
+
+    if (originalSimilarity >= constructedHighestSimilarity[3]) { //if the original response has higher then response will be same as ASR output
+      responseWord = outputWord;
+    }
+
+    else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+      responseWord = constructedHighestSimilarity[0];
+      tokenArray = constructedHighestSimilarity[1];
+      anamolyTokenArray = constructedHighestSimilarity[2];
+    }
+    return {responseWord,tokenArray,anamolyTokenArray}
+  }
+  
+  async getProcessWordContent(contentType,bestTokens,originalText,responseWord) {
+    let constructTokens=[];
+    let finalResponseText='';
+    let tokenArray=[];
+    let anamolyTokenArray=[];
+    if (contentType.toLowerCase() == 'word') {
+      constructTokens = await this.processTokens(bestTokens)
+      const wordsWithValues = await this.generateWords(constructTokens);
+
+      if (originalText.includes('ం') || originalText.includes('ర')) {
+
+        let agreeableResults = await this.replaceCharacters(originalText);
+        let agreeableHighestSimilarity = await this.findHighestSimilarity(wordsWithValues, [originalText, ...agreeableResults]);
+
+        finalResponseText = agreeableHighestSimilarity[0];
+        tokenArray = agreeableHighestSimilarity[1];
+        anamolyTokenArray = agreeableHighestSimilarity[2];
+      }
+      else {//if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+        let responseWordfromConstructedOrOriginal = await this.getResponseText (wordsWithValues,originalText,responseWord)
+        finalResponseText = responseWordfromConstructedOrOriginal.responseWord;
+        tokenArray = responseWordfromConstructedOrOriginal. tokenArray;
+        anamolyTokenArray = responseWordfromConstructedOrOriginal.anamolyTokenArray;
+      }
+    }
+    else { //If not a type of word , response will be ASR response.
+      finalResponseText = responseWord;
+    }
+    return {finalResponseText,tokenArray,anamolyTokenArray}
   }
 }
