@@ -2,7 +2,7 @@ name: PROD DEPLOYMENT
 
 on:
   push:
-    branches: [ all-1.0-prod ]
+    branches: [ release-1.2 ]
 
 jobs:
   build:
