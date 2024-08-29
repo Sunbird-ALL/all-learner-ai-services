@@ -233,6 +233,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -271,7 +272,6 @@ export class ScoresController {
             isRetry: false,
           },
         };
-
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
           CreateLearnerProfileDto.user_id,
@@ -303,7 +303,7 @@ export class ScoresController {
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2))
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -522,6 +522,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -806,6 +807,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1475,6 +1477,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1784,6 +1787,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -2400,6 +2404,7 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer
