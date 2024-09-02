@@ -25,6 +25,9 @@ export class CreateLearnerProfileDto {
   read_duration: number;
 
   @ApiProperty()
+  practice_duration: number;
+
+  @ApiProperty()
   user_id: string;
 
   @ApiProperty()

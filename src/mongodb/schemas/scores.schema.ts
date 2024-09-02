@@ -19,6 +19,7 @@ export class Score {
         construct_text: { type: String, required: true },
         language: { type: String, required: true, index:true },
         read_duration: {type: Number, required: false},
+        practice_duration: {type: Number, required: false},
         confidence_scores: [
           {
             token: { type: String, required: true, index:true},
@@ -94,6 +95,7 @@ export class Score {
     construct_text: string; // this will be constructed by matching response text with original text.
     language: string; // content language
     read_duration: number; // duration for the frequency
+    practice_duration: number; // duration for practicing the content
     confidence_scores: {
       token: string;
       hexcode: string;

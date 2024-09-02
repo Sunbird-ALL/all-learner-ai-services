@@ -234,6 +234,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -523,6 +524,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -808,6 +810,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1478,6 +1481,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1788,6 +1792,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -2405,6 +2410,7 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration:CreateLearnerProfileDto.practice_duration,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer
