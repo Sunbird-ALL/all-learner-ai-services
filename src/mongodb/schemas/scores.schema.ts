@@ -20,6 +20,7 @@ export class Score {
         language: { type: String, required: true, index:true },
         read_duration: {type: Number, required: false},
         practice_duration: {type: Number, required: false},
+        retry_count:{type: Number, required: false},
         confidence_scores: [
           {
             token: { type: String, required: true, index:true},
@@ -96,6 +97,7 @@ export class Score {
     language: string; // content language
     read_duration: number; // duration for the frequency
     practice_duration: number; // duration for practicing the content
+    retry_count: number; // number of times usretry the content
     confidence_scores: {
       token: string;
       hexcode: string;

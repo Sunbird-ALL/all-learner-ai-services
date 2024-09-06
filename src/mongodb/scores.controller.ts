@@ -235,6 +235,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -525,6 +526,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -811,6 +813,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1482,6 +1485,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1793,6 +1797,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -2411,6 +2416,7 @@ export class ScoresController {
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
             practice_duration:CreateLearnerProfileDto.practice_duration,
+            retry_count:CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer

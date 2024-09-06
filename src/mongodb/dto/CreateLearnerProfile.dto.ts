@@ -28,6 +28,9 @@ export class CreateLearnerProfileDto {
   practice_duration: number;
 
   @ApiProperty()
+  retry_count: number;
+
+  @ApiProperty()
   user_id: string;
 
   @ApiProperty()
