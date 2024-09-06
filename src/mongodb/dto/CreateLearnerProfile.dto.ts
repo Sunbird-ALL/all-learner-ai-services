@@ -22,6 +22,15 @@ export class CreateLearnerProfileDto {
   pause_count: number;
 
   @ApiProperty()
+  read_duration: number;
+
+  @ApiProperty()
+  practice_duration: number;
+
+  @ApiProperty()
+  retry_count: number;
+
+  @ApiProperty()
   user_id: string;
 
   @ApiProperty()
