@@ -17,7 +17,7 @@ import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import ta_config from "./config/language/ta";
 import en_config from "./config/language/en"
-
+import lang_common_config from "./config/language/common/commonConfig";
 @ApiTags('scores')
 @Controller('scores')
 export class ScoresController {
@@ -3470,8 +3470,8 @@ export class ScoresController {
         let previous_level_id =
           previous_level === undefined ? 0 : parseInt(previous_level[1]);
         if (sessionResult === 'pass') {
-          if (previous_level_id === 9) {
-            milestone_level = 'm9';
+          if (previous_level_id === 5) {
+            milestone_level = lang_common_config.maxmilestoneLevel;
           } else {
             previous_level_id++;
             milestone_level = 'm' + previous_level_id;
