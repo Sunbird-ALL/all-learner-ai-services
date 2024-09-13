@@ -9,7 +9,8 @@ var lang_common_config = {
         ins: 20,
         del: 15,
         sub: 5
-    }
+    },
+    maxmilestoneLevel : "m5"
 };
 
 export default lang_common_config;
