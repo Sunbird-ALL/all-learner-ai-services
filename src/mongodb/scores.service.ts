@@ -552,23 +552,23 @@ export class ScoresService {
         },
       },
     ]);
-    
-     // Get All hexcode for this selected language
-     let tokenHexcodeDataArr = await this.gethexcodeMapping(language);
 
-     const tokenMap = new Map();
+    // Get All hexcode for this selected language
+    let tokenHexcodeDataArr = await this.gethexcodeMapping(language);
+
+    const tokenMap = new Map();
 
     // Map token to its isCommon and indexNo properties
     tokenHexcodeDataArr.forEach((tokenObj: any) => {
       tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
     });
-  
+
     const commonTargets: any[] = [];
     const nonCommonTargets: any[] = [];
 
     RecordData.forEach((target: any) => {
       const tokenInfo = tokenMap.get(target.character);
-      
+
       if (tokenInfo && tokenInfo.isCommon) {
         commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
       } else {
@@ -580,7 +580,6 @@ export class ScoresService {
     commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
     return [...commonTargets, ...nonCommonTargets];
   }
-
 
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
@@ -925,13 +924,13 @@ export class ScoresService {
     tokenHexcodeDataArr.forEach((tokenObj: any) => {
       tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
     });
-  
+
     const commonTargets: any[] = [];
     const nonCommonTargets: any[] = [];
 
     targets.forEach((target: any) => {
       const tokenInfo = tokenMap.get(target.character);
-      
+
       if (tokenInfo && tokenInfo.isCommon) {
         commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
       } else {
@@ -944,7 +943,6 @@ export class ScoresService {
     return [...commonTargets, ...nonCommonTargets];
 
   }
-
 
   // Familiarity Query
   async getFamiliarityBySession(sessionId: string, language: string) {
@@ -2247,9 +2245,7 @@ export class ScoresService {
     const constructTextSet = new Set();
     let reptitionCount = 0;
 
-    for (const originalEle of original_text.split(
-      ' ',
-    )) {
+    for (const originalEle of original_text.split(' ',)) {
       let originalRepCount = 0;
       for (const sourceEle of response_text.split(' ')) {
         const similarityScore = await this.getTextSimilarity(originalEle, sourceEle);
@@ -2345,6 +2341,58 @@ export class ScoresService {
       (item) => item.token === token,
     );
     return result?.hexcode || '';
+  }
+  async updateTokensGu(nBestToken: any) {
+    let updatedArray: any = [];
+    nBestToken.forEach((element) => {
+
+      let updatedTokens = [];
+      let i = 0;
+
+      // Helper function to get the first key of an object
+      const getFirstKey = (obj) => Object.keys(obj)[0];
+
+      while (i < element.word.length) {
+        let foundToken = null;
+
+        // Check for multi-character tokens by comparing only the first key in each token object
+        for (let j = element.word.length; j > i; j--) {
+          let charCombo = element.word.slice(i, j);
+          foundToken = element.tokens.find(token => getFirstKey(token) === charCombo);
+
+          if (foundToken) {
+            updatedTokens.push(foundToken); // Add the multi-character token
+            i = j;
+            break;
+          }
+        }
+
+        // If no multi-character token found, handle single character
+        if (!foundToken) {
+          let char = element.word[i];
+          let foundSingleToken = element.tokens.find(token => getFirstKey(token) === char);
+
+          if (foundSingleToken) {
+            updatedTokens.push(foundSingleToken);
+          } else {
+            let newToken = {};
+            newToken[char] = 0.811;
+            updatedTokens.push(newToken);
+          }
+          i++;
+        }
+      }
+
+
+      // Create a new object with the word and rearranged tokens
+      let updatedObj = {
+        word: element.word,
+        tokens: updatedTokens
+      };
+      updatedArray.push(updatedObj);
+
+    });
+    return updatedArray;
   }
 
   async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
@@ -2533,7 +2581,9 @@ export class ScoresService {
         }
       }
     }
-
+    console.log("confidence_scoresArr--",confidence_scoresArr)
+    console.log("missing_token_scoresArr--",missing_token_scoresArr)
+    console.log("anomaly_scoreArr--",anomaly_scoreArr)
     return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
   }
 
@@ -2629,6 +2679,7 @@ export class ScoresService {
 
     return syllables;
   }
+
   async processTokens(nBestTokens) {
     let data_arr = [];
 
@@ -2685,6 +2736,7 @@ export class ScoresService {
     const initialUnusedKeyValueArr = dataArr.flatMap(data => Object.entries(data).map(([key, value]) => ({ [key]: value })));
     return generateRecursive("", [], initialUnusedKeyValueArr, 0);
   }
+  
   /* Function for generating the simnilarities for each and every word with the
   original word and sort it in descending order */
   async findAllSimilarities(words_with_values, wordArray) {
