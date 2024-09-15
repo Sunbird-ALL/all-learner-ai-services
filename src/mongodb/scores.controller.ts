@@ -233,9 +233,9 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -392,11 +392,10 @@ export class ScoresController {
       let anomaly_scoreArr = [];
 
       var originalText = CreateLearnerProfileDto.original_text
-      
-      if(originalText.endsWith('.')) {
+
+      if (originalText.endsWith('.')) {
         originalText = originalText.slice(0, -1);
       }
-
 
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
@@ -454,8 +453,10 @@ export class ScoresController {
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
+        
         reptitionCount = constructedTextRepCountData.reptitionCount;
         constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
+        
 
         // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
@@ -468,7 +469,8 @@ export class ScoresController {
         const missingTokenSet = new Set(missingTokens);
         missingTokens = Array.from(missingTokenSet);
 
-        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
+        let updatedTokens = await this.scoresService.updateTokensGu(CreateLearnerProfileDto.output[0].nBestTokens)
+        let identifyTokens = await this.scoresService.identifyTokens(updatedTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
 
         confidence_scoresArr = identifyTokens.confidence_scoresArr;
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
@@ -524,9 +526,9 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -685,8 +687,8 @@ export class ScoresController {
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
 
-      const originalText =  CreateLearnerProfileDto.original_text
-      
+      const originalText = CreateLearnerProfileDto.original_text
+
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
       let constructText = '';
@@ -811,9 +813,9 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1484,8 +1486,8 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1796,8 +1798,8 @@ export class ScoresController {
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
             read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -2414,9 +2416,9 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration:CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration:CreateLearnerProfileDto.practice_duration,
-            retry_count:CreateLearnerProfileDto.retry_count,
+            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer
@@ -3645,14 +3647,14 @@ export class ScoresController {
 
           // This collection_id is for the Hi
         } else if (getSetResult.collectionId === '0d00c89d-5c73-4de1-9153-c300c972ad64' ||
-        getSetResult.collectionId === 'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
-        getSetResult.collectionId === '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
-        (getSetResult.collectionId === '7765ff21-e07a-4a68-9b42-18751f504ef0' &&
-          getSetResult.language === 'hi')) {
-        milestone_level = 'm0';
-        if (previous_level === undefined) {
-          previous_level = 'm0';
-        }
+          getSetResult.collectionId === 'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
+          getSetResult.collectionId === '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
+          (getSetResult.collectionId === '7765ff21-e07a-4a68-9b42-18751f504ef0' &&
+            getSetResult.language === 'hi')) {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
 
         } else {
           if (getSetResult.language === 'ta' &&
