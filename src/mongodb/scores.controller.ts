@@ -469,8 +469,7 @@ export class ScoresController {
         const missingTokenSet = new Set(missingTokens);
         missingTokens = Array.from(missingTokenSet);
 
-        let updatedTokens = await this.scoresService.updateTokensGu(CreateLearnerProfileDto.output[0].nBestTokens)
-        let identifyTokens = await this.scoresService.identifyTokens(updatedTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
+        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
 
         confidence_scoresArr = identifyTokens.confidence_scoresArr;
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
