@@ -2529,9 +2529,6 @@ export class ScoresService {
         }
       }
     }
-    console.log("confidence_scoresArr--",confidence_scoresArr)
-    console.log("missing_token_scoresArr--",missing_token_scoresArr)
-    console.log("anomaly_scoreArr--",anomaly_scoreArr)
     return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
   }
 
