@@ -102,7 +102,8 @@ export class ScoresService {
         serviceId = 'ai4bharat/conformer-hi--gpu-t4';
         break;
       case 'gu':
-        serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
+        serviceId = 'ai4bharat/conformer-gujarati--gpu-t4';
+        //ai4bharat/conformer-multilingual-indo-aryan--gpu-t4
         break;
       case "te":
         serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
@@ -2342,59 +2343,7 @@ export class ScoresService {
     );
     return result?.hexcode || '';
   }
-  async updateTokensGu(nBestToken: any) {
-    let updatedArray: any = [];
-    nBestToken.forEach((element) => {
-
-      let updatedTokens = [];
-      let i = 0;
-
-      // Helper function to get the first key of an object
-      const getFirstKey = (obj) => Object.keys(obj)[0];
-
-      while (i < element.word.length) {
-        let foundToken = null;
-
-        // Check for multi-character tokens by comparing only the first key in each token object
-        for (let j = element.word.length; j > i; j--) {
-          let charCombo = element.word.slice(i, j);
-          foundToken = element.tokens.find(token => getFirstKey(token) === charCombo);
-
-          if (foundToken) {
-            updatedTokens.push(foundToken); // Add the multi-character token
-            i = j;
-            break;
-          }
-        }
-
-        // If no multi-character token found, handle single character
-        if (!foundToken) {
-          let char = element.word[i];
-          let foundSingleToken = element.tokens.find(token => getFirstKey(token) === char);
-
-          if (foundSingleToken) {
-            updatedTokens.push(foundSingleToken);
-          } else {
-            let newToken = {};
-            newToken[char] = 0.811;
-            updatedTokens.push(newToken);
-          }
-          i++;
-        }
-      }
-
-
-      // Create a new object with the word and rearranged tokens
-      let updatedObj = {
-        word: element.word,
-        tokens: updatedTokens
-      };
-      updatedArray.push(updatedObj);
-
-    });
-    return updatedArray;
-  }
-
+  
   async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
