@@ -1,0 +1,27 @@
+name: Prod Deployment
+
+on:
+  push:
+    branches:
+      - all-1.1-prod
+jobs:
+   deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - 
+       name: Deploy Stack
+       uses: appleboy/ssh-action@master
+       with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+        port: ${{ secrets.PORT }}
+        script: |
+             
+             cd /home/sudeepr/all-services/all-learner-ai-services
+             ./deploy.sh
+             
