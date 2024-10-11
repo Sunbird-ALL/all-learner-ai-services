@@ -1591,7 +1591,7 @@ export class ScoresController {
           let key_word = CreateLearnerProfileDto.correctness['50%']
           const allWordsPresent = key_word.every(word => responseText.includes(word.toLowerCase()));
 
-          if (correct_choice_score > 0 && similarityDenoised > 70) {
+          if (correct_choice_score > 0 && similarityDenoised >= 70) {
             correctness_score = 100
           } else if (correct_choice_score > 0 && allWordsPresent) {
             correctness_score = 60
