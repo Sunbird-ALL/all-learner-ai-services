@@ -1452,6 +1452,10 @@ export class ScoresController {
       let similarityDenoisedText = 0;
 
       let pause_count = 0;
+      let correct_choice_score = 0;
+      let correctness_score = 0;
+      let is_correct_choice = CreateLearnerProfileDto.is_correct_choice;
+
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1497,9 +1501,7 @@ export class ScoresController {
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
-
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
@@ -1575,8 +1577,26 @@ export class ScoresController {
         // End Constructed Text Logic
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
-
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
+
+        // Add check for the correct choice
+
+        if (is_correct_choice !== undefined && is_correct_choice !== null) {
+          if (is_correct_choice) {
+            correct_choice_score = 20
+          }
+
+          // calculation for the correct choice final score 
+          let similarityDenoised = similarityDenoisedText * 100
+          let key_word = CreateLearnerProfileDto.correctness['50%']
+          const allWordsPresent = key_word.every(word => responseText.includes(word.toLowerCase()));
+
+          if (correct_choice_score > 0 && similarityDenoised > 70) {
+            correctness_score = 100
+          } else if (correct_choice_score > 0 && allWordsPresent) {
+            correctness_score = 60
+          }
+        }
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id, // userid sent by client
@@ -1593,6 +1613,8 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
+            is_correct_choice: is_correct_choice,
+            correctness_score: correctness_score,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -3387,7 +3409,10 @@ export class ScoresController {
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let originalTextSyllables = [];
+      let is_mechanics = getSetResult.is_mechanics;
+     
       if (getSetResult.language != 'en') {
         originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -3434,9 +3459,19 @@ export class ScoresController {
       } else if (totalSyllables > 500) {
         targetPerThreshold = 5;
       }
-
+      
       if (targetsPercentage <= targetPerThreshold) {
-        if (getSetResult.contentType.toLowerCase() === 'word') {
+        // Add logic for the study the pic mechnics
+        if (is_mechanics) {
+          let correctness_score = correct_score[0].count_scores_gte_50
+      
+          if (correctness_score >= 3) {
+            sessionResult = 'pass';
+          } else {
+            sessionResult = 'fail';
+          }
+        }
+        else if (getSetResult.contentType.toLowerCase() === 'word') {
           if (fluency < 2) {
             sessionResult = 'pass';
           } else {
