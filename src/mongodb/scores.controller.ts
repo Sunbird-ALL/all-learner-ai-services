@@ -1678,6 +1678,7 @@ export class ScoresController {
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2)),
+        createScoreData: createScoreData
       });
     } catch (err) {
       console.log(err);
