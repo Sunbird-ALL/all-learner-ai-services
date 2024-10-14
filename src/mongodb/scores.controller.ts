@@ -1034,8 +1034,32 @@ export class ScoresController {
             });
           }
         }
+        let flag = 0;
+        let tokenArr = [];
+        let anamolyTokenArr = [];
+        let constructTokens = [];
+        if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') {
 
-        responseText = CreateLearnerProfileDto.output[0].source;
+          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
+          const wordsWithValues = await this.scoresService.generateWords(constructTokens);
+          let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText])
+            /*checks whether the ASR has highest similarity or constructed has highest
+              and assign to the response text*/
+            let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
+            if (originalSimilarity >= constructedHighestSimilarity[3]) {
+              responseText = nonDenoisedresponseText;
+              flag = 1;
+            }
+
+            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+              responseText = constructedHighestSimilarity[0];
+              tokenArr = constructedHighestSimilarity[1];
+              anamolyTokenArr = constructedHighestSimilarity[2];
+            }
+        }
+          else {
+          responseText = CreateLearnerProfileDto.output[0].source;
+        }
         const responseTextTokensArr = responseText.split('');
 
         let constructText = '';
@@ -1217,26 +1241,28 @@ export class ScoresController {
         const filteredTokenArr = [];
 
         //token list for ai4bharat response
-        const tokenArr = [];
-        const anamolyTokenArr = [];
+        // const tokenArr = [];
+        // const anamolyTokenArr = [];
 
         // Create Single Array from AI4bharat tokens array
-        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-          element.tokens.forEach((token) => {
-            const key = Object.keys(token)[0];
-            const value = Object.values(token)[0];
+        if (CreateLearnerProfileDto.contentType.toLowerCase() != 'word' || flag == 1) {
+          CreateLearnerProfileDto.output[0].nBestTokens.forEach(element => {
+            element.tokens.forEach(token => {
+              let key = Object.keys(token)[0];
+              let value = Object.values(token)[0];
 
-            let insertObj = {};
-            insertObj[key] = value;
-            tokenArr.push(insertObj);
+              let insertObj = {};
+              insertObj[key] = value;
+              tokenArr.push(insertObj);
 
-            const key1 = Object.keys(token)[1];
-            const value1 = Object.values(token)[1];
-            insertObj = {};
-            insertObj[key1] = value1;
-            anamolyTokenArr.push(insertObj);
+              let key1 = Object.keys(token)[1];
+              let value1 = Object.values(token)[1];
+              insertObj = {}
+              insertObj[key1] = value1;
+              anamolyTokenArr.push(insertObj);
+            });
           });
-        });
+        }
 
         const uniqueChar = new Set();
         prevEle = '';
