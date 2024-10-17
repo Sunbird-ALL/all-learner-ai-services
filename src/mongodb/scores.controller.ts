@@ -2749,7 +2749,7 @@ export class ScoresController {
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
-    @Query() { tags },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
     @Res() response: FastifyReply,
   ) {
     try {
