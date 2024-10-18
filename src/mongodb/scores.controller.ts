@@ -1582,19 +1582,18 @@ export class ScoresController {
         // Add check for the correct choice
 
         if (is_correct_choice !== undefined && is_correct_choice !== null) {
-          if (is_correct_choice) {
-            correct_choice_score = 20
-          }
-
+         
           // calculation for the correct choice final score 
           let similarityDenoised = similarityDenoisedText * 100
           let key_word = CreateLearnerProfileDto.correctness['50%']
           const allWordsPresent = key_word.every(word => responseText.includes(word.toLowerCase()));
 
-          if (correct_choice_score > 0 && similarityDenoised >= 70) {
+          if (is_correct_choice && similarityDenoised >= 70) {
             correctness_score = 100
-          } else if (correct_choice_score > 0 && allWordsPresent) {
+          } else if (is_correct_choice && allWordsPresent) {
             correctness_score = 60
+          } else if (is_correct_choice) {
+            correctness_score = 20
           }
         }
 
