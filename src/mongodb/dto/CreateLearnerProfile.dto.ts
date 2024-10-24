@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateLearnerProfileDto {
   @ApiProperty()
@@ -21,6 +21,9 @@ export class CreateLearnerProfileDto {
   @ApiProperty()
   sub_session_id: string;
 
+  @ApiPropertyOptional()
+  is_correct_choice?: string;
+
   @ApiProperty()
   contentType: string;
 
@@ -29,6 +32,9 @@ export class CreateLearnerProfileDto {
 
   @ApiProperty()
   language: string;
+
+  @ApiPropertyOptional()
+  correctness?: CorrectnessDto[];
 
   @ApiProperty()
   date: Date;
@@ -52,4 +58,9 @@ export class NBestTokenDTO {
 
 export class TokenDTO {
   [key: string]: number;
+}
+
+export class CorrectnessDto {
+  @ApiPropertyOptional()
+  '50%'?: string[];
 }
