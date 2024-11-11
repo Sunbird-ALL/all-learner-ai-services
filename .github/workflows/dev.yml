@@ -2,7 +2,7 @@ name: DEV DEPLOYMENT
 
 on:
   push:
-    branches: [ feature/story-sequence-mode ]
+    branches: [ all-1.3-dev ]
 
 jobs:
   build:
