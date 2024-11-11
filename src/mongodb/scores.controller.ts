@@ -3512,7 +3512,9 @@ export class ScoresController {
             milestone_level = "m" + en_config.max_milestone_level;
           } else if(getSetResult.language === "ta" && previous_level_id === ta_config.max_milestone_level){
             milestone_level = "m" + ta_config.max_milestone_level;
-          } else {
+          } else if(previous_level_id === 9) {
+            milestone_level = 'm9';
+          }else {
             previous_level_id++;
             milestone_level = 'm' + previous_level_id;
           }
