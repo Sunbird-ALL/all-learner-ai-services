@@ -8,6 +8,7 @@ import { fastifyMultipart } from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppClusterService } from './app-cluster.service';
 import compression from '@fastify/compress';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -51,6 +52,15 @@ async function bootstrap() {
     credentials: false,
   });
 
+   // Access the Fastify instance to define the health check endpoint
+   const fastifyInstance = app.getHttpAdapter().getInstance();
+
+   fastifyInstance.get('/ping', async (request: FastifyRequest, reply: FastifyReply) => {
+     reply.status(200).send({
+       status: true,
+       message: 'All Learner ai service App is working',
+     });
+   });
   await app.listen(process.env.PORT, '0.0.0.0');
 }
 AppClusterService.clusterize(bootstrap);
