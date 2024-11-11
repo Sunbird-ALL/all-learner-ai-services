@@ -11,4 +11,13 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+   // Health check endpoint
+   @Get('/ping')
+   checkHealth(): { status: boolean; message: string } {
+     return {
+       status: true,
+       message: 'Learner Ai Service App is working',
+     };
+   }
 }
