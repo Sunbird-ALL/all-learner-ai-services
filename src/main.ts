@@ -8,7 +8,7 @@ import { fastifyMultipart } from '@fastify/multipart';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppClusterService } from './app-cluster.service';
 import compression from '@fastify/compress';
-import { FastifyReply, FastifyRequest } from 'fastify';
+
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
