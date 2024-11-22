@@ -1698,7 +1698,7 @@ export class ScoresController {
           responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
         }
         else {
-          responseText = CreateLearnerProfileDto.response_text;
+          responseText = await this.scoresService.processText(CreateLearnerProfileDto.response_text);
           pause_count = CreateLearnerProfileDto.pause_count;
         }
         // Get All hexcode for this selected language
@@ -1831,6 +1831,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
             isRetry: false,
+            mode:mode
           },
         };
 
