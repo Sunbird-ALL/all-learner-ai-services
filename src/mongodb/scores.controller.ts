@@ -963,6 +963,8 @@ export class ScoresController {
       let DenoisedresponseText;
       let asrOutBeforeDenoised;
 
+      const mode = CreateLearnerProfileDto.mode;
+
       const language = 'kn';
 
       const originalText = CreateLearnerProfileDto.original_text;
@@ -998,9 +1000,11 @@ export class ScoresController {
       let createScoreData: any;
 
       let pause_count = 0;
+      let audioFile;
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-        let audioFile;
+      
+      if(mode == 'online' || mode == undefined){
         if (
           CreateLearnerProfileDto['output'] === undefined &&
           CreateLearnerProfileDto.audio !== undefined
@@ -1034,8 +1038,13 @@ export class ScoresController {
             });
           }
         }
-
         responseText = CreateLearnerProfileDto.output[0].source;
+      }else{
+        responseText = CreateLearnerProfileDto.response_text;
+        pause_count = CreateLearnerProfileDto.pause_count;
+      }
+
+
         const responseTextTokensArr = responseText.split('');
 
         let constructText = '';
@@ -1394,7 +1403,7 @@ export class ScoresController {
           reference: CreateLearnerProfileDto.original_text,
           hypothesis: CreateLearnerProfileDto.output[0].source,
           language: 'kn',
-          base64_string: audioFile.toString('base64'),
+          base64_string: audioFile?.toString('base64'),
         };
 
         const textEvalMatrices = await lastValueFrom(
@@ -1411,6 +1420,8 @@ export class ScoresController {
               }),
             ),
         );
+
+        if (mode !== 'offline') {
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1439,15 +1450,17 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
+        }
+
         const wer = textEvalMatrices.wer;
         const cercal = textEvalMatrices.cer * 2;
         const charCount = Math.abs(
           CreateLearnerProfileDto.original_text.length -
-          CreateLearnerProfileDto.output[0].source.length,
+          responseText.length,
         );
         const wordCount = Math.abs(
           CreateLearnerProfileDto.original_text.split(' ').length -
-          CreateLearnerProfileDto.output[0].source.split(' ').length,
+          responseText.split(' ').length,
         );
         const repetitions = reptitionCount;
         const pauseCount = pause_count;
@@ -1494,11 +1507,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                CreateLearnerProfileDto.output[0].source.length,
+                responseText.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                CreateLearnerProfileDto.output[0].source.split(' ').length,
+                responseText.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -1522,7 +1535,8 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false
+            isRetry: false,
+            mode:mode
           },
         };
 
