@@ -81,6 +81,7 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const mode = CreateLearnerProfileDto.mode;
       const vowelSignArr = ta_config.vowel;
       const language = ta_config.language_code;
       let createScoreData;
@@ -118,43 +119,48 @@ export class ScoresController {
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
 
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
+        if (mode == 'online' || mode == undefined) {
+          if (
+            CreateLearnerProfileDto['output'] === undefined &&
+            CreateLearnerProfileDto.audio !== undefined
+          ) {
+            audioFile = CreateLearnerProfileDto.audio;
+            const decoded = audioFile.toString('base64');
 
-          // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+            // Send Audio file to ASR to process and provide vector with char and score
+            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
 
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
+            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+            pause_count = audioOutput.pause_count || 0;
 
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
+            similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
+            similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
 
-          if (similarityDenoisedText <= similarityNonDenoisedText) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            if (similarityDenoisedText <= similarityNonDenoisedText) {
+              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            } else {
+              CreateLearnerProfileDto['output'] = asrOutDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            }
+
+            if (CreateLearnerProfileDto.output[0].source === '') {
+              return response.status(HttpStatus.BAD_REQUEST).send({
+                status: 'error',
+                message:
+                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+              });
+            }
           }
-
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
-          }
+          responseText = CreateLearnerProfileDto.output[0].source;
+        }else{
+            responseText =CreateLearnerProfileDto.response_text;
+            pause_count = CreateLearnerProfileDto.pause_count;
         }
 
-        responseText = CreateLearnerProfileDto.output[0].source;
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
@@ -187,7 +193,7 @@ export class ScoresController {
 
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
 
-        if (process.env.denoiserEnabled === "true") {
+        if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
           let improved = false;
 
           let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
@@ -243,11 +249,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                CreateLearnerProfileDto.output[0].source.length,
+                responseText.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                CreateLearnerProfileDto.output[0].source.split(' ').length,
+                responseText.split(' ').length,
               ),
             },
             eucledian_distance: {
