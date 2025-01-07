@@ -85,6 +85,8 @@ export class ScoresService {
     let asrOutBeforeDenoised: any;
     let audio: any = data;
     let pause_count: number = 0;
+    let denoised_audio_base64: any = data;
+    let non_denoised_audio_base64: any = data;
 
     let serviceId = '';
     switch (language) {
@@ -107,11 +109,6 @@ export class ScoresService {
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
 
-    if (process.env.skipNonDenoiserAsrCall !== "true") {
-      asrOutBeforeDenoised = await asrCall();
-    }
-
-
 
     let denoiserConfig =
     {
@@ -124,20 +121,29 @@ export class ScoresService {
         "base64_string": audio,
         "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
         "enablePauseCount": true,
-        "contentType": contentType
+        "contentType": contentType,
+        "language": language
       }
     }
 
     await axios.request(denoiserConfig)
       .then((response) => {
-        audio = response.data.denoised_audio_base64;
+        denoised_audio_base64 = response.data.denoised_audio_base64;
+        non_denoised_audio_base64 = response.data.concatenated_audio_base64;
         pause_count = response.data.pause_count;
       })
       .catch((error) => {
         console.log(error);
       });
 
+    if (process.env.skipNonDenoiserAsrCall !== "true") {
+      audio = non_denoised_audio_base64;
+      asrOutBeforeDenoised = await asrCall();
+    }
+  
+
     if (process.env.denoiserEnabled === "true") {
+      audio = denoised_audio_base64
       asrOutDenoisedOutput = await asrCall();
     }
 
