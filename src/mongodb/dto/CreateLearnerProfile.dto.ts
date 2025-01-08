@@ -38,6 +38,9 @@ export class CreateLearnerProfileDto {
 
   @ApiProperty()
   date: Date;
+
+  @ApiPropertyOptional()
+  mechanics_id: string;
 }
 
 export class OutputDTO {
