@@ -1474,23 +1474,24 @@ export class ScoresController {
 
           // Send Audio file to ASR to process and provide vector with char and score
           let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-
-          
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
 
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
+          DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
+          nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
+
+          DenoisedresponseText=DenoisedresponseText.replace(concatenated_phrase, '').trim();
+          nonDenoisedresponseText=nonDenoisedresponseText.replace(concatenated_phrase, '').trim();
+
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, DenoisedresponseText || "");
+          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, nonDenoisedresponseText || "");
+
 
           if (similarityDenoisedText <= similarityNonDenoisedText) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
-            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
           } else {
             CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
-            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source.replace(concatenated_phrase, '').trim() || "");
           }
 
           if (CreateLearnerProfileDto.output[0].source === '') {
@@ -1504,7 +1505,8 @@ export class ScoresController {
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source.replace(concatenated_phrase, '').trim());
+        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
+        responseText = responseText.replace(concatenated_phrase, '').trim();
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
