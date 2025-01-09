@@ -1644,6 +1644,7 @@ export class ScoresController {
               count: pause_count,
             },
             reptitionsCount: reptitionCount,
+            mechanics_id : CreateLearnerProfileDto.mechanics_id || "",
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
           },
