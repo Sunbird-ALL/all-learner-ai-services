@@ -107,6 +107,9 @@ export class ScoresService {
       case "te":
         serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
         break;
+      case 'or':
+        serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
+        break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
@@ -2297,13 +2300,13 @@ export class ScoresService {
 
   async getTextMetrics(original_text: string, response_text: string, language: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
+    
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
     };
-
+   
     const textEvalMatrices = await lastValueFrom(
       this.httpService
         .post(url, JSON.stringify(textData), {
