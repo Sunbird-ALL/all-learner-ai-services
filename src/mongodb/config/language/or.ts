@@ -4,6 +4,3 @@ var or_config = {
 };
 
 export default or_config;
-
-
-//      ା	ି	ୀ	ୁ	ୂ	ୃ	ୄ	େ	ୈ	ୋ	ୌ	ଂ	ଃ	$ଁ

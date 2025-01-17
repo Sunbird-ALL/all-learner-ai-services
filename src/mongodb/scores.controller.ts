@@ -552,6 +552,53 @@ export class ScoresController {
     }
   }
 
+  @ApiBody({
+    description: 'Request body for storing data to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        original_text: { type: 'string', example: 'ବିଲେଇ' },
+        audio: { type: 'string', example: 'Add odiya Wav file base64 string here' },
+        user_id: { type: 'string', example: '8819167684' },
+        session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
+        language: { type: 'string', example: 'or' },
+        date: { type: 'string', format: 'date-time', example: '2024-05-07T12:24:51.779Z' },
+        sub_session_id: { type: 'string', example: '4TsVQ28LWibb8Yi2uJg4DtLK3svIbIHe' },
+        contentId: { type: 'string', example: 'b70af0e5-0d74-4287-9548-4d491c714b0d' },
+        contentType: { type: 'string', example: 'word' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Success message when data is stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'success' },
+        msg: { type: 'string', example: 'Successfully stored data to learner profile' },
+        responseText: { type: 'string', example: 'ବିଲେଇ' },
+        subsessionTargetsCount: { type: 'number', example: 17 },
+        subsessionFluency: { type: 'number', example: 1.54 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Error while data is being stored to the learner profile',
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', example: 'error' },
+        msg: { type: 'string', example: 'Server error - error message' },
+      },
+    },
+  })
+  @ApiForbiddenResponse({ description: 'Forbidden.' })
+  @ApiOperation({
+    summary:
+      'Store students learner ai profile, from the ASR output for a given wav file. This API will work for odiya',
+  })
   @Post('/updateLearnerProfile/or')
   async updateLearnerProfileOr(
     @Res() response: FastifyReply,
