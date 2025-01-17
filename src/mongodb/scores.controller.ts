@@ -18,11 +18,8 @@ import { AxiosError } from 'axios';
 import ta_config from "./config/language/ta";
 import en_config from "./config/language/en"
 import gu_config from './config/language/gu';
-<<<<<<< HEAD
-import hi_config from './config/language/hi';
-=======
 import or_config from './config/language/or';
->>>>>>> all-0.3-odiya
+import hi_config from './config/language/hi';
 
 @ApiTags('scores')
 @Controller('scores')
