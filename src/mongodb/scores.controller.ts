@@ -3962,6 +3962,16 @@ export class ScoresController {
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
+          // This collection_id is for the or
+        } else if (getSetResult.collectionId === '010ba3e3-f6b4-4a4a-856e-e323a288b98e' ||
+          getSetResult.collectionId === '971cdd0b-989f-429b-999a-620c10c670b5' ||
+          getSetResult.collectionId === '104fff5c-9f00-4268-92bb-9697f943035a' ||
+          (getSetResult.collectionId === 'a4947dd3-e9af-4e0c-b8e9-52ed77a1e8cf' &&
+            getSetResult.language === 'or')) {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
 
         } else {
           if (getSetResult.language === 'ta' &&
@@ -4222,6 +4232,46 @@ export class ScoresController {
               getSetResult.collectionId === 'dfe36bd6-91d5-436e-b283-0dc3704f19f5' ||
               getSetResult.collectionId === 'e0021945-8948-4467-a256-13b5bfbbe6af'
             ) {
+              milestone_level = 'm1';
+            }
+          }
+          if (getSetResult.language === 'or' &&
+            getSetResult.collectionId !== '' &&
+            getSetResult.collectionId !== undefined
+          ) {
+
+            // this collection id is for M2
+            if (getSetResult.collectionId === 'f1c48b67-9876-4058-a2d0-d38c8bb4e3fd' ||
+              getSetResult.collectionId === '7dcb258c-8cb8-41cd-971f-15e46fa2136d' ||
+              getSetResult.collectionId === '647d40b3-35d6-415f-9a41-2388d8ca147f' ||
+              getSetResult.collectionId === '52e6cdfc-3f1e-4ca6-84ff-4a2ab04c2cfc') {
+              if (sessionResult === 'pass') {
+                milestone_level = 'm2';
+              } else {
+                milestone_level = 'm1';
+              }
+              // this collection id is for M3
+            } else if (getSetResult.collectionId === 'baf0e828-caad-4597-80c3-e76503b62bbe' ||
+              getSetResult.collectionId === 'ea3c6696-498b-4827-bc6c-3740fad6adfd' ||
+              getSetResult.collectionId === '543a324d-9ade-4621-aa04-2ef16540ac87' ||
+              getSetResult.collectionId === '19b1e674-e633-4339-9365-e1ade2fc5f59') {
+              if (sessionResult === 'fail') {
+                milestone_level = 'm3';
+              } else {
+                milestoneEntry = false;
+              }
+              // This collection id is for m4
+            } else if (getSetResult.collectionId === '3ffd72bc-d45d-4148-a3d5-b786b0a00924' ||
+              getSetResult.collectionId === 'c647f7e8-29f8-4b92-98f4-7995d6dd05e4' ||
+              getSetResult.collectionId === '1501b007-1136-4360-838f-84c4a2a50a8c' ||
+              getSetResult.collectionId === '4a261a24-187e-4616-954c-c2e9d38189ac') {
+              milestone_level = 'm4';
+
+              // This Collection id is for m1
+            } else if (getSetResult.collectionId === '59f80fb8-5ff4-4739-b7ad-3811af25b575' ||
+              getSetResult.collectionId === 'e5f7a86f-3b9f-4dc4-b64f-ff8ade0b88c3' ||
+              getSetResult.collectionId === 'c9564b7a-7854-4989-a43c-1a20a253d6b2' ||
+              getSetResult.collectionId === 'bf48828e-2b54-462d-a12b-59025e2c1fd7') {
               milestone_level = 'm1';
             }
           }
