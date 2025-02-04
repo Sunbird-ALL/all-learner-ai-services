@@ -13,6 +13,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Authorization header missing');
     }
 
+    
     const token = authHeader.split(' ')[1]; // Extract token from "Bearer <token>"
     try {
       const decoded = this.jwtService.verify(token, { secret: process.env.JOSE_SECRET });
