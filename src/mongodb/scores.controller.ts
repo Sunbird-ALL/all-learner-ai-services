@@ -4384,7 +4384,7 @@ export class ScoresController {
   @Get('/getMilestone')
   async getMilestone(
     @Query('language') language: string,
-    @Req() request: Request,
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
   ) {
     try {
