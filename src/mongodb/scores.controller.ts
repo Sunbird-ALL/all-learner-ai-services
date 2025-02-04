@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards, Req } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -21,6 +21,7 @@ import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { request } from 'http';
 
 @ApiTags('scores')
 @UseGuards(JwtAuthGuard)
@@ -159,9 +160,9 @@ export class ScoresController {
             }
           }
           responseText = CreateLearnerProfileDto.output[0].source;
-        }else{
-            responseText =CreateLearnerProfileDto.response_text;
-            pause_count = CreateLearnerProfileDto.pause_count;
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
 
 
@@ -462,10 +463,10 @@ export class ScoresController {
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
-        
+
         reptitionCount = constructedTextRepCountData.reptitionCount;
         constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-        
+
 
         // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
@@ -673,7 +674,7 @@ export class ScoresController {
     try {
       const vowelSignArr = or_config.vowel;
       const language = or_config.language_code;
-      
+
       let createScoreData;
 
       let asrOutDenoised;
@@ -694,9 +695,9 @@ export class ScoresController {
       let confidence_scoresArr = [];
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
-  
+
       const originalText = CreateLearnerProfileDto.original_text;
-      
+
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
       let constructText = '';
@@ -749,7 +750,7 @@ export class ScoresController {
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        
+
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
@@ -775,7 +776,7 @@ export class ScoresController {
 
         // Send a call to text eval serivce
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-       
+
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -877,7 +878,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       let originalTextSyllables = [];
       originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -887,7 +888,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-     
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -1298,46 +1299,46 @@ export class ScoresController {
       let audioFile;
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-      
-      if(mode == 'online' || mode == undefined){
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-          const audioOutput = await this.scoresService.audioFileToAsrOutput(
-            decoded,
-            'kn',
-            CreateLearnerProfileDto['contentType']
-          );
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
 
-          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
+        if (mode == 'online' || mode == undefined) {
+          if (
+            CreateLearnerProfileDto['output'] === undefined &&
+            CreateLearnerProfileDto.audio !== undefined
+          ) {
+            audioFile = CreateLearnerProfileDto.audio;
+            const decoded = audioFile.toString('base64');
+            const audioOutput = await this.scoresService.audioFileToAsrOutput(
+              decoded,
+              'kn',
+              CreateLearnerProfileDto['contentType']
+            );
+            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+            pause_count = audioOutput.pause_count || 0;
 
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
+            if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            } else {
+              CreateLearnerProfileDto['output'] = asrOutDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            }
+
+            if (CreateLearnerProfileDto.output[0].source === '') {
+              return response.status(HttpStatus.BAD_REQUEST).send({
+                status: 'error',
+                message:
+                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+              });
+            }
           }
+          responseText = CreateLearnerProfileDto.output[0].source;
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
-        responseText = CreateLearnerProfileDto.output[0].source;
-      }else{
-        responseText = CreateLearnerProfileDto.response_text;
-        pause_count = CreateLearnerProfileDto.pause_count;
-      }
 
 
         const responseTextTokensArr = responseText.split('');
@@ -1718,32 +1719,32 @@ export class ScoresController {
 
         if (mode !== 'offline') {
 
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
+          if (process.env.denoiserEnabled === "true") {
+            let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+            let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+            let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
 
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
+            if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+              improved = true;
+            }
+
+            let createDenoiserOutputLog = {
+              user_id: CreateLearnerProfileDto.user_id,
+              session_id: CreateLearnerProfileDto.session_id,
+              sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+              contentType: CreateLearnerProfileDto.contentType,
+              contentId: CreateLearnerProfileDto.contentId || "",
+              language: language,
+              original_text: originalText,
+              response_text: nonDenoisedresponseText,
+              denoised_response_text: DenoisedresponseText,
+              improved: improved,
+              comment: ""
+            }
+
+            await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
           }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
 
         }
 
@@ -1831,7 +1832,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -2140,7 +2141,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -3122,11 +3123,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/char/:userId')
+
+  @Get('GetContent/char')
   @ApiOperation({
     summary:
       'Get a set of chars for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3143,14 +3141,15 @@ export class ScoresController {
     },
   })
   async GetContentCharbyUser(
-    @Param('userId') id: string,
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
     @Query() { tags },
     @Res() response: FastifyReply,
+    @Req() request: Request
   ) {
     try {
+      const id = (request as any).user.virtual_id;
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
@@ -3295,11 +3294,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/word/:userId')
+
+  @Get('GetContent/word')
   @ApiOperation({
     summary:
       'Get a set of words for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3315,8 +3311,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentWordbyUser(
+    @Query('language') language: string,
+    @Req() request: Request,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3373,6 +3376,14 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
+      // Add the check for the limit
+      if (contentlimit > 10) {
+        contentlimit = 5;
+      } else if (contentlimit < 5) {
+        contentlimit = 5;
+      } else {
+        contentlimit = contentlimit;
+      }
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3444,11 +3455,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/sentence/:userId')
+
+  @Get('GetContent/sentence')
   @ApiOperation({
     summary:
       'Get a set of sentences for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3464,8 +3472,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(
+    @Query('language') language,
+    @Req() request: Request,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3522,6 +3537,15 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      // Add the check for the limit
+      if (contentlimit > 10) {
+        contentlimit = 5;
+      } else if (contentlimit < 5) {
+        contentlimit = 5;
+      } else {
+        contentlimit = contentlimit;
+      }
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3593,11 +3617,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/paragraph/:userId')
+
+  @Get('GetContent/paragraph')
   @ApiOperation({
     summary:
       'Get a set of paragraphs for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3613,8 +3634,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser(
+    @Req() request: Request,
+    @Query('language') language,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3671,6 +3699,14 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
+      // Add the check for the limit
+      if (contentlimit > 10) {
+        contentlimit = 5;
+      } else if (contentlimit < 5) {
+        contentlimit = 5;
+      } else {
+        contentlimit = contentlimit;
+      }
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -4329,10 +4365,7 @@ export class ScoresController {
   }
 
 
-  @ApiParam({
-    name: 'userId',
-    example: '27519278861697549531193',
-  })
+
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -4345,13 +4378,14 @@ export class ScoresController {
       },
     },
   })
-  @Get('/getMilestone/user/:userId')
+  @Get('/getMilestone')
   async getMilestone(
-    @Param('userId') id: string,
     @Query('language') language: string,
+    @Req() request: Request,
     @Res() response: FastifyReply,
   ) {
     try {
+      const id = (request as any).user.virtual_id;
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
