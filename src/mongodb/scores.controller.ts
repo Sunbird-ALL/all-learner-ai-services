@@ -3141,14 +3141,15 @@ export class ScoresController {
     },
   })
   async GetContentCharbyUser(
-    @Param('userId') id: string,
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
     @Query() { tags },
     @Res() response: FastifyReply,
+    @Req() request: Request
   ) {
     try {
+      const id = (request as any).user.virtual_id;
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
