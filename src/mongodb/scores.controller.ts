@@ -2,7 +2,9 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Sea
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
+
+
 import {
   ApiBody,
   ApiExcludeEndpoint,
@@ -3141,12 +3143,13 @@ export class ScoresController {
     },
   })
   async GetContentCharbyUser(
+    @Req() request: FastifyRequest,
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
     @Query() { tags },
     @Res() response: FastifyReply,
-    @Req() request: Request
+
   ) {
     try {
       const id = (request as any).user.virtual_id;
@@ -3313,7 +3316,7 @@ export class ScoresController {
   })
   async GetContentWordbyUser(
     @Query('language') language: string,
-    @Req() request: Request,
+    @Req() request: FastifyRequest,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
@@ -3474,7 +3477,7 @@ export class ScoresController {
   })
   async GetContentSentencebyUser(
     @Query('language') language,
-    @Req() request: Request,
+    @Req() request: FastifyRequest,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
@@ -3635,7 +3638,7 @@ export class ScoresController {
     },
   })
   async GetContentParagraphbyUser(
-    @Req() request: Request,
+    @Req() request: FastifyRequest,
     @Query('language') language,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
