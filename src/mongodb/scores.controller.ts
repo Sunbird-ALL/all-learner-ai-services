@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards, Req } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -21,6 +21,7 @@ import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { request } from 'http';
 
 @ApiTags('scores')
 @UseGuards(JwtAuthGuard)
@@ -3122,11 +3123,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/char/:userId')
+  
+  @Get('GetContent/char')
   @ApiOperation({
     summary:
       'Get a set of chars for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3295,11 +3293,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/word/:userId')
+ 
+  @Get('GetContent/word')
   @ApiOperation({
     summary:
       'Get a set of words for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3315,8 +3310,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentWordbyUser( 
+    @Query('language') language: string,
+    @Req()request:Request, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id; 
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3444,11 +3446,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/sentence/:userId')
+ 
+  @Get('GetContent/sentence')
   @ApiOperation({
     summary:
       'Get a set of sentences for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3464,8 +3463,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(
+    @Query('language') language,
+    @Req()request: Request,
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3593,11 +3599,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/paragraph/:userId')
+  
+  @Get('GetContent/paragraph')
   @ApiOperation({
     summary:
       'Get a set of paragraphs for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3613,8 +3616,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser(
+    @Req() request: Request, 
+    @Query('language') language, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id = (request as any).user.virtual_id;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -4329,10 +4339,7 @@ export class ScoresController {
   }
 
 
-  @ApiParam({
-    name: 'userId',
-    example: '27519278861697549531193',
-  })
+ 
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -4345,13 +4352,14 @@ export class ScoresController {
       },
     },
   })
-  @Get('/getMilestone/user/:userId')
+  @Get('/getMilestone')
   async getMilestone(
-    @Param('userId') id: string,
     @Query('language') language: string,
+    @Req() request: Request,
     @Res() response: FastifyReply,
   ) {
     try {
+      const id = (request as any).user.virtual_id; 
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
