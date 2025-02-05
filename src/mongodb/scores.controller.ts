@@ -3152,7 +3152,8 @@ export class ScoresController {
 
   ) {
     try {
-      const id = (request as any).user.virtual_id;
+      const id =((request as any).user.virtual_id).toString();
+     
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
@@ -3322,7 +3323,7 @@ export class ScoresController {
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
     @Res() response: FastifyReply) {
     try {
-      const id = (request as any).user.virtual_id;
+      const id = ((request as any).user.virtual_id).toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3483,7 +3484,7 @@ export class ScoresController {
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
     @Res() response: FastifyReply) {
     try {
-      const id = (request as any).user.virtual_id;
+      const id = ((request as any).user.virtual_id).toString();;
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3645,7 +3646,7 @@ export class ScoresController {
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
     @Res() response: FastifyReply) {
     try {
-      const id = (request as any).user.virtual_id;
+      const id = ((request as any).user.virtual_id).toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -4388,7 +4389,7 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
-      const id = (request as any).user.virtual_id;
+      const id = ((request as any).user.virtual_id).toString();
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
