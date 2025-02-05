@@ -4350,8 +4350,8 @@ export class ScoresController {
         data: {
           sessionResult: sessionResult,
           totalTargets: totalTargets,
-          currentLevel: currentLevel,
-          previous_level: previous_level,
+          currentLevel: currentLevel ? currentLevel : "m0",
+          previous_level: previous_level ? previous_level : "m0",
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
