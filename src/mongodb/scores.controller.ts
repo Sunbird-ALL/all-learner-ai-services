@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards, Req } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import {
   ApiBody,
   ApiExcludeEndpoint,
@@ -17,8 +17,10 @@ import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import ta_config from "./config/language/ta";
 import en_config from "./config/language/en"
+import { JwtAuthGuard } from 'src/auth/auth.guard';
 
 @ApiTags('scores')
+@UseGuards(JwtAuthGuard)
 @Controller('scores')
 export class ScoresController {
   constructor(
@@ -2723,11 +2725,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/char/:userId')
+ 
+  @Get('GetContent/char')
   @ApiOperation({
     summary:
       'Get a set of chars for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -2744,7 +2743,7 @@ export class ScoresController {
     },
   })
   async GetContentCharbyUser(
-    @Param('userId') id: string,
+    @Req() request: FastifyRequest,
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
     @Query() { gettargetlimit = 5 },
@@ -2752,6 +2751,7 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
+      const id =((request as any).user.virtual_id).toString();
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
@@ -2896,11 +2896,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/word/:userId')
+  
+  @Get('GetContent/word')
   @ApiOperation({
     summary:
       'Get a set of words for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -2916,8 +2913,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentWordbyUser( 
+    @Req() request: FastifyRequest,
+    @Query('language') language: string, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id =((request as any).user.virtual_id).toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3045,11 +3049,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/sentence/:userId')
+  
+  @Get('GetContent/sentence')
   @ApiOperation({
     summary:
       'Get a set of sentences for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3065,8 +3066,17 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Query('mechanics_id') mechanics_id, @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(
+    @Req() request: FastifyRequest,
+    @Query('language') language, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Query('mechanics_id') mechanics_id, 
+    @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id =((request as any).user.virtual_id).toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3196,11 +3206,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('GetContent/paragraph/:userId')
+ 
+  @Get('GetContent/paragraph')
   @ApiOperation({
     summary:
       'Get a set of paragraphs for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3216,8 +3223,15 @@ export class ScoresController {
       },
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser( 
+    @Req() request: FastifyRequest,
+    @Query('language') language, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Res() response: FastifyReply) {
     try {
+      const id =((request as any).user.virtual_id).toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -3857,13 +3871,14 @@ export class ScoresController {
       },
     },
   })
-  @Get('/getMilestone/user/:userId')
+  @Get('/getMilestone')
   async getMilestone(
-    @Param('userId') id: string,
+    @Req() request: FastifyRequest,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
+      const id =((request as any).user.virtual_id).toString();
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
