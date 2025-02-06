@@ -3248,6 +3248,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3405,6 +3406,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3567,6 +3569,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3728,6 +3731,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
