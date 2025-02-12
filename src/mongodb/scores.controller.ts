@@ -3154,7 +3154,7 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],@Query('category') category,@Query('story_mode') story_mode,@Query('type_of_learner') type_of_learner, @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
@@ -3222,6 +3222,9 @@ export class ScoresController {
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
+        "category": category || "",
+        "type_of_learner" : type_of_learner, 
+        "story_mode": story_mode
       };
 
       const newContent = await lastValueFrom(
