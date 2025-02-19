@@ -1373,7 +1373,6 @@ export class ScoresController {
         subsessionFluency: parseFloat(fluency.toFixed(2)),
       });
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -1682,7 +1681,6 @@ export class ScoresController {
         createScoreData: createScoreData
       });
     } catch (err) {
-      console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
@@ -2830,6 +2828,13 @@ export class ScoresController {
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
+      // Add the check for the limit
+      if(contentlimit < 5){
+        contentlimit = 5;
+      }else if( contentlimit > 20){
+        contentlimit = 20
+      }
+      
       const textData = {
         tokenArr: getGetTargetCharArr,
         language: language || 'ta',
@@ -2979,6 +2984,13 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      // Add the check for the limit
+      if(contentlimit < 5){
+        contentlimit = 5;
+      }else if( contentlimit > 20){
+        contentlimit = 20
+      }
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3136,6 +3148,14 @@ export class ScoresController {
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
+      // Add the check for the limit
+      // Add the check for the limit
+      if(contentlimit < 5){
+        contentlimit = 5;
+      }else if( contentlimit > 20){
+        contentlimit = 20
+      }
+
       const textData = {
         "tokenArr": getGetTargetCharArr,
         "language": language || "ta",
@@ -3291,6 +3311,13 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
+
+      // Add the check for the limit
+      if(contentlimit < 5){
+        contentlimit = 5;
+      }else if( contentlimit > 20){
+        contentlimit = 20
+      }
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3970,7 +3997,6 @@ export class ScoresController {
     });
     const notIncludedTotal = notIncluded.length;
 
-    console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({
       status: 'success',
       matched: matched,
