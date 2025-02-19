@@ -80,6 +80,16 @@ export class Score {
         },
         reptitionsCount: { type: Number },
         asrOutput: { type: String, required: true },
+        prosody_fluency: {
+        pitch_classification: { type: String, required: false },
+        intensity_classification: { type: String, required: false },
+        expression_classification: { type: String, required: false },
+        smoothness_classification: { type: String, required: false },
+        },
+        tempo:{
+        tempo_classification: { type: String, required: false },
+        tempo_wpm: { type: Number, required: false },
+        },
         isRetry: { type: Boolean, required: false },
         mode: { type: String, required: false },
       },
@@ -147,6 +157,16 @@ export class Score {
     };
     reptitionsCount: number;
     asrOutput: string;
+    prosody_fluency: {
+      pitch_classification: string;
+      intensity_classification: string;
+      expression_classification: string;
+      smoothness_classification: string;
+    };
+    tempo:{
+     tempo_classification: string;
+     tempo_wpm: number;
+    };
     createdAt: Date;
     isRetry: boolean;
     mode: string;

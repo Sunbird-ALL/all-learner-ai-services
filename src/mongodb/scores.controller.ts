@@ -1957,6 +1957,11 @@ export class ScoresController {
       let similarityDenoisedText = 0;
 
       let pause_count = 0;
+      
+      let pitch_classification: string | null = null;
+      let intensity_classification: string | null = null;
+      let expression_classification: string | null = null;
+      let smoothness_classification: string | null = null;
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1979,6 +1984,10 @@ export class ScoresController {
             asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
             pause_count = audioOutput.pause_count || 0;
+            pitch_classification = audioOutput.pitch_classification;         
+            intensity_classification = audioOutput.intensity_classification; 
+            expression_classification = audioOutput.expression_classification;
+            smoothness_classification = audioOutput.smoothness_classification; 
 
             similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
             similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
@@ -2010,7 +2019,7 @@ export class ScoresController {
         }
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
