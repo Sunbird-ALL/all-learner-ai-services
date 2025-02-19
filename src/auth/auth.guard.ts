@@ -17,26 +17,25 @@ export class JwtAuthGuard implements CanActivate {
     }
     const token = authHeader.split(' ')[1];
     try {
-      // **Step 1: Correctly Generate Encryption Key (Hash)**
+      //Step 1: Correctly Generate Encryption Key
       const secret_key = process.env.JOSE_SECRET || '';
       const hash = createHash('sha256').update(secret_key).digest();
   
-      // **Step 2: Decrypt the Token**
+      //Step 2: Decrypt the Token
       const jwtDecryptedToken = await jose.jwtDecrypt(token, hash);
       
-      // **Ensure jwtSignedToken Exists in Decrypted Payload**
       if (!jwtDecryptedToken.payload.jwtSignedToken) {
         throw new Error("jwtSignedToken not found in decrypted payload");
       }
 
-      // **Step 3: Verify the Signed JWT**
+      //Step 3: Verify the Signed JWT
       const jwtSignedToken = String(jwtDecryptedToken.payload.jwtSignedToken);
     
-      // **Fix Signing Key (Ensure Proper Decoding)**
+      //Fix Signing Key
       const jwtSigninKey = new TextEncoder().encode(process.env.JWT_SIGNIN_PRIVATE_KEY);
       const verifiedToken = await jose.jwtVerify(jwtSignedToken, jwtSigninKey);
       
-      // **Step 4: Attach User Data to Request**
+      //Step 4: Attach User Data to Request
       (request as any).user = verifiedToken.payload;
 
       return true;
