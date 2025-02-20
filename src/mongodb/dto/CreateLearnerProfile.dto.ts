@@ -13,9 +13,6 @@ export class CreateLearnerProfileDto {
   audio: Buffer;
 
   @ApiProperty()
-  user_id: string;
-
-  @ApiProperty()
   session_id: string;
 
   @ApiProperty()

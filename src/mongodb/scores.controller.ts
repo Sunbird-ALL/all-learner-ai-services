@@ -77,11 +77,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/ta')
   async updateLearnerProfileTa(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-
+      const user_id = ((request as any).user.virtual_id).toString();
       const vowelSignArr = ta_config.vowel;
       const language = ta_config.language_code;
       let createScoreData;
@@ -198,7 +199,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -219,7 +220,7 @@ export class ScoresController {
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
+          user_id: user_id, // userid sent by client
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
@@ -274,7 +275,7 @@ export class ScoresController {
 
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -361,10 +362,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/hi')
   async updateLearnerProfileHi(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       if (
         CreateLearnerProfileDto['output'] === undefined &&
         CreateLearnerProfileDto.audio !== undefined
@@ -663,7 +666,7 @@ export class ScoresController {
       const createdAt = new Date().toISOString().replace('Z', '+00:00');
 
       const createScoreData = {
-        user_id: CreateLearnerProfileDto.user_id,
+        user_id: user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
           createdAt: createdAt,
@@ -679,7 +682,7 @@ export class ScoresController {
 
       // For retry attempt detection
       const retryAttempt = await this.scoresService.getRetryStatus(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.contentId,
       );
 
@@ -753,10 +756,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/kn')
   async updateLearnerProfileKn(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const confidence_scoresArr = [];
       const anomaly_scoreArr = [];
       const missing_token_scoresArr = [];
@@ -1231,7 +1236,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -1278,7 +1283,7 @@ export class ScoresController {
         const createdAt = new Date().toISOString().replace('Z', '+00:00');
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id,
+          user_id: user_id,
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
@@ -1333,7 +1338,7 @@ export class ScoresController {
 
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -1429,10 +1434,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const originalText = await this.scoresService.processText(CreateLearnerProfileDto.original_text);
 
       let createScoreData;
@@ -1556,7 +1563,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -1599,7 +1606,7 @@ export class ScoresController {
         }
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
+          user_id: user_id, // userid sent by client
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
@@ -1652,7 +1659,7 @@ export class ScoresController {
 
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -1733,8 +1740,12 @@ export class ScoresController {
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for telgu' })
   @Post('/updateLearnerProfile/te')
-  async updateLearnerProfileTe(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
+  async updateLearnerProfileTe(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply, 
+    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       let originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
 
@@ -2284,7 +2295,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -2315,7 +2326,7 @@ export class ScoresController {
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
+          user_id: user_id, // userid sent by client
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "", // used to club set recorded data within session
@@ -2364,7 +2375,7 @@ export class ScoresController {
 
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -2460,11 +2471,8 @@ export class ScoresController {
     }
   }
 
-  @ApiParam({
-    name: 'userId',
-    example: '2020076506',
-  })
-  @Get('/GetTargets/user/:userId')
+ 
+  @Get('/GetTargets/user')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
     status: 200,
@@ -2492,13 +2500,14 @@ export class ScoresController {
     },
   })
   async GetTargetsbyUser(
-    @Param('userId') id: string,
+    @Req() request: FastifyRequest,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const targetResult = await this.scoresService.getTargetsByUser(
-        id,
+        user_id,
         language,
       );
       return response.status(HttpStatus.OK).send(targetResult);
@@ -2678,7 +2687,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('/GetFamiliarity/user/:userId')
+  @Get('/GetFamiliarity/user')
   @ApiOperation({ summary: 'Get Familiarity of characters by user id' })
   @ApiResponse({
     status: 200,
@@ -2706,13 +2715,14 @@ export class ScoresController {
     },
   })
   async GetFamiliarityByUser(
-    @Param('userId') id: string,
+    @Req() request: FastifyRequest,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const familiarityResult = await this.scoresService.getFamiliarityByUser(
-        id, language
+        user_id, language
       );
       return response.status(HttpStatus.OK).send(familiarityResult);
     } catch (err) {
@@ -3448,8 +3458,12 @@ export class ScoresController {
       'This API will give pass or fail result with gettarget count for records performed in the subsession. Also this API perform milestone update for discovery and showcase.',
   })
   @Post('/getSetResult')
-  async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
+  async getSetResult(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply, 
+    @Body() getSetResult: any) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       let targetPerThreshold = 30;
       let milestoneEntry = true;
       let totalSyllables = 0;
@@ -3488,7 +3502,7 @@ export class ScoresController {
       let sessionResult = 'No Result';
 
       let recordData: any = await this.scoresService.getlatestmilestone(
-        getSetResult.user_id,
+        user_id,
         getSetResult.language,
       );
       let previous_level = recordData[0]?.milestone_level || undefined;
@@ -3842,7 +3856,7 @@ export class ScoresController {
       if (milestoneEntry) {
         await this.scoresService
           .createMilestoneRecord({
-            user_id: getSetResult.user_id,
+            user_id: user_id,
             session_id: getSetResult.session_id,
             sub_session_id: getSetResult.sub_session_id,
             milestone_level: milestone_level,
@@ -3850,7 +3864,7 @@ export class ScoresController {
           })
           .then(async () => {
             recordData = await this.scoresService.getlatestmilestone(
-              getSetResult.user_id,
+              user_id,
               getSetResult.language,
             );
 
@@ -3886,10 +3900,6 @@ export class ScoresController {
   }
 
 
-  @ApiParam({
-    name: 'userId',
-    example: '27519278861697549531193',
-  })
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -4022,9 +4032,10 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
-  @Get('/GetSessionIds/:userId')
-  async GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
-    return this.scoresService.getAllSessions(id, limit);
+  @Get('/GetSessionIds')
+  async GetSessionIdsByUser(@Req() request: FastifyRequest, @Query() { limit = 5 }) {
+    const user_id =((request as any).user.virtual_id).toString();
+    return this.scoresService.getAllSessions(user_id, limit);
   }
 
 
