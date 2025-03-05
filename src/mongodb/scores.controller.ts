@@ -192,8 +192,7 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -483,8 +482,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -772,8 +770,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-       
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -1057,7 +1054,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1294,6 +1291,16 @@ export class ScoresController {
 
       let pause_count = 0;
       let audioFile;
+      let avg_pause = 0;
+
+      let pitch_classification = "";
+      let pitch_mean = 0;
+      let pitch_std = 0;
+      let intensity_classification = "";
+      let intensity_mean = 0;
+      let intensity_std = 0;
+      let expression_classification = "";
+      let smoothness_classification = "";
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
       
@@ -1312,6 +1319,15 @@ export class ScoresController {
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
+          avg_pause = audioOutput.avg_pause;
+          pitch_classification = audioOutput.pitch_classification; 
+          pitch_mean = audioOutput.pitch_mean;
+          pitch_std = audioOutput.pitch_std;       
+          intensity_classification = audioOutput.intensity_classification; 
+          intensity_mean = audioOutput.intensity_mean;
+          intensity_std = audioOutput.intensity_std;
+          expression_classification = audioOutput.expression_classification;
+          smoothness_classification = audioOutput.smoothness_classification; 
 
           if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -1713,7 +1729,10 @@ export class ScoresController {
               }),
             ),
         );
-
+        let tempo_classification = textEvalMatrices.tempo_classification;
+        let pause_count_textEval = textEvalMatrices.pause_count;
+        let words_per_minute = textEvalMatrices.words_per_minute;
+        let rate_classification = textEvalMatrices.rate_classification;
         if (mode !== 'offline') {
 
         if (process.env.denoiserEnabled === "true") {
@@ -1774,6 +1793,7 @@ export class ScoresController {
           100;
 
         const createdAt = new Date().toISOString().replace('Z', '+00:00');
+        let accuracy_classification = this.scoresService.getAccuracyClassification(CreateLearnerProfileDto.contentType, fluencyScore);
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id,
@@ -1825,6 +1845,37 @@ export class ScoresController {
             silence_Pause: {
               total_duration: 0,
               count: pause_count,
+            },
+            prosody_fluency: {
+              pitch: { 
+                pitch_classification: pitch_classification,
+                pitch_mean: pitch_mean,
+                pitch_std: pitch_std
+              },
+              intensity: {
+                intensity_classification: intensity_classification,
+                intensity_mean: intensity_mean,
+                intensity_std: intensity_std
+              },
+              tempo: {
+                tempo_classification: tempo_classification,
+                words_per_minute: words_per_minute,
+                pause_count: pause_count_textEval,
+               },
+              expression_classification: expression_classification,
+              smoothness: {
+                smoothness_classification: smoothness_classification,
+                pause_count:pause_count,
+                avg_pause: avg_pause
+              },
+              rate: {
+                rate_classification: rate_classification,
+                words_per_minute: words_per_minute,
+              },
+              accuracy: {
+                accuracy_classification: accuracy_classification,
+                fluencyScore: fluencyScore.toFixed(3),
+              }
             },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
@@ -1957,11 +2008,16 @@ export class ScoresController {
       let similarityDenoisedText = 0;
 
       let pause_count = 0;
-      
-      let pitch_classification: string | null = null;
-      let intensity_classification: string | null = null;
-      let expression_classification: string | null = null;
-      let smoothness_classification: string | null = null;
+      let avg_pause = 0;
+
+      let pitch_classification = "";
+      let pitch_mean = 0;
+      let pitch_std = 0;
+      let intensity_classification = "";
+      let intensity_mean = 0;
+      let intensity_std = 0;
+      let expression_classification = "";
+      let smoothness_classification = "";
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
@@ -1984,8 +2040,13 @@ export class ScoresController {
             asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
             pause_count = audioOutput.pause_count || 0;
-            pitch_classification = audioOutput.pitch_classification;         
+            avg_pause = audioOutput.avg_pause;
+            pitch_classification = audioOutput.pitch_classification; 
+            pitch_mean = audioOutput.pitch_mean;
+            pitch_std = audioOutput.pitch_std;       
             intensity_classification = audioOutput.intensity_classification; 
+            intensity_mean = audioOutput.intensity_mean;
+            intensity_std = audioOutput.intensity_std;
             expression_classification = audioOutput.expression_classification;
             smoothness_classification = audioOutput.smoothness_classification; 
 
@@ -2020,7 +2081,11 @@ export class ScoresController {
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
         const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-
+        let tempo_classification = textEvalMatrices.tempo_classification;
+        let pause_count_textEval = textEvalMatrices.pause_count;
+        let words_per_minute = textEvalMatrices.words_per_minute;
+        let rate_classification = textEvalMatrices.rate_classification;
+  
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
 
@@ -2096,6 +2161,7 @@ export class ScoresController {
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
+        let accuracy_classification = this.scoresService.getAccuracyClassification(CreateLearnerProfileDto.contentType, fluencyScore);
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id, // userid sent by client
@@ -2143,6 +2209,37 @@ export class ScoresController {
             silence_Pause: {
               total_duration: 0,
               count: pause_count,
+            },
+            prosody_fluency: {
+              pitch: { 
+                pitch_classification: pitch_classification,
+                pitch_mean: pitch_mean,
+                pitch_std: pitch_std
+              },
+              intensity: {
+                intensity_classification: intensity_classification,
+                intensity_mean: intensity_mean,
+                intensity_std: intensity_std
+              },
+              tempo: {
+                tempo_classification: tempo_classification,
+                words_per_minute: words_per_minute,
+                pause_count: pause_count_textEval,
+               },
+              expression_classification: expression_classification,
+              smoothness: {
+                smoothness_classification: smoothness_classification,
+                pause_count:pause_count,
+                avg_pause: avg_pause
+              },
+              rate: {
+                rate_classification: rate_classification,
+                words_per_minute: words_per_minute,
+              },
+              accuracy: {
+                accuracy_classification: accuracy_classification,
+                fluencyScore: fluencyScore.toFixed(3),
+              }
             },
             reptitionsCount: reptitionCount,
             asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
@@ -3889,6 +3986,140 @@ export class ScoresController {
       } else {
         sessionResult = 'fail';
       }
+      // NEW: Compute fluencyResult only for English showcase.
+      let fluencyResult: string;
+      if (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) {
+        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
+          // Determine pass threshold based on milestone level.
+          // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
+          const userLevelNum = parseInt(previous_level.replace('m', ''), 10);
+          const passThreshold = (userLevelNum >= 4) ? 3.0 : 2.6;
+        
+          // Retrieve all audio records for the given sub-session and language 'en' or kn
+          
+          const allAudioRecords = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
+        
+          const totalAudios = allAudioRecords.length;
+          let passCount = 0;
+        
+          // Loop through each audio record.
+          for (const record of allAudioRecords) {
+            const prosody = record.prosody_fluency || {};
+            const exprClass = prosody.expression_classification || "Very Disfluent";
+            const smoothClass = (prosody.smoothness && prosody.smoothness.smoothness_classification) || "Very Disfluent";
+            const accClass = (prosody.accuracy && prosody.accuracy.accuracy_classification) || "Very Disfluent";
+            const rateClass = (prosody.rate && prosody.rate.rate_classification) || "Very Disfluent";
+        
+            // Convert the classification strings to numeric scores.
+            const exprScore = this.scoresService.classificationToScore(exprClass);
+            const smoothScore = this.scoresService.classificationToScore(smoothClass);
+            const accScore = this.scoresService.classificationToScore(accClass);
+            const rateScore = this.scoresService.classificationToScore(rateClass);
+        
+            // Compute the weighted score.
+            const weightedScore = (exprScore * 0.20) + (smoothScore * 0.10) + (accScore * 0.40) + (rateScore * 0.30);
+
+            // Determine if this record passes.
+            let recordPass = false;
+            if (userLevelNum >= 4) {
+              if (weightedScore >= passThreshold) {
+                recordPass = true;
+              } else {
+                // Exception: for M4+, if weightedScore is below 3.0, then check for these combinations.
+                if (
+                  (exprClass === 'Moderately Fluent' && smoothClass === 'Disfluent' && accClass === 'Moderately Fluent' && rateClass === 'Moderately Fluent') ||
+                  (exprClass === 'Disfluent' && smoothClass === 'Fluent' && accClass === 'Moderately Fluent' && rateClass === 'Moderately Fluent') ||
+                  (exprClass === 'Very Disfluent' && smoothClass === 'Moderately Fluent' && accClass === 'Moderately Fluent' && rateClass === 'Fluent')
+                ) {
+                  recordPass = true;
+                }
+              }
+            } else {
+              // For levels below M4, use the normal threshold.
+              recordPass = (weightedScore >= passThreshold);
+            }
+        
+            if (weightedScore >= passThreshold) {
+              passCount++;
+            }
+          }
+        
+          // Even/odd logic: 
+          // For even total audios: pass if passCount >= (totalAudios / 2)
+          // For odd total audios: pass if passCount > (totalAudios / 2)
+          if (totalAudios > 0) {
+            if (totalAudios % 2 === 0) {
+              fluencyResult = (passCount >= totalAudios / 2) ? 'pass' : 'fail';
+            } else {
+              fluencyResult = (passCount > totalAudios / 2) ? 'pass' : 'fail';
+            }
+          } else {
+            // If no audio records are present, assign a default value.
+            fluencyResult = 'fail';
+          }
+        }
+      }
+      let prosodyResult: string;
+      if (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) {
+        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
+          const userLevelNum = previous_level ? parseInt(previous_level.replace('m', ''), 10) : 0;
+          if (userLevelNum >= 6) {
+            const allAudioRecordsProsody = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
+          
+            const totalAudiosProsody = allAudioRecordsProsody.length;
+            let passCountProsody = 0;
+          
+            // Helper function: normalize classification – valid values are 'natural', 'flat', 'exaggerated', 'erratic'
+            const normalizeClassification = (cls: string): string => {
+              const valid = ['natural', 'flat', 'exaggerated', 'erratic'];
+              const lower = cls.toLowerCase();
+              return valid.includes(lower) ? lower : 'erratic';
+            };
+          
+            for (const record of allAudioRecordsProsody) {
+              const prosody = record.prosody_fluency || {};
+              const pitchClass = normalizeClassification(prosody.pitch?.pitch_classification || "erratic");
+              const intensityClass = normalizeClassification(prosody.intensity?.intensity_classification || "erratic");
+              const tempoClass = normalizeClassification(prosody.tempo?.tempo_classification || "erratic");
+          
+              // Rule 1: If any feature is 'erratic', record fails.
+              let recordProsodyPass = true;
+              if (pitchClass === 'erratic' || intensityClass === 'erratic' || tempoClass === 'erratic') {
+                recordProsodyPass = false;
+              } else {
+                // Rule 2: If 2 or more features are 'exaggerated', record fails.
+                let exaggeratedCount = 0;
+                if (pitchClass === 'exaggerated') exaggeratedCount++;
+                if (intensityClass === 'exaggerated') exaggeratedCount++;
+                if (tempoClass === 'exaggerated') exaggeratedCount++;
+                if (exaggeratedCount >= 2) {
+                  recordProsodyPass = false;
+                }
+              }
+              if (recordProsodyPass) {
+                passCountProsody++;
+              }
+            }
+          
+            if (totalAudiosProsody > 0) {
+              prosodyResult = (totalAudiosProsody % 2 === 0)
+                ? ((passCountProsody >= totalAudiosProsody / 2) ? 'pass' : 'fail')
+                : ((passCountProsody > totalAudiosProsody / 2) ? 'pass' : 'fail');
+            } else {
+              prosodyResult = 'fail';
+            }
+          } else {
+            // For users below level m6, we do not compute prosodyResult.
+            prosodyResult = undefined;
+          }
+        }
+      }
+      
+      // If fluencyResult is computed and is 'fail', enforce overall sessionResult to 'fail'
+      if ((typeof fluencyResult !== 'undefined' && fluencyResult === 'fail') ||
+          (typeof prosodyResult !== 'undefined' && prosodyResult === 'fail')) {
+        sessionResult = 'fail';
+      }
 
       let milestone_level = previous_level;
 
@@ -4315,7 +4546,10 @@ export class ScoresController {
             }
           });
       }
-
+      if (!( (getSetResult.language.toLowerCase() === 'en' || getSetResult.language.toLowerCase() === 'kn') && (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) )) {
+        fluencyResult = undefined; 
+        prosodyResult = undefined;
+      }
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
@@ -4326,6 +4560,8 @@ export class ScoresController {
           targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
+          fluencyResult: fluencyResult,  
+          prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
         },
