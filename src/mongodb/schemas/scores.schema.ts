@@ -80,6 +80,37 @@ export class Score {
         },
         reptitionsCount: { type: Number },
         asrOutput: { type: String, required: true },
+        prosody_fluency: {
+          pitch: { 
+            pitch_classification: { type: String, required: false },
+            pitch_mean: { type: Number, required: false },
+            pitch_std: { type: Number, required: false },
+          },
+          intensity: {
+            intensity_classification: { type: String, required: false },
+            intensity_mean: { type: Number, required: false },
+            intensity_std: { type: Number, required: false },
+          },
+          tempo:{
+            tempo_classification: { type: String, required: false },
+            words_per_minute: { type: Number, required: false },
+            pause_count: { type: Number, required: false },
+            },
+          expression_classification: { type: String, required: false },
+          smoothness: {
+            smoothness_classification: { type: String, required: false },
+            pause_count: { type: Number, required: false },
+            avg_pause: { type: Number, required: false },
+           },
+          rate: {
+            rate_classification: { type: String, required: false },
+            words_per_minute: { type: Number, required: false },
+          },
+          accuracy: {
+            accuracy_classification: { type: String, required: false },
+            fluencyScore: { type: Number, index: true },
+          }
+        },
         isRetry: { type: Boolean, required: false },
         mode: { type: String, required: false },
       },
@@ -147,6 +178,37 @@ export class Score {
     };
     reptitionsCount: number;
     asrOutput: string;
+    prosody_fluency: {
+      pitch: { 
+        pitch_classification: string;
+        pitch_mean: number;
+        pitch_std: number;
+      };
+      intensity: {
+        intensity_classification: string;
+        intensity_mean: number;
+        intensity_std: number;
+      };
+      tempo:{
+        tempo_classification: string;
+        words_per_minute: number;
+        pause_count: number;
+       };
+      expression_classification: string;
+      smoothness: {
+        smoothness_classification: string;
+        pause_count: number;
+        avg_pause: number;
+      };
+      rate: {
+        rate_classification: string;
+        words_per_minute: number;
+      };
+      accuracy: {
+        accuracy_classification: string;
+        fluencyScore: number;
+      }
+    };
     createdAt: Date;
     isRetry: boolean;
     mode: string;

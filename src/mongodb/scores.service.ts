@@ -86,6 +86,15 @@ export class ScoresService {
     let asrOutBeforeDenoised: any;
     let audio: any = data;
     let pause_count: number = 0;
+    let avg_pause: number = 0;
+    let pitch_classification : any;
+    let pitch_mean : number = 0;
+    let pitch_std : number = 0;
+    let intensity_classification : any;
+    let intensity_mean : number = 0;
+    let intensity_std : number = 0;
+    let expression_classification : any;
+    let smoothness_classification : any;
 
     let serviceId = '';
     switch (language) {
@@ -131,7 +140,8 @@ export class ScoresService {
         "base64_string": audio,
         "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
         "enablePauseCount": true,
-        "contentType": contentType
+        "contentType": contentType,
+        "enable_prosody_fluency" : true
       }
     }
 
@@ -139,6 +149,15 @@ export class ScoresService {
       .then((response) => {
         audio = response.data.denoised_audio_base64;
         pause_count = response.data.pause_count;
+        avg_pause = response.data.avg_pause;
+        pitch_classification = response.data.pitch_classification;
+        pitch_mean = response.data.pitch_mean;
+        pitch_std = response.data.pitch_std;
+        intensity_classification = response.data.intensity_classification;
+        intensity_mean = response.data.intensity_mean;
+        intensity_std = response.data.intensity_std;
+        expression_classification = response.data.expression_classification;
+        smoothness_classification = response.data.smoothness_classification;
       })
       .catch((error) => {
         console.log(error);
@@ -197,7 +216,7 @@ export class ScoresService {
       return output;
     }
 
-    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count };
+    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count, avg_pause: avg_pause, pitch_classification: pitch_classification, pitch_mean: pitch_mean, pitch_std: pitch_std, intensity_classification: intensity_classification, intensity_mean: intensity_mean,intensity_std: intensity_std, expression_classification: expression_classification, smoothness_classification: smoothness_classification };
   }
 
   async findAll(): Promise<any> {
@@ -2294,13 +2313,14 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string) {
+  async getTextMetrics(original_text: string, response_text: string, language: string, base64_audio: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
     
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
+      base64_string: base64_audio
     };
    
     const textEvalMatrices = await lastValueFrom(
@@ -2761,5 +2781,56 @@ export class ScoresService {
 
     // If no transformations were added, return the original word
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
+  }
+  getAccuracyClassification(contentType: string, score: number): string {
+    const ct = contentType.toLowerCase();
+    if (ct === 'word') {
+      if (score >= 0 && score < 0.6) return "Fluent";
+      else if (score >= 0.6 && score < 2) return "Moderately Fluent";
+      else if (score >= 2 && score <= 3) return "Disfluent";
+      else return "Very Disfluent";
+    } else if (ct === 'sentence') {
+      if (score >= 0 && score < 1.5) return "Fluent";
+      else if (score >= 1.5 && score < 4.0) return "Moderately Fluent";
+      else if (score >= 4.0 && score <= 6) return "Disfluent";
+      else return "Very Disfluent";
+    } else if (ct === 'paragraph') {
+      if (score >= 0 && score < 3) return "Fluent";
+      else if (score >= 3 && score < 6) return "Moderately Fluent";
+      else if (score >= 6 && score <= 8) return "Disfluent";
+      else return "Very Disfluent";
+    }
+    return "N/A";
+  }
+  public classificationToScore(classification: string): number {
+    switch (classification) {
+      case 'Fluent':
+        return 4;
+      case 'Moderately Fluent':
+        return 3;
+      case 'Disfluent':
+        return 2;
+      case 'Very Disfluent':
+        return 1;
+      default:
+        return 1;  
+    }
+  }
+  public async getSubSessionScores(subSessionId: string, language: string): Promise<any[]> {
+    // Find documents where at least one session in the sessions array has the matching sub_session_id and language.
+    const docs = await this.scoreModel.find({
+      'sessions.sub_session_id': subSessionId,
+      'sessions.language': language
+    }).lean();
+    
+    // Flatten the sessions array and then filter to only those matching exactly the sub_session_id and language.
+    const sessions = docs.reduce((acc: any[], doc: any) => {
+      if (doc.sessions && Array.isArray(doc.sessions)) {
+        const matching = doc.sessions.filter((s: any) => s.sub_session_id === subSessionId && s.language === language);
+        return acc.concat(matching);
+      }
+      return acc;
+    }, []);
+    return sessions;
   }
 }
