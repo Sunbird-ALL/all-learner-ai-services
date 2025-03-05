@@ -192,7 +192,7 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -482,7 +482,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -770,7 +770,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -1054,7 +1054,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
