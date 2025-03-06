@@ -5,7 +5,7 @@ import { JwtAuthGuard } from 'src/auth/auth.guard';
 
 @Injectable()
 export class VersionedAuthInterceptor implements NestInterceptor {
-  constructor(private jwtAuthGuard: JwtAuthGuard) {}
+  constructor(private readonly jwtAuthGuard: JwtAuthGuard) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();

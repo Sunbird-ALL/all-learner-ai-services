@@ -12,7 +12,7 @@ export class UserIdInterceptor implements NestInterceptor {
     if (version === 'v2') {
       // Extract token from headers
       const authHeader = request.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      if (!authHeader?.startsWith('Bearer '))  {
         throw new UnauthorizedException('Authorization token missing or invalid');
       }
 
