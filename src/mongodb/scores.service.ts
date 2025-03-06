@@ -1264,6 +1264,35 @@ export class ScoresService {
     return RecordData;
   }
 
+  async getCorrectnessBysubSession(
+    subSessionId: string,
+    language: string,
+  ) {
+    const threshold = 50;
+    let RecordData = [];
+
+    RecordData = await this.scoreModel.aggregate([
+      {
+        $unwind: '$sessions',
+      },
+      {
+        $match: {
+          'sessions.sub_session_id': subSessionId,
+          'sessions.language': language
+        },
+      },{
+        $group:{
+          _id:null,
+          count_scores_gte_50: {
+            $sum: {
+              $cond: [{ $gte: ['$sessions.correctness_score', threshold] }, 1, 0] // Conditional count
+            }
+        }
+      }
+     }
+    ])
+    return RecordData;
+  }
   async getFamiliarityByUser(userId: string, language: string) {
     const threshold = 0.7;
     let RecordData = [];

@@ -17,10 +17,12 @@ export class Score {
         original_text: { type: String, required: true },
         response_text: { type: String, required: true },
         construct_text: { type: String, required: true },
-        language: { type: String, required: true, index:true },
         read_duration: {type: Number, required: false},
         practice_duration: {type: Number, required: false},
         retry_count:{type: Number, required: false},
+        language: { type: String, required: true, index: true },
+        is_correct_choice:{ type: Boolean, required: false},
+        correctness_score: {type: Number, required: false},
         confidence_scores: [
           {
             token: { type: String, required: true, index: true },
@@ -129,7 +131,9 @@ export class Score {
     language: string; // content language
     read_duration: number; // duration for the frequency
     practice_duration: number; // duration for practicing the content
-    retry_count: number; // number of times usretry the content
+    retry_count: number; // number of times usretry the conte
+    is_correct_choice:boolean;
+    correctness_score:number;
     confidence_scores: {
       token: string;
       hexcode: string;

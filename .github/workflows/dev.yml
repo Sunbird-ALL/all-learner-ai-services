@@ -2,7 +2,7 @@ name: DEV DEPLOYMENT
 
 on:
   push:
-    branches: [ release-2.0-tn-dev ]
+    branches: [ all-1.3-dev ]
 
 jobs:
   build:
