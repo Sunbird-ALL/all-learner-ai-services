@@ -81,7 +81,7 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(data: any, language: string, contentType: string): Promise<any> {
+  async audioFileToAsrOutput(data: any, language: string, contentType: string, version: string): Promise<any> {
     let asrOutDenoisedOutput: any;
     let asrOutBeforeDenoised: any;
     let audio: any = data;
@@ -118,12 +118,11 @@ export class ScoresService {
       asrOutBeforeDenoised = await asrCall();
     }
 
-
-
+    const Api_url = process.env.ALL_TEXT_EVAL_API + `${version}`+ "/audio_processing";
     let denoiserConfig =
     {
       method: 'post',
-      url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
+      url: Api_url,
       headers: {
         'Content-Type': 'application/json'
       },
@@ -2294,8 +2293,8 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string) {
-    const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
+  async getTextMetrics(original_text: string, response_text: string, language: string, version: string) {
+    const url = process.env.ALL_TEXT_EVAL_API + `${version}` + "/getTextMatrices";
     
     const textData = {
       reference: original_text,

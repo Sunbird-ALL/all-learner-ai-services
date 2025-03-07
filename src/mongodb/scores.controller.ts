@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpStatus, Res, Query, ParseArrayPipe, Version, UseInterceptors, UseGuards, Req } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import {
   ApiBody,
   ApiExcludeEndpoint,
@@ -20,8 +20,11 @@ import en_config from "./config/language/en"
 import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
+import { UserIdInterceptor } from './interceptors/user_id.interceptor';
+import { VersionedAuthInterceptor } from './interceptors/versioned-auth.interceptor';
 
 @ApiTags('scores')
+@UseInterceptors(UserIdInterceptor)
 @Controller('scores')
 export class ScoresController {
   constructor(
@@ -76,8 +79,11 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Tamil',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/ta')
   async updateLearnerProfileTa(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
@@ -129,7 +135,7 @@ export class ScoresController {
             const decoded = audioFile.toString('base64');
 
             // Send Audio file to ASR to process and provide vector with char and score
-            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'],request.version);
 
             asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -157,9 +163,9 @@ export class ScoresController {
             }
           }
           responseText = CreateLearnerProfileDto.output[0].source;
-        }else{
-            responseText =CreateLearnerProfileDto.response_text;
-            pause_count = CreateLearnerProfileDto.pause_count;
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
 
 
@@ -192,7 +198,7 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, request.version)
 
         if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -308,6 +314,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
@@ -316,6 +323,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -369,8 +377,11 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Gujarati',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/gu')
   async updateLearnerProfileGu(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
@@ -424,7 +435,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'], request.version);
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -460,10 +471,10 @@ export class ScoresController {
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
-        
+
         reptitionCount = constructedTextRepCountData.reptitionCount;
         constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-        
+
 
         // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
@@ -483,7 +494,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, request.version)
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -601,6 +612,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         originalText: originalText,
@@ -610,6 +622,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -663,15 +676,18 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for odiya',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/or')
   async updateLearnerProfileOr(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
       const vowelSignArr = or_config.vowel;
       const language = or_config.language_code;
-      
+
       let createScoreData;
 
       let asrOutDenoised;
@@ -692,9 +708,9 @@ export class ScoresController {
       let confidence_scoresArr = [];
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
-  
+
       const originalText = CreateLearnerProfileDto.original_text;
-      
+
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
       let constructText = '';
@@ -715,7 +731,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'], request.version);
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -747,7 +763,7 @@ export class ScoresController {
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        
+
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
@@ -772,8 +788,8 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
-       
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, request.version)
+
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -875,7 +891,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       let originalTextSyllables = [];
       originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -885,8 +901,9 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-     
+
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         originalText: originalText,
@@ -896,6 +913,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -950,8 +968,11 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Hindi',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/hi')
   async updateLearnerProfileHi(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
@@ -1000,7 +1021,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'], request.version);
 
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -1057,7 +1078,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, request.version)
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1174,6 +1195,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         originalText: originalText,
@@ -1183,6 +1205,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -1236,8 +1259,11 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Kannada',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/kn')
   async updateLearnerProfileKn(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
@@ -1296,46 +1322,47 @@ export class ScoresController {
       let audioFile;
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-      
-      if(mode == 'online' || mode == undefined){
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-          const audioOutput = await this.scoresService.audioFileToAsrOutput(
-            decoded,
-            'kn',
-            CreateLearnerProfileDto['contentType']
-          );
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
 
-          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
+        if (mode == 'online' || mode == undefined) {
+          if (
+            CreateLearnerProfileDto['output'] === undefined &&
+            CreateLearnerProfileDto.audio !== undefined
+          ) {
+            audioFile = CreateLearnerProfileDto.audio;
+            const decoded = audioFile.toString('base64');
+            const audioOutput = await this.scoresService.audioFileToAsrOutput(
+              decoded,
+              'kn',
+              CreateLearnerProfileDto['contentType'],
+              request.version
+            );
+            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+            pause_count = audioOutput.pause_count || 0;
 
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
+            if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            } else {
+              CreateLearnerProfileDto['output'] = asrOutDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            }
+
+            if (CreateLearnerProfileDto.output[0].source === '') {
+              return response.status(HttpStatus.BAD_REQUEST).send({
+                status: 'error',
+                message:
+                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+              });
+            }
           }
+          responseText = CreateLearnerProfileDto.output[0].source;
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
-        responseText = CreateLearnerProfileDto.output[0].source;
-      }else{
-        responseText = CreateLearnerProfileDto.response_text;
-        pause_count = CreateLearnerProfileDto.pause_count;
-      }
 
 
         const responseTextTokensArr = responseText.split('');
@@ -1690,8 +1717,8 @@ export class ScoresController {
         }
 
 
-        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
+        const url = process.env.ALL_TEXT_EVAL_API + `${request.version}`+ "/getTextMatrices";
+       
         const textData = {
           reference: CreateLearnerProfileDto.original_text,
           hypothesis: CreateLearnerProfileDto.output[0].source,
@@ -1716,32 +1743,32 @@ export class ScoresController {
 
         if (mode !== 'offline') {
 
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
+          if (process.env.denoiserEnabled === "true") {
+            let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+            let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+            let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
 
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
+            if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+              improved = true;
+            }
+
+            let createDenoiserOutputLog = {
+              user_id: CreateLearnerProfileDto.user_id,
+              session_id: CreateLearnerProfileDto.session_id,
+              sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+              contentType: CreateLearnerProfileDto.contentType,
+              contentId: CreateLearnerProfileDto.contentId || "",
+              language: language,
+              original_text: originalText,
+              response_text: nonDenoisedresponseText,
+              denoised_response_text: DenoisedresponseText,
+              improved: improved,
+              comment: ""
+            }
+
+            await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
           }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
 
         }
 
@@ -1829,7 +1856,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -1868,6 +1895,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
@@ -1877,11 +1905,13 @@ export class ScoresController {
     } catch (err) {
       console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
     }
   }
+
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
@@ -1930,8 +1960,11 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for English',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
@@ -1974,7 +2007,7 @@ export class ScoresController {
             const decoded = audioFile.toString('base64');
 
             // Send Audio file to ASR to process and provide vector with char and score
-            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'], request.version);
 
             asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
@@ -2010,7 +2043,7 @@ export class ScoresController {
         }
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language)
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, request.version)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -2138,7 +2171,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -2165,6 +2198,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
@@ -2174,6 +2208,7 @@ export class ScoresController {
     } catch (err) {
       console.log(err);
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -2224,8 +2259,13 @@ export class ScoresController {
   })
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiOperation({ summary: 'Store students learner ai profile, from the ASR output for a given wav file. This API will work for telgu' })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/updateLearnerProfile/te')
-  async updateLearnerProfileTe(@Res() response: FastifyReply, @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
+  async updateLearnerProfileTe(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
     try {
       let originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
@@ -2304,7 +2344,7 @@ export class ScoresController {
           const decoded = audioFile.toString('base64');
 
           // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType'], request.version);
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
@@ -2645,7 +2685,7 @@ export class ScoresController {
 
         }
 
-        const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
+        const url = process.env.ALL_TEXT_EVAL_API + `${request.version}`+ "/getTextMatrices";
 
         const textData = {
           "reference": CreateLearnerProfileDto.original_text,
@@ -2790,6 +2830,7 @@ export class ScoresController {
       );
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         msg: "Successfully stored data to learner profile",
         responseText: responseText,
@@ -2798,6 +2839,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: "error",
         message: "Server error - " + err
       });
@@ -2809,6 +2851,8 @@ export class ScoresController {
     name: 'sessionId',
     example: '20200765061699008295109',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Get('/GetTargets/session/:sessionId')
   @ApiResponse({
     status: 200,
@@ -2842,15 +2886,20 @@ export class ScoresController {
   })
   @ApiOperation({ summary: 'Get Targets character by session id' })
   async GetTargetsbySession(
+    @Req() request: FastifyRequest,
     @Param('sessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const targetResult = await this.scoresService.getTargetsBySession(id, language);
-      return response.status(HttpStatus.OK).send(targetResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        targetResult
+    });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -2861,7 +2910,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('/GetTargets/user/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('/GetTargets/user/:userId?')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
     status: 200,
@@ -2889,6 +2940,7 @@ export class ScoresController {
     },
   })
   async GetTargetsbyUser(
+    @Req() request: FastifyRequest,
     @Param('userId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -2898,9 +2950,13 @@ export class ScoresController {
         id,
         language,
       );
-      return response.status(HttpStatus.OK).send(targetResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        targetResult
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -2911,6 +2967,8 @@ export class ScoresController {
     name: 'subsessionId',
     example: '2020076506',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Get('/GetTargets/subsession/:subsessionId')
   @ApiOperation({ summary: 'Get Targets character by subsessionId' })
   @ApiResponse({
@@ -2944,6 +3002,7 @@ export class ScoresController {
     },
   })
   async GetTargetsbysubsession(
+    @Req() request: FastifyRequest,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -2953,9 +3012,13 @@ export class ScoresController {
         id,
         language
       );
-      return response.status(HttpStatus.OK).send(targetResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        targetResult
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -2966,6 +3029,8 @@ export class ScoresController {
     name: 'subsessionId',
     example: '2020076506',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Get('/GetFamiliarity/subsession/:subsessionId')
   @ApiOperation({ summary: 'Get familiarity character by sub session' })
   @ApiResponse({
@@ -2999,6 +3064,7 @@ export class ScoresController {
     },
   })
   async GetFamiliaritybysubsession(
+    @Req() request: FastifyRequest,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -3009,9 +3075,13 @@ export class ScoresController {
           id,
           language
         );
-      return response.status(HttpStatus.OK).send(familiarityResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        familiarityResult
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3022,6 +3092,8 @@ export class ScoresController {
     name: 'sessionId',
     example: '20200765061699008295109',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Get('/GetFamiliarity/session/:sessionId')
   @ApiOperation({ summary: 'Get Familiarity of characters by session id' })
   @ApiResponse({
@@ -3055,6 +3127,7 @@ export class ScoresController {
     },
   })
   async GetFamiliarityBysession(
+    @Req() request: FastifyRequest,
     @Param('sessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -3062,9 +3135,13 @@ export class ScoresController {
     try {
       const familiarityResult =
         await this.scoresService.getFamiliarityBySession(id, language);
-      return response.status(HttpStatus.OK).send(familiarityResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        familiarityResult
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3075,7 +3152,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('/GetFamiliarity/user/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('/GetFamiliarity/user/:userId?')
   @ApiOperation({ summary: 'Get Familiarity of characters by user id' })
   @ApiResponse({
     status: 200,
@@ -3103,6 +3182,7 @@ export class ScoresController {
     },
   })
   async GetFamiliarityByUser(
+    @Req() request: FastifyRequest,
     @Param('userId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -3111,9 +3191,13 @@ export class ScoresController {
       const familiarityResult = await this.scoresService.getFamiliarityByUser(
         id, language
       );
-      return response.status(HttpStatus.OK).send(familiarityResult);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        familiarityResult
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3124,7 +3208,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('GetContent/char/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('GetContent/char/:userId?')
   @ApiOperation({
     summary:
       'Get a set of chars for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3141,6 +3227,7 @@ export class ScoresController {
     },
   })
   async GetContentCharbyUser(
+    @Req() request: FastifyRequest,
     @Param('userId') id: string,
     @Query('language') language: string,
     @Query() { contentlimit = 5 },
@@ -3150,22 +3237,12 @@ export class ScoresController {
   ) {
     try {
       let currentLevel = 'm0';
-      const recordData: any = await this.scoresService.getlatestmilestone(
-        id,
-        language,
-      );
+      const recordData: any = await this.scoresService.getlatestmilestone(id,language);
       currentLevel = recordData[0]?.milestone_level || 'm0';
 
-      const getGetTarget = await this.scoresService.getTargetsByUser(
-        id,
-        language,
-      );
-      const validations = await this.scoresService.getAssessmentRecordsUserid(
-        id,
-      );
-      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-        language,
-      );
+      const getGetTarget = await this.scoresService.getTargetsByUser(id,language);
+      const validations = await this.scoresService.getAssessmentRecordsUserid(id);
+      const tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
 
       let getGetTargetCharArr = getGetTarget
         .filter((getGetTargetEle, index) => {
@@ -3225,7 +3302,7 @@ export class ScoresController {
         });
       }
 
-      const url = process.env.ALL_CONTENT_SERVICE_API;
+      const url = process.env.ALL_CONTENT_SERVICE_API + `${request.version}` + "/content/getContent";
 
       const textData = {
         tokenArr: getGetTargetCharArr,
@@ -3243,6 +3320,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3280,6 +3358,7 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
         content: contentArr,
         contentForToken: contentForTokenArr,
         getTargetChar: getGetTargetCharArr,
@@ -3287,6 +3366,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3297,7 +3377,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('GetContent/word/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('GetContent/word/:userId?')
   @ApiOperation({
     summary:
       'Get a set of words for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3313,19 +3395,20 @@ export class ScoresController {
       },
     },
   })
-  async GetContentWordbyUser(@Param('userId') id: string, @Query('language') language: string, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentWordbyUser(
+    @Req() request: FastifyRequest,
+    @Param('userId') id: string,
+    @Query('language') language: string,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
-      const recordData: any = await this.scoresService.getlatestmilestone(
-        id,
-        language,
-      );
-      const getGetTarget = await this.scoresService.getTargetsByUser(
-        id,
-        language,
-      );
+      const recordData: any = await this.scoresService.getlatestmilestone( id, language);
+      const getGetTarget = await this.scoresService.getTargetsByUser(id,language);
 
       let currentLevel = 'm0';
       currentLevel = recordData[0]?.milestone_level || 'm0';
@@ -3344,15 +3427,12 @@ export class ScoresController {
         });
 
       let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
-
       let contentLevel = contentComplexityLevel.contentLevel;
       let complexityLevel = contentComplexityLevel.complexityLevel;
 
       if (language === 'en') {
 
-        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-          language,
-        );
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
 
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
@@ -3370,8 +3450,8 @@ export class ScoresController {
         }
       }
 
-      const url = process.env.ALL_CONTENT_SERVICE_API;
-
+      const url = process.env.ALL_CONTENT_SERVICE_API + `${request.version}` + "/content/getContent";
+      
       const textData = {
         "tokenArr": getGetTargetCharArr,
         "language": language || "ta",
@@ -3388,6 +3468,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3397,7 +3478,7 @@ export class ScoresController {
             }),
           ),
       );
-
+    
       let contentArr;
       let contentForTokenArr;
 
@@ -3428,6 +3509,7 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
         content: contentArr,
         contentForToken: contentForTokenArr,
         getTargetChar: getGetTargetCharArr,
@@ -3436,6 +3518,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3446,7 +3529,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('GetContent/sentence/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('GetContent/sentence/:userId?')
   @ApiOperation({
     summary:
       'Get a set of sentences for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3462,19 +3547,23 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],@Query('category') category,@Query('story_mode') story_mode,@Query('type_of_learner') type_of_learner, @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(
+    @Req() request: FastifyRequest,
+    @Param('userId') id: string,
+    @Query('language') language,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Query('category') category,
+    @Query('story_mode') story_mode,
+    @Query('type_of_learner') type_of_learner,
+    @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
-      const recordData: any = await this.scoresService.getlatestmilestone(
-        id,
-        language,
-      );
-      const getGetTarget = await this.scoresService.getTargetsByUser(
-        id,
-        language,
-      );
+      const recordData: any = await this.scoresService.getlatestmilestone(id, language);
+      const getGetTarget = await this.scoresService.getTargetsByUser(id, language);
 
       let currentLevel = 'm0';
       currentLevel = recordData[0]?.milestone_level || 'm0';
@@ -3499,9 +3588,7 @@ export class ScoresController {
 
       if (language === 'en') {
 
-        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(
-          language,
-        );
+        const tokenHexcodeData = await this.scoresService.gethexcodeMapping(language);
 
         getGetTargetCharArr.forEach((getGetTargetCharArrEle) => {
           const tokenGraphemes = getTokenGraphemes(getGetTargetCharArrEle);
@@ -3519,7 +3606,7 @@ export class ScoresController {
         }
       }
 
-      const url = process.env.ALL_CONTENT_SERVICE_API;
+      const url = process.env.ALL_CONTENT_SERVICE_API + `${request.version}` + "/content/getContent";
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3531,7 +3618,7 @@ export class ScoresController {
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
         "category": category || "",
-        "type_of_learner" : type_of_learner, 
+        "type_of_learner": type_of_learner,
         "story_mode": story_mode
       };
 
@@ -3540,6 +3627,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3580,6 +3668,7 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
         content: contentArr,
         contentForToken: contentForTokenArr,
         getTargetChar: getGetTargetCharArr,
@@ -3588,6 +3677,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3598,7 +3688,9 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
-  @Get('GetContent/paragraph/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('GetContent/paragraph/:userId?')
   @ApiOperation({
     summary:
       'Get a set of paragraphs for the user to practice, upon feeding the Get Target Chars to Content Algorithm by user id',
@@ -3614,19 +3706,20 @@ export class ScoresController {
       },
     },
   })
-  async GetContentParagraphbyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Res() response: FastifyReply) {
+  async GetContentParagraphbyUser(
+    @Req() request: FastifyRequest,
+    @Param('userId') id: string,
+    @Query('language') language,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+    @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
-      const recordData: any = await this.scoresService.getlatestmilestone(
-        id,
-        language,
-      );
-      const getGetTarget = await this.scoresService.getTargetsByUser(
-        id,
-        language,
-      );
+      const recordData: any = await this.scoresService.getlatestmilestone(id,language);
+      const getGetTarget = await this.scoresService.getTargetsByUser(id,language);
 
       let currentLevel = 'm0';
       currentLevel = recordData[0]?.milestone_level || 'm0';
@@ -3645,7 +3738,6 @@ export class ScoresController {
         });
 
       let contentComplexityLevel = await this.scoresService.getMilestoneBasedContentComplexity(currentLevel);
-
       let contentLevel = contentComplexityLevel.contentLevel;
       let complexityLevel = contentComplexityLevel.complexityLevel;
 
@@ -3671,7 +3763,7 @@ export class ScoresController {
         }
       }
 
-      const url = process.env.ALL_CONTENT_SERVICE_API;
+      const url = process.env.ALL_CONTENT_SERVICE_API + `${request.version}` + "/content/getContent";
 
       const textData = {
         "tokenArr": getGetTargetCharArr,
@@ -3689,6 +3781,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': request.headers.authorization
             },
           })
           .pipe(
@@ -3729,6 +3822,7 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
         content: contentArr,
         contentForToken: contentForTokenArr,
         getTargetChar: getGetTargetCharArr,
@@ -3737,6 +3831,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -3800,8 +3895,13 @@ export class ScoresController {
     summary:
       'This API will give pass or fail result with gettarget count for records performed in the subsession. Also this API perform milestone update for discovery and showcase.',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/getSetResult')
-  async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
+  async getSetResult(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() getSetResult: any) {
     try {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
@@ -4308,6 +4408,7 @@ export class ScoresController {
       }
 
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         data: {
           sessionResult: sessionResult,
@@ -4323,6 +4424,7 @@ export class ScoresController {
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -4346,8 +4448,11 @@ export class ScoresController {
       },
     },
   })
-  @Get('/getMilestone/user/:userId')
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('/getMilestone/user/:userId?')
   async getMilestone(
+    @Req() request: FastifyRequest,
     @Param('userId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -4359,11 +4464,13 @@ export class ScoresController {
       );
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       return response.status(HttpStatus.CREATED).send({
+        apiVersion: request?.version,
         status: 'success',
         data: { milestone_level: milestone_level },
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: 'error',
         message: 'Server error - ' + err,
       });
@@ -4371,8 +4478,13 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/GetMissingChars')
-  async GetMissingChars(@Res() response: FastifyReply, @Body() storyData: any) {
+  async GetMissingChars(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() storyData: any) {
     const data = await this.scoresService.getMissingChars(
       storyData.storyLanguage,
     );
@@ -4441,6 +4553,7 @@ export class ScoresController {
     const notIncludedTotal = notIncluded.length;
 
     return response.status(HttpStatus.CREATED).send({
+      apiVersion: request?.version,
       status: 'success',
       matched: matched,
       matchtedTotal: matchtedTotal,
@@ -4450,8 +4563,11 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/addAssessmentInput')
   async AddAssessmentInput(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() assessmentInput: AssessmentInputDto,
   ) {
@@ -4459,14 +4575,19 @@ export class ScoresController {
       assessmentInput,
     );
     return response.status(HttpStatus.CREATED).send({
+      apiVersion: request?.version,
       status: 'success',
       msg: 'Successfully stored data to Assessment Input',
     });
   }
 
   @ApiExcludeEndpoint(true)
-  @Get('/GetSessionIds/:userId')
-  async GetSessionIdsByUser(@Param('userId') id: string, @Query() { limit = 5 }) {
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
+  @Get('/GetSessionIds/:userId?')
+  async GetSessionIdsByUser(
+    @Param('userId') id: string,
+    @Query() { limit = 5 }) {
     return this.scoresService.getAllSessions(id, limit);
   }
 
@@ -4532,8 +4653,13 @@ export class ScoresController {
     summary:
       'This API will give the users target',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/getUsersTargets')
-  async GetUsersTargets(@Res() response: FastifyReply, @Body() data: any) {
+  async GetUsersTargets(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() data: any) {
     try {
       const { userIds, language } = data;
       let recordData = []
@@ -4545,9 +4671,13 @@ export class ScoresController {
           targetCount: userRecord.length
         })
       }
-      return response.status(HttpStatus.OK).send(recordData);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        recordData
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: "error",
         message: "Server error - " + err
       });
@@ -4619,8 +4749,13 @@ export class ScoresController {
     summary:
       'This API will give the users familiarity',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/getUsersFamiliarity')
-  async GetUsersFamiliarity(@Res() response: FastifyReply, @Body() data: any) {
+  async GetUsersFamiliarity(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() data: any) {
     try {
       const { userIds, language } = data;
       let recordData = []
@@ -4633,9 +4768,13 @@ export class ScoresController {
           familiarityCount: familiarityRecord.length
         })
       }
-      return response.status(HttpStatus.OK).send(recordData);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        recordData
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: "error",
         message: "Server error - " + err
       });
@@ -4685,8 +4824,13 @@ export class ScoresController {
     summary:
       'This API will give the users milestone level',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/getUsersMilestones')
-  async getUsersMilestones(@Res() response: FastifyReply, @Body() data: any) {
+  async getUsersMilestones(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() data: any) {
     try {
       const { userIds, language } = data;
       let recordData = [];
@@ -4699,9 +4843,13 @@ export class ScoresController {
           data: { milestone_level: milestone_level },
         });
       }
-      return response.status(HttpStatus.OK).send(recordData);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        recordData
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: "error",
         message: "Server error - " + err
       });
@@ -4811,8 +4959,13 @@ export class ScoresController {
     summary:
       'This API will give the users familiarity & Target',
   })
+  @Version(['1', '2'])
+  @UseInterceptors(VersionedAuthInterceptor)
   @Post('/getUserProfile')
-  async GetUserProfile(@Res() response: FastifyReply, @Body() data: any) {
+  async GetUserProfile(
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() data: any) {
     try {
       const { userId, language } = data;
       let target_Data: any = []
@@ -4843,9 +4996,13 @@ export class ScoresController {
         Target: target_Data,
         Famalarity: famalarity_Data
       };
-      return response.status(HttpStatus.OK).send(finalResponse);
+      return response.status(HttpStatus.OK).send({
+        apiVersion: request?.version,
+        finalResponse
+      });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        apiVersion: request?.version,
         status: "error",
         message: "Server error - " + err
       });
