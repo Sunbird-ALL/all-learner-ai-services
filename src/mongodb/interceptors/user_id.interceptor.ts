@@ -1,18 +1,19 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, UnauthorizedException } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { createHash } from 'crypto';
-import * as jose from 'jose';
 
 @Injectable()
 export class UserIdInterceptor implements NestInterceptor {
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+    const jose = await import('jose');
+
     const request = context.switchToHttp().getRequest();
     const version = request.url.split('/')[1]; // Extract API version (e.g., "v1" or "v2")
 
     if (version === 'v2') {
       // Extract token from headers
       const authHeader = request.headers.authorization;
-      if (!authHeader?.startsWith('Bearer '))  {
+      if (!authHeader?.startsWith('Bearer ')) {
         throw new UnauthorizedException('Authorization token missing or invalid');
       }
 
