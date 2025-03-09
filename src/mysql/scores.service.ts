@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { CreateScoreDto } from './dto/create-score.dto';
-import { UpdateScoreDto } from './dto/update-score.dto';
+import { CreateScoreDto } from './dto/create-score.dto.js';
+import { UpdateScoreDto } from './dto/update-score.dto.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Score } from './entities/score.entity';
+import { Score } from './entities/score.entity.js';
 
 @Injectable()
 export class ScoresService {

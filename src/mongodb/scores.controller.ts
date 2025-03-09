@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, HttpStatus, Res, Query, ParseArrayPipe, Version, UseInterceptors, UseGuards, Req } from '@nestjs/common';
-import { ScoresService } from './scores.service';
-import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
-import { AssessmentInputDto } from './dto/AssessmentInput.dto';
+import { ScoresService } from './scores.service.js';
+import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto.js';
+import { AssessmentInputDto } from './dto/AssessmentInput.dto.js';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import {
   ApiBody,
@@ -15,13 +15,13 @@ import {
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
-import ta_config from "./config/language/ta";
-import en_config from "./config/language/en"
-import gu_config from './config/language/gu';
-import or_config from './config/language/or';
-import hi_config from './config/language/hi';
-import { UserIdInterceptor } from './interceptors/user_id.interceptor';
-import { VersionedAuthInterceptor } from './interceptors/versioned-auth.interceptor';
+import ta_config from "./config/language/ta.js";
+import en_config from "./config/language/en.js"
+import gu_config from './config/language/gu.js';
+import or_config from './config/language/or.js';
+import hi_config from './config/language/hi.js';
+import { UserIdInterceptor } from './interceptors/user_id.interceptor.js';
+import { VersionedAuthInterceptor } from './interceptors/versioned-auth.interceptor.js';
 
 @ApiTags('scores')
 @UseInterceptors(UserIdInterceptor)

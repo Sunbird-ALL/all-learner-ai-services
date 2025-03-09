@@ -1,9 +1,9 @@
 import { DynamicModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { MongodbModule } from './mongodb/mongodb.module';
-import { MysqlModule } from './mysql/mysql.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { MongodbModule } from './mongodb/mongodb.module.js';
+import { MysqlModule } from './mysql/mysql.module.js';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
 import { HttpModule } from '@nestjs/axios';
 
 export class AppModule {
