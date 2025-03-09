@@ -1,4 +1,4 @@
-import { Score } from '../mysql/entities/score.entity';
+import { Score } from '../mysql/entities/score.entity.js';
 
 export default {
   type: 'mysql',

@@ -1,20 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ScoreDocument } from './schemas/scores.schema';
+import { ScoreDocument } from './schemas/scores.schema.js';
 import {
   hexcodeMappingDocument,
-} from './schemas/hexcodeMapping.schema';
+} from './schemas/hexcodeMapping.schema.js';
 import {
   assessmentInputDocument,
-} from './schemas/assessmentInput.schema';
-import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema';
+} from './schemas/assessmentInput.schema.js';
+import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema.js';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
-import { CacheService } from './cache/cache.service';
-import lang_common_config from "./config/language/common/commonConfig";
+import { CacheService } from './cache/cache.service.js';
+import lang_common_config from "./config/language/common/commonConfig.js";
 import * as splitGraphemes from 'split-graphemes';
 
 @Injectable()
@@ -118,7 +118,7 @@ export class ScoresService {
       asrOutBeforeDenoised = await asrCall();
     }
 
-    const Api_url = process.env.ALL_TEXT_EVAL_API + `${version}`+ "/audio_processing";
+    const Api_url = process.env.ALL_TEXT_EVAL_API + `${version}` + "/audio_processing";
     let denoiserConfig =
     {
       method: 'post',
@@ -2295,13 +2295,13 @@ export class ScoresService {
 
   async getTextMetrics(original_text: string, response_text: string, language: string, version: string) {
     const url = process.env.ALL_TEXT_EVAL_API + `${version}` + "/getTextMatrices";
-    
+
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
     };
-   
+
     const textEvalMatrices = await lastValueFrom(
       this.httpService
         .post(url, JSON.stringify(textData), {
@@ -2344,7 +2344,7 @@ export class ScoresService {
     );
     return result?.hexcode || '';
   }
-  
+
   async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
@@ -2683,7 +2683,7 @@ export class ScoresService {
     const initialUnusedKeyValueArr = dataArr.flatMap(data => Object.entries(data).map(([key, value]) => ({ [key]: value })));
     return generateRecursive("", [], initialUnusedKeyValueArr, 0);
   }
-  
+
   /* Function for generating the simnilarities for each and every word with the
   original word and sort it in descending order */
   async findAllSimilarities(words_with_values, wordArray) {

@@ -9,14 +9,14 @@ import {
   HttpStatus,
   Res,
 } from '@nestjs/common';
-import { ScoresService } from './scores.service';
-import { CreateScoreDto } from './dto/create-score.dto';
-import { UpdateScoreDto } from './dto/update-score.dto';
+import { ScoresService } from './scores.service.js';
+import { CreateScoreDto } from './dto/create-score.dto.js';
+import { UpdateScoreDto } from './dto/update-score.dto.js';
 import { FastifyReply } from 'fastify';
 
 @Controller('scores')
 export class ScoresController {
-  constructor(private readonly scoresService: ScoresService) {}
+  constructor(private readonly scoresService: ScoresService) { }
 
   @Post()
   create(

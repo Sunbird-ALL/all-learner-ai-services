@@ -1,18 +1,17 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
-import mongodbConfig from '../config/mongodb.config';
-import { ScoreSchema } from './schemas/scores.schema';
-import { hexcodeMappingSchema } from './schemas/hexcodeMapping.schema';
-import { assessmentInputSchema } from './schemas/assessmentInput.schema';
-import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema'
-import { ScoresController } from './scores.controller';
-import { ScoresService } from './scores.service';
-import { CacheService } from './cache/cache.service';
+import { ScoreSchema } from './schemas/scores.schema.js';
+import { hexcodeMappingSchema } from './schemas/hexcodeMapping.schema.js';
+import { assessmentInputSchema } from './schemas/assessmentInput.schema.js';
+import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema.js'
+import { ScoresController } from './scores.controller.js';
+import { ScoresService } from './scores.service.js';
+import { CacheService } from './cache/cache.service.js';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
-import { JwtAuthGuard } from 'src/auth/auth.guard';
+import { JwtAuthGuard } from '../auth/auth.guard.js';
 
 
 @Module({
@@ -26,7 +25,7 @@ import { JwtAuthGuard } from 'src/auth/auth.guard';
 
     MongooseModule.forRootAsync({
       useFactory: async () => ({
-        uri: process.env.MONGO_URL,
+        uri: process.env.MONGO_URL || "mongodb://127.0.0.1:27017/lais_db",
         useNewUrlParser: true,
         useUnifiedTopology: true,
         connectionFactory: (connection) => {
@@ -35,7 +34,7 @@ import { JwtAuthGuard } from 'src/auth/auth.guard';
         },
       }),
     }),
-    
+
     MongooseModule.forFeature([
       { name: 'Score', schema: ScoreSchema },
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
@@ -46,6 +45,6 @@ import { JwtAuthGuard } from 'src/auth/auth.guard';
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService, JwtService, JwtAuthGuard],
-  
+
 })
 export class MongodbModule { }

@@ -1,4 +1,4 @@
-var cluster = require('cluster');
+import cluster from 'node:cluster';
 import * as os from 'os';
 import { Injectable } from '@nestjs/common';
 
