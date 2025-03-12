@@ -33,6 +33,9 @@ export class CreateLearnerProfileDto {
   @ApiProperty()
   language: string;
 
+  @ApiProperty()
+  hallucination_alternative: string[];
+
   @ApiPropertyOptional()
   correctness?: CorrectnessDto[];
 
