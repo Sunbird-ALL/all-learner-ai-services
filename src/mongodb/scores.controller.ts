@@ -3065,7 +3065,7 @@ export class ScoresController {
       },
     },
   })
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Query('mechanics_id') mechanics_id, @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Query('mechanics_id') mechanics_id, @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], @Query('story_mode') story_mode, @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
@@ -3134,7 +3134,8 @@ export class ScoresController {
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
         "mechanics_id":mechanics_id,
-        "level_competency" : level_competency || []
+        "level_competency" : level_competency || [],
+        "story_mode": story_mode || false
       };
 
       const newContent = await lastValueFrom(
@@ -3507,9 +3508,13 @@ export class ScoresController {
         let previous_level_id =
           previous_level === undefined ? 0 : parseInt(previous_level[1]);
         if (sessionResult === 'pass') {
-          if (previous_level_id === 9) {
+          if (getSetResult.language === "en" && previous_level_id === en_config.max_milestone_level) {
+            milestone_level = "m" + en_config.max_milestone_level;
+          } else if(getSetResult.language === "ta" && previous_level_id === ta_config.max_milestone_level){
+            milestone_level = "m" + ta_config.max_milestone_level;
+          } else if(previous_level_id === 9) {
             milestone_level = 'm9';
-          } else {
+          }else {
             previous_level_id++;
             milestone_level = 'm' + previous_level_id;
           }
