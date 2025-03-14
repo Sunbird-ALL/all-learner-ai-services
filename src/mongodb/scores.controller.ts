@@ -1502,7 +1502,41 @@ export class ScoresController {
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
+
+        let textEvalMatrices;
+
+        if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
+        Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
+        CreateLearnerProfileDto.hallucination_alternative.length > 0){
+
+          function checkResponseTextAnomaly(responseText: string): boolean {
+            const phrasesToCheck = ["thank you", "and", "yes"];
+            return phrasesToCheck.some(phrase => responseText.includes(phrase));
+          }
+
+          const checkHallucinationAlternatives = async (responseText: string, hallucinationAlternatives: any): Promise<boolean> => {
+            const similarityThreshold = 0.5; // 50% similarity
+            for (const alternative of hallucinationAlternatives) {
+              const similarityScore = await this.scoresService.getTextSimilarity(responseText, alternative);
+              if (similarityScore >= similarityThreshold) {
+                return true;
+              }
+            }
+            return false;
+          };
+
+          const checkConstructTextSimilarity = async (constructText: string): Promise<boolean> => {
+            const similarityThreshold = 0.5;
+            const similarityScore = await this.scoresService.getTextSimilarity(constructText, originalText);
+            return similarityScore >= similarityThreshold;
+          }
+
+          if(await checkResponseTextAnomaly(responseText) || await checkHallucinationAlternatives(responseText, CreateLearnerProfileDto.hallucination_alternative) || await checkConstructTextSimilarity(responseText)){
+            responseText = originalText;
+          }
+        }
+
+        textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -1644,6 +1678,7 @@ export class ScoresController {
               count: pause_count,
             },
             reptitionsCount: reptitionCount,
+            mechanics_id : CreateLearnerProfileDto.mechanics_id || "",
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
           },
