@@ -2091,8 +2091,6 @@ export class ScoresController {
         let words_per_minute = textEvalMatrices.words_per_minute;
         let rate_classification = textEvalMatrices.rate_classification;
  
-        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -3597,8 +3595,19 @@ export class ScoresController {
       },
     },
   })
-  
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],@Query('category') category,@Query('story_mode') story_mode,@Query('type_of_learner') type_of_learner, @Res() response: FastifyReply) {
+ 
+  async GetContentSentencebyUser(
+  @Param('userId') id: string, 
+  @Query('language') language, 
+  @Query() { contentlimit = 5 }, 
+  @Query() { gettargetlimit = 5 }, 
+  @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[],
+  @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[],
+  @Query('category') category,
+  @Query('story_mode') story_mode,
+  @Query('mechanics_id') mechanics_id,
+  @Query('type_of_learner') type_of_learner, 
+  @Res() response: FastifyReply) {
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
@@ -3668,7 +3677,7 @@ export class ScoresController {
         "graphemesMappedObj": graphemesMappedObj,
         "category": category || "",
         "type_of_learner" : type_of_learner, 
-        "story_mode": story_mode
+        "story_mode": story_mode,
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || []
 
