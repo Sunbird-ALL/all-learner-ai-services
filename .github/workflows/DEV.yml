@@ -28,7 +28,7 @@ jobs:
         with:
           context: .
           push: true
-          tags:  ${{ secrets.CONTAINER_REGISTRY }}:${{ secrets.IMAGE_TAG }}
+          tags:  ishanwork1/sunbird-all:${{ secrets.IMAGE_TAG }}
         env:
           MY_ENV_VARS: ${{ secrets.MY_ENV_VARS }}
   deploy:
