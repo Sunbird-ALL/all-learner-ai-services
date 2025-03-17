@@ -4012,8 +4012,8 @@ export class ScoresController {
       if (targetsPercentage <= targetPerThreshold) {
         // Add logic for the study the pic mechnics
         if (is_mechanics) {
-          let correctness_score = correct_score[0].count_scores_gte_50
-      
+          let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
+
           if (correctness_score >= 3) {
             sessionResult = 'pass';
           } else {
