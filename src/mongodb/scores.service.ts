@@ -1287,6 +1287,9 @@ export class ScoresService {
             $sum: {
               $cond: [{ $gte: ['$sessions.correctness_score', threshold] }, 1, 0] // Conditional count
             }
+        },
+        total_correctness_score: {
+          $sum: '$sessions.correctness_score'
         }
       }
      }

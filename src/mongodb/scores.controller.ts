@@ -3960,7 +3960,7 @@ export class ScoresController {
       let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let originalTextSyllables = [];
       let is_mechanics = getSetResult.is_mechanics;
-     
+      
       if (getSetResult.language != 'en') {
         originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -4047,7 +4047,7 @@ export class ScoresController {
         if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
-          const userLevelNum = parseInt(previous_level.replace('m', ''), 10);
+          const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
           const passThreshold = (userLevelNum >= 4) ? 3.0 : 2.6;
         
           // Retrieve all audio records for the given sub-session and language 'en' or kn
@@ -4619,6 +4619,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
+          total_correctness_score:correct_score[0].total_correctness_score / 5
         },
       });
     } catch (err) {
