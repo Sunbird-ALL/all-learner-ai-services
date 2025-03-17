@@ -3952,6 +3952,7 @@ export class ScoresController {
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
       let targetPerThreshold = 30;
+      let contentLimit = 5;
       let milestoneEntry = true;
       let totalSyllables = 0;
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
@@ -4619,7 +4620,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / 5
+          total_correctness_score:correct_score[0].total_correctness_score / contentLimit
         },
       });
     } catch (err) {
