@@ -4620,7 +4620,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / contentLimit
+          total_correctness_score:correct_score[0]?.total_correctness_score / contentLimit || 0
         },
       });
     } catch (err) {
