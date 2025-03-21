@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ScoreDocument } from './schemas/scores.schema';
 import {
   hexcodeMappingDocument,
@@ -2602,5 +2602,13 @@ export class ScoresService {
     syllables = [...new Set(syllables)];
 
     return syllables;
+  }
+
+  async profileFunction<T>(fn: () => Promise<T>, functionName: string): Promise<T> {
+    const start = Date.now();
+    const result = await fn();
+    const duration = Date.now() - start;
+    Logger.log(`${functionName} executed in ${duration}ms`, 'Profiler');
+    return result;
   }
 }
