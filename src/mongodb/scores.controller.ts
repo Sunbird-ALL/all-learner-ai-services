@@ -1638,6 +1638,7 @@ export class ScoresController {
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
             contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
             contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
+            comprehension:CreateLearnerProfileDto.comprehension, // Response from LLM for mechanics
             createdAt: createdAt,
             language: language, // content language
             original_text: originalText, // content text shown to speak
@@ -3448,6 +3449,7 @@ export class ScoresController {
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let {overallScore,isComprehension} = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language)
       let originalTextSyllables = [];
       let is_mechanics = getSetResult.is_mechanics;
      
@@ -3501,12 +3503,20 @@ export class ScoresController {
       if (targetsPercentage <= targetPerThreshold) {
         // Add logic for the study the pic mechnics
         if (is_mechanics) {
-          let correctness_score = correct_score[0].count_scores_gte_50
-      
+          let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
+          if(isComprehension) {
+            if (overallScore >= 14) {
+              sessionResult = 'pass';
+            }else {
+              sessionResult = 'fail';
+            }
+          }
+          else {
           if (correctness_score >= 3) {
             sessionResult = 'pass';
           } else {
             sessionResult = 'fail';
+          }
           }
         }
         else if (getSetResult.contentType.toLowerCase() === 'word') {
