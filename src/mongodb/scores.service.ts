@@ -2603,4 +2603,40 @@ export class ScoresService {
 
     return syllables;
   }
+
+  public async getSubSessionScores(subSessionId: string, language: string): Promise<any[]> {
+    // Find documents where at least one session in the sessions array has the matching sub_session_id and language.
+    const docs = await this.scoreModel.find({
+      'sessions.sub_session_id': subSessionId,
+      'sessions.language': language
+    }).lean();
+    
+    // Flatten the sessions array and then filter to only those matching exactly the sub_session_id and language.
+    const sessions = docs.reduce((acc: any[], doc: any) => {
+      if (doc.sessions && Array.isArray(doc.sessions)) {
+        const matching = doc.sessions.filter((s: any) => s.sub_session_id === subSessionId && s.language === language);
+        return acc.concat(matching);
+      }
+      return acc;
+    }, []);
+    return sessions;
+  }
+
+  public async getComprehensionScore(subSessionId: string, language: string) {
+    const sessions = await this.getSubSessionScores(subSessionId, language);
+    const comprehensionScores: any[] = [];
+    sessions.forEach((session: any) => {
+      if (session.comprehension !== undefined) {
+        comprehensionScores.push(session.comprehension);
+      }
+    });
+    let overallScore = 0;
+    let isComprehension = false;
+    if(comprehensionScores.length>0){
+      comprehensionScores.forEach((score) => {overallScore+= score.overall});
+      isComprehension = true;
+    }
+    return {overallScore,isComprehension};
+  }
+
 }

@@ -33,6 +33,17 @@ export class CreateLearnerProfileDto {
   @ApiProperty()
   language: string;
 
+  @ApiPropertyOptional()
+  comprehension?: {
+    marks: number;
+    grades: number;
+    semantics: number;
+    context: number;
+    grammar: number;
+    accuracy: number;
+    overall: number;
+  };
+
   @ApiProperty()
   hallucination_alternative: string[];
 
