@@ -4417,4 +4417,32 @@ export class ScoresController {
       });
     }
   }
+
+  @Patch('/updateMilestone/user/:userId')
+  async updateMilestone(
+    @Param('userId') userId: string,
+    @Body() body: { subSessionId: string; newMilestoneLevel: string },
+    @Res() response: FastifyReply,
+  ) {
+    try {
+      const updateResult = await this.scoresService.updateMilestoneLevel(
+        userId,
+        body.subSessionId,
+        body.newMilestoneLevel,
+      );
+
+
+      return response.status(HttpStatus.OK).send({
+        status: 'success',
+        result : updateResult.modifiedCount,
+        message: 'Milestone updated successfully',
+      });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: 'error',
+        message: 'Server error - ' + err.message,
+      });
+    }
+  }
+  
 }
