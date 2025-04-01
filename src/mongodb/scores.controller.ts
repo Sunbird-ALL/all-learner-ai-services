@@ -3484,7 +3484,9 @@ export class ScoresController {
         getSetResult.user_id,
         getSetResult.language,
       );
+      console.log("recordData----", recordData);
       let previous_level = recordData[0]?.milestone_level || undefined;
+      console.log("previous_level-----", previous_level);
 
       if (totalSyllables <= 100) {
         targetPerThreshold = 30;
@@ -3550,19 +3552,19 @@ export class ScoresController {
         getSetResult.collectionId === '' ||
         getSetResult?.collectionId === undefined
       ) {
-        let previous_level_id =
-          previous_level === undefined ? 0 : parseInt(previous_level[1]);
+        let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level.replace("m", ""));
+        
         if (sessionResult === 'pass') {
-          if (getSetResult.language === "en" && previous_level_id === en_config.max_milestone_level) {
-            milestone_level = "m" + en_config.max_milestone_level;
-          } else if(getSetResult.language === "ta" && previous_level_id === ta_config.max_milestone_level){
+          if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level) {
+            milestone_level = en_config.max_milestone_level;
+          } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
-          } else if(previous_level_id === 9) {
-            milestone_level = 'm9';
-          }else {
-            previous_level_id++;
-            milestone_level = 'm' + previous_level_id;
+          } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
+            milestone_level = ta_config.max_milestone_level; 
+          } else {
+            milestone_level = 'm' + (previous_level_id + 1);
           }
+          
         }
       } else {
         if (
@@ -3843,6 +3845,7 @@ export class ScoresController {
       }
 
       let currentLevel = milestone_level;
+      console.log("currentLevel----3856", currentLevel);
 
       if (milestoneEntry) {
         await this.scoresService
@@ -3860,6 +3863,7 @@ export class ScoresController {
             );
 
             currentLevel = recordData[0]?.milestone_level || undefined;
+
             if (currentLevel === undefined) {
               currentLevel = previous_level;
             } else if (getSetResult.contentType.toLowerCase() === 'char') {
@@ -4427,7 +4431,7 @@ export class ScoresController {
         body.newMilestoneLevel,
       );
 
-  
+
       return response.status(HttpStatus.OK).send({
         status: 'success',
         result : updateResult.modifiedCount,
@@ -4440,4 +4444,5 @@ export class ScoresController {
       });
     }
   }
+  
 }
