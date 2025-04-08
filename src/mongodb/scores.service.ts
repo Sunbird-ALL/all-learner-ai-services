@@ -2645,4 +2645,39 @@ export class ScoresService {
       { $set: { "milestone_progress.$.milestone_level": newMilestoneLevel } }
     );
   }
+
+  async getComprehensionFromLLM(studentText,teacherText) {
+    const url = process.env.ALL_LLM_URL;
+    const data = {
+      studentText: studentText,
+      teacherText: teacherText,
+      markPrompt: ""
+    };
+    const comprehension = await lastValueFrom(
+      this.httpService
+        .post(url, JSON.stringify(data), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        .pipe(
+          map((resp) => {
+            const item = resp.data.responseObj.responseDataParams.data[0];
+            return {
+              marks: item.marks,
+              semantics: item.semantics,
+              context: item.context,
+              grammar: item.grammar,
+              accuracy: item.accuracy,
+              overall: item.overall
+            };
+          }),
+          catchError((error: AxiosError) => {
+            throw error;
+          }),
+        ),
+    );
+    
+    return comprehension;
+  }
 }
