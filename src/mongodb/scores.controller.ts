@@ -1455,6 +1455,7 @@ export class ScoresController {
       let correct_choice_score = 0;
       let correctness_score = 0;
       let is_correct_choice = CreateLearnerProfileDto.is_correct_choice;
+      let comprehension;
 
 
       /* Condition to check whether content type is char or not. If content type is char
@@ -1502,6 +1503,9 @@ export class ScoresController {
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
+        if(CreateLearnerProfileDto.ans_key && CreateLearnerProfileDto.ans_key.length >0 &&  DenoisedresponseText.length>0) {
+          comprehension = await this.scoresService.getComprehensionFromLLM(DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
+        }
 
         let textEvalMatrices;
 
@@ -1638,7 +1642,7 @@ export class ScoresController {
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
             contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
             contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            comprehension:CreateLearnerProfileDto.comprehension, // Response from LLM for mechanics
+            comprehension:comprehension, // Response from LLM for mechanics
             createdAt: createdAt,
             language: language, // content language
             original_text: originalText, // content text shown to speak
@@ -3449,9 +3453,9 @@ export class ScoresController {
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let {overallScore,isComprehension} = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language)
       let originalTextSyllables = [];
       let is_mechanics = getSetResult.is_mechanics;
+      let overallScore,isComprehension;
      
       if (getSetResult.language != 'en') {
         originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
@@ -3484,9 +3488,7 @@ export class ScoresController {
         getSetResult.user_id,
         getSetResult.language,
       );
-      console.log("recordData----", recordData);
       let previous_level = recordData[0]?.milestone_level || undefined;
-      console.log("previous_level-----", previous_level);
 
       if (totalSyllables <= 100) {
         targetPerThreshold = 30;
@@ -3505,6 +3507,7 @@ export class ScoresController {
       if (targetsPercentage <= targetPerThreshold) {
         // Add logic for the study the pic mechnics
         if (is_mechanics) {
+          ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
           let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
           if(isComprehension) {
             if (overallScore >= 14) {
@@ -3845,7 +3848,6 @@ export class ScoresController {
       }
 
       let currentLevel = milestone_level;
-      console.log("currentLevel----3856", currentLevel);
 
       if (milestoneEntry) {
         await this.scoresService
@@ -3884,6 +3886,7 @@ export class ScoresController {
           fluency: fluency,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
+          comprehensionScore : overallScore
         },
       });
     } catch (err) {
