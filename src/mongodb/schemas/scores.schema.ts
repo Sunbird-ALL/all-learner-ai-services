@@ -22,6 +22,7 @@ export class Score {
         correctness_score: {type: Number, required: false},
         comprehension :{
           marks: { type: Number, required: true },
+          grades: {type :Number, required: true},
           semantics: {type :Number, required: true},
           context: {type :Number, required: true},
           grammar: {type :Number, required: true},
@@ -107,6 +108,7 @@ export class Score {
     correctness_score:number;
     comprehension: {
       marks: number;
+      grades: number;
       semantics: number;
       context: number;
       grammar: number;
