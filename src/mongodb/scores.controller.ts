@@ -20,6 +20,7 @@ import en_config from "./config/language/en"
 import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
+import kn_config from './config/language/kn';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -1255,32 +1256,12 @@ export class ScoresController {
 
       const mode = CreateLearnerProfileDto.mode;
 
-      const language = 'kn';
+      const language = kn_config.language_code;
 
       const originalText = CreateLearnerProfileDto.original_text;
       const originalTextTokensArr = originalText.split('');
 
-      const kannadaVowelSignArr = [
-        'ಾ',
-        'ಿ',
-        'ೀ',
-        'ು',
-        'ೂ',
-        'ೃ',
-        'ೆ',
-        'ೇ',
-        'ೈ',
-        'ೊ',
-        'ೋ',
-        'ೌ',
-        'ಂ',
-        'ಃ',
-        'ೄ',
-        '್',
-        'ಀ',
-        'ಁ',
-        '಼',
-      ];
+      const kannadaVowelSignArr = kn_config.vowel
       vowelSignArr = kannadaVowelSignArr;
 
       let responseText = '';
@@ -1301,6 +1282,9 @@ export class ScoresController {
       let intensity_std = 0;
       let expression_classification = "";
       let smoothness_classification = "";
+      let tokenArrandAnamolyArrdefine = false;
+      let tokenArr = [];
+      let anamolyTokenArr = [];
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
       
@@ -1347,7 +1331,46 @@ export class ScoresController {
             });
           }
         }
-        responseText = CreateLearnerProfileDto.output[0].source;
+        let constructTokens = [];
+
+        if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word'){ // If it is word check for Token combinations and agreeable substitutes for word improvements
+          let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
+          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)  
+          const wordsWithValues = await this.scoresService.generateWords(constructTokens); // Form all possible words from ASR tokens
+          const replacements = kn_config.replacements;
+          const firstChar = originalText[0]
+          if (replacements.hasOwnProperty(firstChar)) { // If it is agreeable , construct the possible orignal words and compare all construted words for better possible response
+            let agreeableResults = replacements[firstChar] + originalText.slice(1);
+            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, agreeableResults]);
+            if (originalSimilarity >= agreeableHighestSimilarity[3]) {
+              responseText = nonDenoisedresponseText;
+              tokenArrandAnamolyArrdefine = true;
+            }
+
+            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+              responseText = agreeableHighestSimilarity[0];
+              tokenArr = agreeableHighestSimilarity[1];
+              anamolyTokenArr = agreeableHighestSimilarity[2];
+            }
+
+          }
+          else { // If is not agreeable, compare the costructed words with original and get hisghest
+            let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText]);
+            if (originalSimilarity >= constructedHighestSimilarity[3]) {
+              responseText = nonDenoisedresponseText;
+              tokenArrandAnamolyArrdefine = true;
+            }
+            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+              responseText = constructedHighestSimilarity[0];
+              tokenArr = constructedHighestSimilarity[1];
+              anamolyTokenArr = constructedHighestSimilarity[2];
+            }
+          }
+          
+        }
+        else  {  // If it is not a word use reeponse given by ASR
+          responseText = CreateLearnerProfileDto.output[0].source;
+        }
       }else{
         responseText = CreateLearnerProfileDto.response_text;
         pause_count = CreateLearnerProfileDto.pause_count;
@@ -1535,26 +1558,27 @@ export class ScoresController {
         const filteredTokenArr = [];
 
         //token list for ai4bharat response
-        const tokenArr = [];
-        const anamolyTokenArr = [];
 
         // Create Single Array from AI4bharat tokens array
-        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-          element.tokens.forEach((token) => {
-            const key = Object.keys(token)[0];
-            const value = Object.values(token)[0];
+        // generate tokenArr and anamolytokenArr if it is not word or using ASR returned resposne for content type word
+        if (CreateLearnerProfileDto.contentType.toLowerCase() != 'word' || tokenArrandAnamolyArrdefine) {
+          CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+            element.tokens.forEach((token) => {
+              const key = Object.keys(token)[0];
+              const value = Object.values(token)[0];
 
-            let insertObj = {};
-            insertObj[key] = value;
-            tokenArr.push(insertObj);
+              let insertObj = {};
+              insertObj[key] = value;
+              tokenArr.push(insertObj);
 
-            const key1 = Object.keys(token)[1];
-            const value1 = Object.values(token)[1];
-            insertObj = {};
-            insertObj[key1] = value1;
-            anamolyTokenArr.push(insertObj);
+              const key1 = Object.keys(token)[1];
+              const value1 = Object.values(token)[1];
+              insertObj = {};
+              insertObj[key1] = value1;
+              anamolyTokenArr.push(insertObj);
+            });
           });
-        });
+        }
 
         const uniqueChar = new Set();
         prevEle = '';
