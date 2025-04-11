@@ -2815,23 +2815,40 @@ export class ScoresService {
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
   }
   getAccuracyClassification(contentType: string, score: number): string {
+    const config: Record<string, [number, number, string][]> = {
+      word: [
+        [0, 1, "Fluent"],
+        [1, 2, "Moderately Fluent"],
+        [2, 3, "Disfluent"],
+        [3, Infinity, "Very Disfluent"]
+      ],
+      sentence: [
+        [0, 3, "Fluent"],
+        [3, 6, "Moderately Fluent"],
+        [6, 8, "Disfluent"],
+        [8, Infinity, "Very Disfluent"]
+      ],
+      paragraph: [
+        [0, 5, "Fluent"],
+        [5, 10, "Moderately Fluent"],
+        [10, 12, "Disfluent"],
+        [12, Infinity, "Very Disfluent"]
+      ]
+    };
+    // Normalize the content type and get its thresholds.
     const ct = contentType.toLowerCase();
-    if (ct === 'word') {
-      if (score >= 0 && score <= 1) return "Fluent";
-      else if (score > 1 && score <= 2) return "Moderately Fluent";
-      else if (score > 2 && score <= 3) return "Disfluent";
-      else return "Very Disfluent";
-    } else if (ct === 'sentence') {
-      if (score >= 0 && score <= 3) return "Fluent";
-      else if (score > 3 && score <= 6) return "Moderately Fluent";
-      else if (score > 6 && score <= 8) return "Disfluent";
-      else return "Very Disfluent";
-    } else if (ct === 'paragraph') {
-      if (score >= 0 && score <= 5) return "Fluent";
-      else if (score > 5 && score <= 10) return "Moderately Fluent";
-      else if (score > 10 && score <= 12) return "Disfluent";
-      else return "Very Disfluent";
+    const thresholds = config[ct];
+    // If the content type is not recognized, return "N/A"
+    if (!thresholds) {
+      return "N/A";
     }
+    // Loop through the thresholds and return the classification that matches.
+    for (const [min, max, label] of thresholds) {
+      if (score >= min && score <= max) {
+        return label;
+      }
+    }
+    // Fallback in case no classification is matched.
     return "N/A";
   }
   public classificationToScore(classification: string): number {
