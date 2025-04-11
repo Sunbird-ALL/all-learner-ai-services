@@ -2817,19 +2817,19 @@ export class ScoresService {
   getAccuracyClassification(contentType: string, score: number): string {
     const ct = contentType.toLowerCase();
     if (ct === 'word') {
-      if (score >= 0 && score < 0.6) return "Fluent";
-      else if (score >= 0.6 && score < 2) return "Moderately Fluent";
-      else if (score >= 2 && score <= 3) return "Disfluent";
+      if (score >= 0 && score <= 1) return "Fluent";
+      else if (score > 1 && score <= 2) return "Moderately Fluent";
+      else if (score > 2 && score <= 3) return "Disfluent";
       else return "Very Disfluent";
     } else if (ct === 'sentence') {
-      if (score >= 0 && score < 1.5) return "Fluent";
-      else if (score >= 1.5 && score < 4.0) return "Moderately Fluent";
-      else if (score >= 4.0 && score <= 6) return "Disfluent";
+      if (score >= 0 && score <= 3) return "Fluent";
+      else if (score > 3 && score <= 6) return "Moderately Fluent";
+      else if (score > 6 && score <= 8) return "Disfluent";
       else return "Very Disfluent";
     } else if (ct === 'paragraph') {
-      if (score >= 0 && score < 3) return "Fluent";
-      else if (score >= 3 && score < 6) return "Moderately Fluent";
-      else if (score >= 6 && score <= 8) return "Disfluent";
+      if (score >= 0 && score <= 5) return "Fluent";
+      else if (score > 5 && score <= 10) return "Moderately Fluent";
+      else if (score > 10 && score <= 12) return "Disfluent";
       else return "Very Disfluent";
     }
     return "N/A";
