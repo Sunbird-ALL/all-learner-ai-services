@@ -282,19 +282,23 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
+      
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+    
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -1348,17 +1352,19 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -1701,16 +1707,19 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language
       );
+      
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -2418,16 +2427,18 @@ export class ScoresController {
       }
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -2594,6 +2605,7 @@ export class ScoresController {
     try {
       const targetResult = await this.scoresService.getTargetsBysubSession(
         id,
+        id,
         language
       );
       return response.status(HttpStatus.OK).send(targetResult);
@@ -2649,6 +2661,7 @@ export class ScoresController {
     try {
       const familiarityResult =
         await this.scoresService.getFamiliarityBysubSession(
+          id,
           id,
           language
         );
@@ -3449,16 +3462,18 @@ export class ScoresController {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
       let totalSyllables = 0;
-      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      
       let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let originalTextSyllables = [];
       let is_mechanics = getSetResult.is_mechanics;
       let overallScore,isComprehension;
      
       if (getSetResult.language != 'en') {
-        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id,getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       }
       let totalTargets = targets.length;
