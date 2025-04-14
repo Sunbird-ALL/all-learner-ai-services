@@ -400,6 +400,7 @@ export class ScoresService {
   }
 
   async getTargetsBysubSession(
+    userId: string,
     subSessionId: string,
     language: string,
   ) {
@@ -407,6 +408,11 @@ export class ScoresService {
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -1038,6 +1044,7 @@ export class ScoresService {
   }
 
   async getFamiliarityBysubSession(
+    userId:string,
     subSessionId: string,
     language: string,
   ) {
@@ -1045,6 +1052,11 @@ export class ScoresService {
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          user_id: userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -1528,8 +1540,13 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFluencyBysubSession(subSessionId: string, language: string) {
+  async getFluencyBysubSession(userId: string, subSessionId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -2569,8 +2586,13 @@ export class ScoresService {
     return { contentLevel: contentLevel, complexityLevel }
   }
 
-  async getSubsessionOriginalTextSyllables(sub_session_id: string) {
+  async getSubsessionOriginalTextSyllables(userId:string, sub_session_id: string) {
     const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
