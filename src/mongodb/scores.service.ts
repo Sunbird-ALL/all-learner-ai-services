@@ -99,7 +99,7 @@ export class ScoresService {
     let serviceId = '';
     switch (language) {
       case 'kn':
-        serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
+        serviceId = 'ai4bharat/conformer-multilingual-all--gpu-t4';
         break;
       case 'ta':
         serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
@@ -2746,13 +2746,13 @@ export class ScoresService {
     for (const word of wordArray) {
       for (const wordWithVal of words_with_values) {
         const constructedWord = wordWithVal[0];
-        const usedArr = wordWithVal[1];
-        const unusedArr = wordWithVal[2];
+        const tokenArr = wordWithVal[1];
+        const anamolyTokenArr = wordWithVal[2];
         const score = await this.getTextSimilarity(word, constructedWord);
 
         if (score > highestScore) {
           highestScore = score;
-          highestScoreArr = [constructedWord, usedArr, unusedArr, score];
+          highestScoreArr = [constructedWord, tokenArr, anamolyTokenArr, score];
         }
       }
     }
