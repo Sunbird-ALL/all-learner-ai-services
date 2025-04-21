@@ -1727,13 +1727,14 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+    
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2))
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
+        createScoreData: createScoreData
       });
     } catch (err) {
       console.log(err);
