@@ -16,6 +16,7 @@ import { AxiosError } from 'axios';
 import { CacheService } from './cache/cache.service';
 import lang_common_config from "./config/language/common/commonConfig";
 import * as splitGraphemes from 'split-graphemes';
+import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 
 @Injectable()
 export class ScoresService {
@@ -25,7 +26,10 @@ export class ScoresService {
     private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>,
     @InjectModel('assessmentInput')
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
-    @InjectModel('denoiserOutputLogs') private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    @InjectModel('denoiserOutputLogs')
+    private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    @InjectModel('llmOutputLogs') 
+    private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -1942,7 +1946,6 @@ export class ScoresService {
         { token: 1, _id: 0 },
       )
       .exec();
-    console.log(RecordData);
     const tokenArray = RecordData.map((data) => {
       return data.token;
     });
@@ -2111,6 +2114,17 @@ export class ScoresService {
     }
   }
 
+  async addLlmOutputLog(llmOutputLog: any): Promise<any> {
+    try {
+      const createllmOutputLog = new this.llmOutputLogsModel(llmOutputLog);
+      const result = await createllmOutputLog.save();
+      return result;
+
+    } catch (err) {
+      return err;
+    }
+  }
+
   async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -2270,7 +2284,6 @@ export class ScoresService {
 
   async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
     const textData = {
       reference: original_text,
       hypothesis: response_text,
@@ -2648,6 +2661,7 @@ export class ScoresService {
 
   async getComprehensionFromLLM(studentText,teacherText) {
     const url = process.env.ALL_LLM_URL;
+    
     const data = {
       studentText: studentText,
       teacherText: teacherText,
