@@ -1668,11 +1668,12 @@ export class ScoresController {
               const hexcode = getTokenHexcode(value.charkey);
 
               if (hexcode !== '') {
+                let confidenceScore = value.charvalue>0.7 ? value.charvalue : 0.777
                 confidence_scoresArr.push({
                   token: value.charkey,
                   hexcode: hexcode,
-                  confidence_score: value.charvalue,
-                  identification_status: identification_status,
+                  confidence_score: confidenceScore,
+                  identification_status: 1,
                 });
               } else {
                 if (
