@@ -15,6 +15,9 @@ export class llmOutputLogs extends Document {
   @Prop({ required: true })
   teacherText: string;
 
+  @Prop({ required: false })
+  questionText: string;
+
   @Prop({ required: true })
   studentText: string;
 

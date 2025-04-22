@@ -36,6 +36,9 @@ export class CreateLearnerProfileDto {
   @ApiPropertyOptional()
   ans_key?: string[];
 
+  @ApiPropertyOptional()
+  question_text?: string;
+
   @ApiProperty()
   hallucination_alternative: string[];
 

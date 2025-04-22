@@ -2659,10 +2659,11 @@ export class ScoresService {
     );
   }
 
-  async getComprehensionFromLLM(studentText,teacherText) {
+  async getComprehensionFromLLM(questionText,studentText,teacherText) {
     const url = process.env.ALL_LLM_URL;
     
     const data = {
+      questionText: questionText,
       studentText: studentText,
       teacherText: teacherText,
       markPrompt: ""
