@@ -1522,7 +1522,6 @@ export class ScoresController {
             overall: comprehension.overall,
            
           }
-          console.log("createLlmOutputLog=----", createLlmOutputLog);
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
 
