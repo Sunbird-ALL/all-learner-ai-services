@@ -1505,12 +1505,13 @@ export class ScoresController {
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
       
         if(CreateLearnerProfileDto.ans_key && CreateLearnerProfileDto.ans_key.length >0 &&  DenoisedresponseText.length>0) {
-          comprehension = await this.scoresService.getComprehensionFromLLM(DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
+          comprehension = await this.scoresService.getComprehensionFromLLM(CreateLearnerProfileDto.question_text,DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
           
           let createLlmOutputLog = {
             user_id: CreateLearnerProfileDto.user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            questionText: CreateLearnerProfileDto.question_text || "",
             teacherText: originalText,
             studentText: responseText,
             ansKey: CreateLearnerProfileDto.ans_key,
