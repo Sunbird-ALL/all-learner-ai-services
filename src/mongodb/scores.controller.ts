@@ -3993,18 +3993,16 @@ export class ScoresController {
       }
       let totalTargets = targets.length;
 
-      if (getSetResult.totalSyllableCount == undefined) {
-        totalSyllables = totalTargets + familiarity.length;
-      } else {
-        if (getSetResult.language === "en") {
-          if (getSetResult.totalSyllableCount > 50) {
-            totalSyllables = 50;
-          } else {
-            totalSyllables = getSetResult.totalSyllableCount;
-          }
+
+      if(getSetResult.totalSyllableCount != undefined && getSetResult.language === "en"){
+        if (getSetResult.totalSyllableCount > 50) {
+          totalSyllables = 50;
         } else {
-          totalSyllables = getSetResult.totalSyllableCount
+          totalSyllables = getSetResult.totalSyllableCount;
         }
+      }
+      else{
+        totalSyllables = totalTargets + familiarity.length;
       }
 
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
