@@ -3480,16 +3480,25 @@ export class ScoresController {
       let targetPerThreshold = 30;
       let milestoneEntry = true;
       let totalSyllables = 0;
+      let originalTextSyllables = [];
+      let is_mechanics = getSetResult.is_mechanics;
+      let overallScore, isComprehension;
+      let sessionResult = 'No Result';
+
       
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      
-      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let originalTextSyllables = [];
-      let is_mechanics = getSetResult.is_mechanics;
-      let overallScore,isComprehension;
-     
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
+
+      if (is_mechanics && isComprehension) {
+        if (overallScore >= 14) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
+        }
+      }
+
       if (getSetResult.language != 'en') {
         originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id,getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
@@ -3515,8 +3524,6 @@ export class ScoresController {
       targetsPercentage = targetsPercentage < 0 ? 0 : targetsPercentage;
       passingPercentage = passingPercentage < 0 ? 0 : passingPercentage;
 
-      let sessionResult = 'No Result';
-
       let recordData: any = await this.scoresService.getlatestmilestone(
         getSetResult.user_id,
         getSetResult.language,
@@ -3536,48 +3543,40 @@ export class ScoresController {
       } else if (totalSyllables > 500) {
         targetPerThreshold = 5;
       }
-      
-      if (targetsPercentage <= targetPerThreshold) {
-        // Add logic for the study the pic mechnics
-        if (is_mechanics) {
-          ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
-          let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
-          if(isComprehension) {
-            if (overallScore >= 14) {
+      if (!isComprehension) {
+        if (targetsPercentage <= targetPerThreshold) {
+          // Add logic for the study the pic mechnics
+          if (is_mechanics) {
+            let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
+
+            if (correctness_score >= 3) {
               sessionResult = 'pass';
-            }else {
+            } else {
               sessionResult = 'fail';
             }
           }
-          else {
-          if (correctness_score >= 3) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
+          else if (getSetResult.contentType.toLowerCase() === 'word') {
+            if (fluency < 2) {
+              sessionResult = 'pass';
+            } else {
+              sessionResult = 'fail';
+            }
+          } else if (getSetResult.contentType.toLowerCase() === 'sentence') {
+            if (fluency < 6) {
+              sessionResult = 'pass';
+            } else {
+              sessionResult = 'fail';
+            }
+          } else if (getSetResult.contentType.toLowerCase() === 'paragraph') {
+            if (fluency < 10) {
+              sessionResult = 'pass';
+            } else {
+              sessionResult = 'fail';
+            }
           }
-          }
+        } else {
+          sessionResult = 'fail';
         }
-        else if (getSetResult.contentType.toLowerCase() === 'word') {
-          if (fluency < 2) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        } else if (getSetResult.contentType.toLowerCase() === 'sentence') {
-          if (fluency < 6) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        } else if (getSetResult.contentType.toLowerCase() === 'paragraph') {
-          if (fluency < 10) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        }
-      } else {
-        sessionResult = 'fail';
       }
 
       let milestone_level = previous_level;
@@ -3589,18 +3588,18 @@ export class ScoresController {
         getSetResult?.collectionId === undefined
       ) {
         let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level.replace("m", ""));
-        
+
         if (sessionResult === 'pass') {
           if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level) {
             milestone_level = en_config.max_milestone_level;
           } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
           } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
-            milestone_level = ta_config.max_milestone_level; 
+            milestone_level = ta_config.max_milestone_level;
           } else {
             milestone_level = 'm' + (previous_level_id + 1);
           }
-          
+
         }
       } else {
         if (
@@ -3911,15 +3910,14 @@ export class ScoresController {
         status: 'success',
         data: {
           sessionResult: sessionResult,
-          totalTargets: totalTargets,
+          totalTargets: totalTargets || 0,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          comprehensionScore : overallScore
+          comprehensionScore: overallScore
         },
       });
     } catch (err) {

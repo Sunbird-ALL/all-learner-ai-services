@@ -39,7 +39,8 @@ export class llmOutputLogs extends Document {
   @Prop({ required: true })
   overall: number;
 
-  createdAt:{ type: Date, required: true}
+  @Prop()
+  createdAt: Date;
 }
 
 export type llmOutputLogsDocument = llmOutputLogs & Document;
