@@ -3484,6 +3484,7 @@ export class ScoresController {
       let is_mechanics = getSetResult.is_mechanics;
       let overallScore, isComprehension;
       let sessionResult = 'No Result';
+      let max_level = getSetResult.max_level;
 
       
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
@@ -3590,8 +3591,10 @@ export class ScoresController {
         let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level.replace("m", ""));
 
         if (sessionResult === 'pass') {
-          if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level) {
+          if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level && max_level == undefined) {
             milestone_level = en_config.max_milestone_level;
+          }else if (getSetResult.language === en_config.language_code && previous_level_id >= max_level) {
+            milestone_level = max_level;
           } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
           } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
