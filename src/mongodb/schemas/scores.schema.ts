@@ -23,6 +23,14 @@ export class Score {
         language: { type: String, required: true, index: true },
         is_correct_choice:{ type: Boolean, required: false},
         correctness_score: {type: Number, required: false},
+        comprehension :{
+          marks: { type: Number, required: true },
+          semantics: {type :Number, required: true},
+          context: {type :Number, required: true},
+          grammar: {type :Number, required: true},
+          accuracy: {type :Number, required: true},
+          overall: {type :Number, required: true},
+        },
         confidence_scores: [
           {
             token: { type: String, required: true, index: true },
@@ -81,6 +89,7 @@ export class Score {
           count: { type: Number },
         },
         reptitionsCount: { type: Number },
+        mechanics_id: { type: String, required: false },
         asrOutput: { type: String, required: true },
         prosody_fluency: {
           pitch: { 
@@ -134,6 +143,14 @@ export class Score {
     retry_count: number; // number of times usretry the conte
     is_correct_choice:boolean;
     correctness_score:number;
+    comprehension: {
+      marks: number;
+      semantics: number;
+      context: number;
+      grammar: number;
+      accuracy: number;
+      overall: number;
+    };
     confidence_scores: {
       token: string;
       hexcode: string;
@@ -181,6 +198,7 @@ export class Score {
       count: number;
     };
     reptitionsCount: number;
+    mechanics_id: string;
     asrOutput: string;
     prosody_fluency: {
       pitch: { 

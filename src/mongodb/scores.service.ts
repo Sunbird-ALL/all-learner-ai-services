@@ -16,6 +16,7 @@ import { AxiosError } from 'axios';
 import { CacheService } from './cache/cache.service';
 import lang_common_config from "./config/language/common/commonConfig";
 import * as splitGraphemes from 'split-graphemes';
+import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 
 @Injectable()
 export class ScoresService {
@@ -26,7 +27,10 @@ export class ScoresService {
     private readonly hexcodeMappingModel: Model<hexcodeMappingDocument>,
     @InjectModel('assessmentInput')
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
-    @InjectModel('denoiserOutputLogs') private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    @InjectModel('denoiserOutputLogs')
+    private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
+    @InjectModel('llmOutputLogs') 
+    private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -426,6 +430,7 @@ export class ScoresService {
   }
 
   async getTargetsBysubSession(
+    userId: string,
     subSessionId: string,
     language: string,
   ) {
@@ -433,6 +438,11 @@ export class ScoresService {
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -1115,6 +1125,7 @@ export class ScoresService {
   }
 
   async getFamiliarityBysubSession(
+    userId:string,
     subSessionId: string,
     language: string,
   ) {
@@ -1122,6 +1133,11 @@ export class ScoresService {
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          user_id: userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -1608,8 +1624,13 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFluencyBysubSession(subSessionId: string, language: string) {
+  async getFluencyBysubSession(userId: string, subSessionId: string, language: string) {
     const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -2190,6 +2211,17 @@ export class ScoresService {
     }
   }
 
+  async addLlmOutputLog(llmOutputLog: any): Promise<any> {
+    try {
+      const createllmOutputLog = new this.llmOutputLogsModel(llmOutputLog);
+      const result = await createllmOutputLog.save();
+      return result;
+
+    } catch (err) {
+      return err;
+    }
+  }
+
   async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -2347,7 +2379,7 @@ export class ScoresService {
 
   async getTextMetrics(original_text: string, response_text: string, language: string, base64_audio: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-    
+
     const textData = {
       reference: original_text,
       hypothesis: response_text,
@@ -2645,8 +2677,13 @@ export class ScoresService {
     return { contentLevel: contentLevel, complexityLevel }
   }
 
-  async getSubsessionOriginalTextSyllables(sub_session_id: string) {
+  async getSubsessionOriginalTextSyllables(userId:string, sub_session_id: string) {
     const RecordData = await this.scoreModel.aggregate([
+      {
+        $match: {
+          'user_id':userId
+        }
+      },
       {
         $unwind: '$sessions',
       },
@@ -2848,6 +2885,7 @@ export class ScoresService {
         return 1;  
     }
   }
+
   public async getSubSessionScores(subSessionId: string, language: string): Promise<any[]> {
     // Find documents where at least one session in the sessions array has the matching sub_session_id and language.
     const docs = await this.scoreModel.find({
@@ -2865,4 +2903,67 @@ export class ScoresService {
     }, []);
     return sessions;
   }
+
+
+  public async getComprehensionScore(subSessionId: string, language: string) {
+    const sessions = await this.getSubSessionScores(subSessionId, language);
+    const comprehensionScores: any[] = [];
+    sessions.forEach((session: any) => {
+      if (session.comprehension !== undefined) {
+        comprehensionScores.push(session.comprehension);
+      }
+    });
+    let overallScore = 0;
+    let isComprehension = false;
+    if(comprehensionScores.length>0){
+      comprehensionScores.forEach((score) => {overallScore+= score.overall});
+      isComprehension = true;
+    }
+    return {overallScore,isComprehension};
+  }
+
+  async updateMilestoneLevel(userId: string, subSessionId: string, newMilestoneLevel: string) {
+    return this.scoreModel.updateOne(
+      { user_id: userId, "milestone_progress.sub_session_id": subSessionId },
+      { $set: { "milestone_progress.$.milestone_level": newMilestoneLevel } }
+    );
+  }
+
+  async getComprehensionFromLLM(questionText,studentText,teacherText) {
+    const url = process.env.ALL_LLM_URL;
+    
+    const data = {
+      questionText: questionText,
+      studentText: studentText,
+      teacherText: teacherText,
+      markPrompt: ""
+    };
+    const comprehension = await lastValueFrom(
+      this.httpService
+        .post(url, JSON.stringify(data), {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
+        .pipe(
+          map((resp) => {
+            const item = resp.data.responseObj.responseDataParams.data[0];
+            return {
+              marks: item.marks,
+              semantics: item.semantics,
+              context: item.context,
+              grammar: item.grammar,
+              accuracy: item.accuracy,
+              overall: item.overall
+            };
+          }),
+          catchError((error: AxiosError) => {
+            throw error;
+          }),
+        ),
+    );
+    
+    return comprehension;
+  }
+
 }

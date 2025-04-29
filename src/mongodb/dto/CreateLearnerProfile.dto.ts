@@ -52,10 +52,22 @@ export class CreateLearnerProfileDto {
   language: string;
 
   @ApiPropertyOptional()
+  ans_key?: string[];
+
+  @ApiPropertyOptional()
+  question_text?: string;
+
+  @ApiProperty()
+  hallucination_alternative: string[];
+
+  @ApiPropertyOptional()
   correctness?: CorrectnessDto[];
 
   @ApiProperty()
   date: Date;
+
+  @ApiPropertyOptional()
+  mechanics_id: string;
 }
 
 export class OutputDTO {
