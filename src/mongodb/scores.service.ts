@@ -2674,13 +2674,6 @@ export class ScoresService {
     return {overallScore,isComprehension};
   }
 
-  async updateMilestoneLevel(userId: string, subSessionId: string, newMilestoneLevel: string) {
-    return this.scoreModel.updateOne(
-      { user_id: userId, "milestone_progress.sub_session_id": subSessionId },
-      { $set: { "milestone_progress.$.milestone_level": newMilestoneLevel } }
-    );
-  }
-
   async getComprehensionFromLLM(questionText,studentText,teacherText) {
     const url = process.env.ALL_LLM_URL;
     
