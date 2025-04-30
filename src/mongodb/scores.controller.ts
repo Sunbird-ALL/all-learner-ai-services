@@ -293,16 +293,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -585,16 +587,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -1160,16 +1164,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -2147,8 +2153,6 @@ export class ScoresController {
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
 
-        let textEvalMatrices;
-
         if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
         Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
         CreateLearnerProfileDto.hallucination_alternative.length > 0){
@@ -2179,10 +2183,6 @@ export class ScoresController {
             responseText = originalText;
           }
         }
-
-        textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
-
-
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
 
@@ -3698,7 +3698,19 @@ export class ScoresController {
     },
   })
 
-  async GetContentSentencebyUser(@Param('userId') id: string, @Query('language') language, @Query() { contentlimit = 5 }, @Query() { gettargetlimit = 5 }, @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], @Query('mechanics_id') mechanics_id, @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], @Query('story_mode') story_mode, @Res() response: FastifyReply) {
+  async GetContentSentencebyUser(
+    @Param('userId') id: string, 
+    @Query('language') language, 
+    @Query() { contentlimit = 5 }, 
+    @Query() { gettargetlimit = 5 }, 
+    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
+    @Query('mechanics_id') mechanics_id, 
+    @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], 
+    @Query('story_mode') story_mode, 
+    @Query('category') category:string,
+    @Query('type_of_learner') type_of_learner:string,
+    @Res() response: FastifyReply) {
+    
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
@@ -4731,7 +4743,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / contentLimit
+          total_correctness_score:correct_score[0]?.total_correctness_score / contentLimit || 0,
           comprehensionScore: overallScore
         },
       });
