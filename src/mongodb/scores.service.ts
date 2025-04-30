@@ -19,6 +19,7 @@ import * as splitGraphemes from 'split-graphemes';
 
 @Injectable()
 export class ScoresService {
+
   constructor(
     @InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>,
     @InjectModel('hexcodeMapping')
@@ -85,11 +86,20 @@ export class ScoresService {
     let asrOutBeforeDenoised: any;
     let audio: any = data;
     let pause_count: number = 0;
+    let avg_pause: number = 0;
+    let pitch_classification : any;
+    let pitch_mean : number = 0;
+    let pitch_std : number = 0;
+    let intensity_classification : any;
+    let intensity_mean : number = 0;
+    let intensity_std : number = 0;
+    let expression_classification : any;
+    let smoothness_classification : any;
 
     let serviceId = '';
     switch (language) {
       case 'kn':
-        serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
+        serviceId = 'ai4bharat/conformer-multilingual-all--gpu-t4';
         break;
       case 'ta':
         serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
@@ -100,8 +110,14 @@ export class ScoresService {
       case 'hi':
         serviceId = 'ai4bharat/conformer-hi--gpu-t4';
         break;
+      case 'gu':
+        serviceId = 'ai4bharat/conformer-gujarati--gpu-t4';
+        break;
       case "te":
         serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
+        break;
+      case 'or':
+        serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
         break;
       default:
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
@@ -124,7 +140,8 @@ export class ScoresService {
         "base64_string": audio,
         "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
         "enablePauseCount": true,
-        "contentType": contentType
+        "contentType": contentType,
+        "enable_prosody_fluency" : true
       }
     }
 
@@ -132,6 +149,15 @@ export class ScoresService {
       .then((response) => {
         audio = response.data.denoised_audio_base64;
         pause_count = response.data.pause_count;
+        avg_pause = response.data.avg_pause;
+        pitch_classification = response.data.pitch_classification;
+        pitch_mean = response.data.pitch_mean;
+        pitch_std = response.data.pitch_std;
+        intensity_classification = response.data.intensity_classification;
+        intensity_mean = response.data.intensity_mean;
+        intensity_std = response.data.intensity_std;
+        expression_classification = response.data.expression_classification;
+        smoothness_classification = response.data.smoothness_classification;
       })
       .catch((error) => {
         console.log(error);
@@ -190,7 +216,7 @@ export class ScoresService {
       return output;
     }
 
-    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count };
+    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count, avg_pause: avg_pause, pitch_classification: pitch_classification, pitch_mean: pitch_mean, pitch_std: pitch_std, intensity_classification: intensity_classification, intensity_mean: intensity_mean,intensity_std: intensity_std, expression_classification: expression_classification, smoothness_classification: smoothness_classification };
   }
 
   async findAll(): Promise<any> {
@@ -549,9 +575,33 @@ export class ScoresService {
       },
     ]);
 
-    return RecordData;
-  }
+    // Get All hexcode for this selected language
+    let tokenHexcodeDataArr = await this.gethexcodeMapping(language);
 
+    const tokenMap = new Map();
+
+    // Map token to its isCommon and indexNo properties
+    tokenHexcodeDataArr.forEach((tokenObj: any) => {
+      tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
+    });
+
+    const commonTargets: any[] = [];
+    const nonCommonTargets: any[] = [];
+
+    RecordData.forEach((target: any) => {
+      const tokenInfo = tokenMap.get(target.character);
+
+      if (tokenInfo && tokenInfo.isCommon) {
+        commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
+      } else {
+        nonCommonTargets.push(target);
+      }
+    });
+
+    // Sort common targets by indexNo
+    commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
+    return [...commonTargets, ...nonCommonTargets];
+  }
 
   async getTargetsByUser(userId: string, language: string = null) {
     const threshold = 0.7;
@@ -889,6 +939,33 @@ export class ScoresService {
     return RecordData;
   }
 
+  async mostCommonTargets(tokenHexcodeDataArr: [], targets: []) {
+    const tokenMap = new Map();
+
+    // Map token to its isCommon and indexNo properties
+    tokenHexcodeDataArr.forEach((tokenObj: any) => {
+      tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
+    });
+
+    const commonTargets: any[] = [];
+    const nonCommonTargets: any[] = [];
+
+    targets.forEach((target: any) => {
+      const tokenInfo = tokenMap.get(target.character);
+
+      if (tokenInfo && tokenInfo.isCommon) {
+        commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
+      } else {
+        nonCommonTargets.push(target);
+      }
+    });
+
+    // Sort common targets by indexNo
+    commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
+    return [...commonTargets, ...nonCommonTargets];
+
+  }
+
   // Familiarity Query
   async getFamiliarityBySession(sessionId: string, language: string) {
     const threshold = 0.7;
@@ -1210,6 +1287,9 @@ export class ScoresService {
             $sum: {
               $cond: [{ $gte: ['$sessions.correctness_score', threshold] }, 1, 0] // Conditional count
             }
+        },
+        total_correctness_score: {
+          $sum: '$sessions.correctness_score'
         }
       }
      }
@@ -1942,7 +2022,6 @@ export class ScoresService {
         { token: 1, _id: 0 },
       )
       .exec();
-    console.log(RecordData);
     const tokenArray = RecordData.map((data) => {
       return data.token;
     });
@@ -2192,24 +2271,24 @@ export class ScoresService {
     let syllableArr = []
 
     // This code block used to create syllable list from text strings
-    if (language === "ta") {
-      for (const textELE of text.split('')) {
-        if (textELE != ' ') {
-          if (vowelSignArr.includes(textELE)) {
-            if (isPrevVowel) {
-            } else {
-              prevEle = prevEle + textELE;
-              syllableArr.push(prevEle);
-            }
-            isPrevVowel = true;
+    //if (language === "ta") {
+    for (const textELE of text.split('')) {
+      if (textELE != ' ') {
+        if (vowelSignArr.includes(textELE)) {
+          if (isPrevVowel) {
           } else {
-            syllableArr.push(textELE);
-            prevEle = textELE;
-            isPrevVowel = false;
+            prevEle = prevEle + textELE;
+            syllableArr.push(prevEle);
           }
+          isPrevVowel = true;
+        } else {
+          syllableArr.push(textELE);
+          prevEle = textELE;
+          isPrevVowel = false;
         }
       }
     }
+
 
     return syllableArr;
   }
@@ -2220,9 +2299,7 @@ export class ScoresService {
     const constructTextSet = new Set();
     let reptitionCount = 0;
 
-    for (const originalEle of original_text.split(
-      ' ',
-    )) {
+    for (const originalEle of original_text.split(' ',)) {
       let originalRepCount = 0;
       for (const sourceEle of response_text.split(' ')) {
         const similarityScore = await this.getTextSimilarity(originalEle, sourceEle);
@@ -2268,16 +2345,16 @@ export class ScoresService {
     return { constructText, reptitionCount }
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string, base64_string) {
+  async getTextMetrics(original_text: string, response_text: string, language: string, base64_audio: string) {
     const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
-
+    
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
-      base64_string: base64_string.toString('base64'),
+      base64_string: base64_audio
     };
-
+   
     const textEvalMatrices = await lastValueFrom(
       this.httpService
         .post(url, JSON.stringify(textData), {
@@ -2320,7 +2397,7 @@ export class ScoresService {
     );
     return result?.hexcode || '';
   }
-
+  
   async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
@@ -2507,7 +2584,6 @@ export class ScoresService {
         }
       }
     }
-
     return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
   }
 
@@ -2602,5 +2678,191 @@ export class ScoresService {
     syllables = [...new Set(syllables)];
 
     return syllables;
+  }
+
+  async processTokens(nBestTokens) {
+    let data_arr = [];
+
+    nBestTokens.forEach((element) => {
+      element.tokens.forEach((token) => {
+        let insertObj = {}; // Create an empty object for each iteration
+
+        // Add the first key-value pair if valid
+        let key = Object.keys(token)[0];
+        if (key && key.trim() !== '') {
+          let value = Object.values(token)[0];
+          insertObj[key] = value;
+        }
+
+        // Add the second key-value pair if valid
+        if (Object.keys(token).length > 1) {
+          let key1 = Object.keys(token)[1];
+          if (key1 && key1.trim() !== '') {
+            let value1 = Object.values(token)[1];
+            insertObj[key1] = value1;
+          }
+        }
+
+        // Only push to data_arr if there's at least one valid key-value pair
+        if (Object.keys(insertObj).length > 0) {
+          data_arr.push(insertObj);
+        }
+      });
+    });
+
+    return data_arr;
+  }
+  /*  Function for generating the constructed text without  missing the sequence and for every constructed text
+   we are storing used chars and that are not used we are storing it in unused char array  */
+  async generateWords(dataArr) {
+    const generateRecursive = (currentWord, usedKeyValueArr, unusedKeyValueArr, index) => {
+      if (index === dataArr.length) {
+        return [[currentWord, usedKeyValueArr, unusedKeyValueArr]];
+      }
+      const possibleWords = [];
+      const currentObject = dataArr[index];
+      for (const key in currentObject) {
+        if (currentObject.hasOwnProperty(key)) {
+          const newWord = currentWord + key;
+          const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
+          const newUnusedKeyValueArr = unusedKeyValueArr.filter(pair => !pair.hasOwnProperty(key));
+          possibleWords.push(
+            ...generateRecursive(newWord, newUsedKeyValueArr, newUnusedKeyValueArr, index + 1)
+          );
+        }
+      }
+      return possibleWords;
+    };
+    const initialUnusedKeyValueArr = dataArr.flatMap(data => Object.entries(data).map(([key, value]) => ({ [key]: value })));
+    return generateRecursive("", [], initialUnusedKeyValueArr, 0);
+  }
+  
+  /* Function for generating the simnilarities for each and every word with the
+  original word and sort it in descending order */
+  async findAllSimilarities(words_with_values, wordArray) {
+    let highestScore = -Infinity;
+    let highestScoreArr = null;
+
+    for (const word of wordArray) {
+      for (const wordWithVal of words_with_values) {
+        const constructedWord = wordWithVal[0];
+        const tokenArr = wordWithVal[1];
+        const anamolyTokenArr = wordWithVal[2];
+        const score = await this.getTextSimilarity(word, constructedWord);
+
+        if (score > highestScore) {
+          highestScore = score;
+          highestScoreArr = [constructedWord, tokenArr, anamolyTokenArr, score];
+        }
+      }
+    }
+    return highestScoreArr;
+  }
+
+
+  async replaceCharacters(word) {  // Agreeable Substitutes word generation
+    let outcomes = new Set();
+
+    // Function to perform the replacements
+    function performReplacements(w) {
+      let transformations = [];
+
+      // Process 'ం' at the end of the word
+      if (w.endsWith('ం')) {
+        transformations.push(w.slice(0, -1) + 'మ్');
+      }
+
+      // Process 'ం' and 'ర' in the middle of the word
+
+      for (let i = 0; i < w.length - 1; i++) {
+        if (w[i] === 'ం') {
+          let nextChar = w[i + 1];
+          let inclu_char = '';
+          if (['క', 'ఖ', 'గ', 'ఘ', 'ఙ'].includes(nextChar)) {
+            inclu_char = 'ఙ్';
+          } else if (['చ', 'ఛ', 'జ', 'ఝ', 'ఞ'].includes(nextChar)) {
+            inclu_char = 'ఞ్';
+          } else if (['ట', 'ఠ', 'డ', 'ఢ', 'ణ'].includes(nextChar)) {
+            inclu_char = 'ణ్';
+          } else if (['త', 'థ', 'ద', 'ధ', 'న'].includes(nextChar)) {
+            inclu_char = 'న్';
+          } else if (['ప', 'ఫ', 'బ', 'భ', 'మ'].includes(nextChar)) {
+            inclu_char = 'మ్';
+          } else {
+            inclu_char = 'మ్';
+          }
+          transformations.push(w.slice(0, i) + inclu_char + w.slice(i + 1));
+        }
+        if (w[i] === 'ర') {
+          transformations.push(w.slice(0, i) + 'ఱ' + w.slice(i + 1));
+        }
+      }
+
+
+      // Apply new transformations
+      transformations.forEach(newWord => {
+        if (!outcomes.has(newWord)) {
+          outcomes.add(newWord);
+          performReplacements(newWord); // Recursively handle new transformations
+        }
+      });
+    }
+
+    // Perform replacements on the original word
+    performReplacements(word);
+
+    // If no transformations were added, return the original word
+    return outcomes.size > 0 ? Array.from(outcomes) : [word];
+  }
+  getAccuracyClassification(contentType: string, score: number): string {
+    const ct = contentType.toLowerCase();
+    if (ct === 'word') {
+      if (score >= 0 && score < 0.6) return "Fluent";
+      else if (score >= 0.6 && score < 2) return "Moderately Fluent";
+      else if (score >= 2 && score <= 3) return "Disfluent";
+      else return "Very Disfluent";
+    } else if (ct === 'sentence') {
+      if (score >= 0 && score < 1.5) return "Fluent";
+      else if (score >= 1.5 && score < 4.0) return "Moderately Fluent";
+      else if (score >= 4.0 && score <= 6) return "Disfluent";
+      else return "Very Disfluent";
+    } else if (ct === 'paragraph') {
+      if (score >= 0 && score < 3) return "Fluent";
+      else if (score >= 3 && score < 6) return "Moderately Fluent";
+      else if (score >= 6 && score <= 8) return "Disfluent";
+      else return "Very Disfluent";
+    }
+    return "N/A";
+  }
+  public classificationToScore(classification: string): number {
+    switch (classification) {
+      case 'Fluent':
+        return 4;
+      case 'Moderately Fluent':
+        return 3;
+      case 'Disfluent':
+        return 2;
+      case 'Very Disfluent':
+        return 1;
+      default:
+        return 1;  
+    }
+  }
+  public async getSubSessionScores(subSessionId: string, language: string): Promise<any[]> {
+    // Find documents where at least one session in the sessions array has the matching sub_session_id and language.
+    const docs = await this.scoreModel.find({
+      'sessions.sub_session_id': subSessionId,
+      'sessions.language': language
+    }).lean();
+    
+    // Flatten the sessions array and then filter to only those matching exactly the sub_session_id and language.
+    const sessions = docs.reduce((acc: any[], doc: any) => {
+      if (doc.sessions && Array.isArray(doc.sessions)) {
+        const matching = doc.sessions.filter((s: any) => s.sub_session_id === subSessionId && s.language === language);
+        return acc.concat(matching);
+      }
+      return acc;
+    }, []);
+    return sessions;
   }
 }
