@@ -13,24 +13,6 @@ export class CreateLearnerProfileDto {
   audio: Buffer;
 
   @ApiProperty()
-  response_text: string;
-
-  @ApiProperty()
-  mode: string;
-
-  @ApiProperty()
-  pause_count: number;
-
-  @ApiProperty()
-  read_duration: number;
-
-  @ApiProperty()
-  practice_duration: number;
-
-  @ApiProperty()
-  retry_count: number;
-
-  @ApiProperty()
   user_id: string;
 
   @ApiProperty()
