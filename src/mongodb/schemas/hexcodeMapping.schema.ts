@@ -14,12 +14,6 @@ export class hexcodeMapping extends Document {
 
   @Prop({ required: false, index:true })
   graphemes: [string];
-
-  @Prop({ required: true, index:true})
-  isCommon: boolean;
-
-  @Prop({ required: true, index:true })
-  indexNo: number;
 }
 
 export type hexcodeMappingDocument = hexcodeMapping & Document;

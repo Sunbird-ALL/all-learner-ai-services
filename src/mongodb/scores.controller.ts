@@ -17,10 +17,6 @@ import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import ta_config from "./config/language/ta";
 import en_config from "./config/language/en"
-import gu_config from './config/language/gu';
-import or_config from './config/language/or';
-import hi_config from './config/language/hi';
-import kn_config from './config/language/kn';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -83,7 +79,7 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const mode = CreateLearnerProfileDto.mode;
+
       const vowelSignArr = ta_config.vowel;
       const language = ta_config.language_code;
       let createScoreData;
@@ -109,7 +105,6 @@ export class ScoresController {
 
       const originalText = CreateLearnerProfileDto.original_text;
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-
       let responseText = '';
       let constructText = '';
 
@@ -121,48 +116,43 @@ export class ScoresController {
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
 
-        if (mode == 'online' || mode == undefined) {
-          if (
-            CreateLearnerProfileDto['output'] === undefined &&
-            CreateLearnerProfileDto.audio !== undefined
-          ) {
-            audioFile = CreateLearnerProfileDto.audio;
-            const decoded = audioFile.toString('base64');
+        if (
+          CreateLearnerProfileDto['output'] === undefined &&
+          CreateLearnerProfileDto.audio !== undefined
+        ) {
+          audioFile = CreateLearnerProfileDto.audio;
+          const decoded = audioFile.toString('base64');
 
-            // Send Audio file to ASR to process and provide vector with char and score
-            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          // Send Audio file to ASR to process and provide vector with char and score
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
 
-            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-            pause_count = audioOutput.pause_count || 0;
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
-            similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-            similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
+          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
 
-            if (similarityDenoisedText <= similarityNonDenoisedText) {
-              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-              DenoisedresponseText = asrOutDenoised[0]?.source;
-              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-            } else {
-              CreateLearnerProfileDto['output'] = asrOutDenoised;
-              DenoisedresponseText = asrOutDenoised[0]?.source;
-              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-            }
-
-            if (CreateLearnerProfileDto.output[0].source === '') {
-              return response.status(HttpStatus.BAD_REQUEST).send({
-                status: 'error',
-                message:
-                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-              });
-            }
+          if (similarityDenoisedText <= similarityNonDenoisedText) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
           }
-          responseText = CreateLearnerProfileDto.output[0].source;
-        }else{
-            responseText =CreateLearnerProfileDto.response_text;
-            pause_count = CreateLearnerProfileDto.pause_count;
+
+          if (CreateLearnerProfileDto.output[0].source === '') {
+            return response.status(HttpStatus.BAD_REQUEST).send({
+              status: 'error',
+              message:
+                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+            });
+          }
         }
 
+        responseText = CreateLearnerProfileDto.output[0].source;
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
@@ -193,297 +183,8 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-        if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
-          let improved = false;
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, audioFile)
 
-          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
-          let similarityScoreDenoisedResText = similarityDenoisedText;
-
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
-          }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
-
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
-
-        let createdAt = new Date().toISOString().replace('Z', '+00:00')
-
-        createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
-          session: {
-            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
-            contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
-            contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            createdAt: createdAt,
-            language: language, // content language
-            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
-            response_text: responseText, // text return by ai after converting audio to text
-            construct_text: constructText, // this will be constructed by matching response text with original text.
-            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
-            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
-            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
-            error_rate: {
-              character: textEvalMatrices.cer,
-              word: textEvalMatrices.wer,
-            },
-            count_diff: {
-              character: Math.abs(
-                CreateLearnerProfileDto.original_text.length -
-                responseText.length,
-              ),
-              word: Math.abs(
-                CreateLearnerProfileDto.original_text.split(' ').length -
-                responseText.split(' ').length,
-              ),
-            },
-            eucledian_distance: {
-              insertions: {
-                chars: textEvalMatrices.insertion,
-                count: textEvalMatrices.insertion.length,
-              },
-              deletions: {
-                chars: textEvalMatrices.deletion,
-                count: textEvalMatrices.deletion.length,
-              },
-              substitutions: {
-                chars: textEvalMatrices.substitution,
-                count: textEvalMatrices.substitution.length,
-              },
-            },
-            fluencyScore: fluencyScore.toFixed(3),
-            silence_Pause: {
-              total_duration: 0,
-              count: pause_count,
-            },
-            reptitionsCount: reptitionCount,
-            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false,
-          },
-        };
-        // For retry attempt detection
-        const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
-          CreateLearnerProfileDto.contentId,
-        );
-
-        // Store Array to DB
-        const data = await this.scoresService.create(createScoreData);
-      }
-
-      // Cal the subsessionWise and content_id wise target.
-      let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
-      const totalTargets = targets.length;
-
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      return response.status(HttpStatus.CREATED).send({
-        status: 'success',
-        msg: 'Successfully stored data to learner profile',
-        responseText: responseText,
-        subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2)),
-      });
-    } catch (err) {
-      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        status: 'error',
-        message: 'Server error - ' + err,
-      });
-    }
-  }
-
-  @ApiBody({
-    description: 'Request body for storing data to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        original_text: { type: 'string', example: 'ગોલુને ફરવુ ગમે છે.' },
-        audio: { type: 'string', example: 'Add gujarati Wav file base64 string here' },
-        user_id: { type: 'string', example: '8819167684' },
-        session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
-        language: { type: 'string', example: 'gu' },
-        date: { type: 'string', format: 'date-time', example: '2024-05-07T12:24:51.779Z' },
-        sub_session_id: { type: 'string', example: '4TsVQ28LWibb8Yi2uJg4DtLK3svIbIHe' },
-        contentId: { type: 'string', example: 'b70af0e5-0d74-4287-9548-4d491c714b0d' },
-        contentType: { type: 'string', example: 'Sentence' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Success message when data is stored to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', example: 'success' },
-        msg: { type: 'string', example: 'Successfully stored data to learner profile' },
-        responseText: { type: 'string', example: 'ગોલુને ફરવુ ગમે' },
-        subsessionTargetsCount: { type: 'number', example: 17 },
-        subsessionFluency: { type: 'number', example: 1.54 },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Error while data is being stored to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', example: 'error' },
-        msg: { type: 'string', example: 'Server error - error message' },
-      },
-    },
-  })
-  @ApiForbiddenResponse({ description: 'Forbidden.' })
-  @ApiOperation({
-    summary:
-      'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Gujarati',
-  })
-  @Post('/updateLearnerProfile/gu')
-  async updateLearnerProfileGu(
-    @Res() response: FastifyReply,
-    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
-  ) {
-    try {
-      const vowelSignArr = gu_config.vowel;
-      const language = gu_config.language_code;
-      let createScoreData;
-
-      let asrOutDenoised;
-      let asrOutBeforeDenoised;
-
-      let nonDenoisedresponseText = "";
-      let DenoisedresponseText = "";
-
-      let similarityNonDenoisedText = 0;
-      let similarityDenoisedText = 0;
-
-      let constructTokenArr = [];
-      let correctTokens = [];
-      let missingTokens = [];
-
-      let reptitionCount = 0;
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-
-      var originalText = CreateLearnerProfileDto.original_text
-
-      if (originalText.endsWith('.')) {
-        originalText = originalText.slice(0, -1);
-      }
-
-      let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      let responseText = '';
-      let constructText = '';
-
-      let pause_count = 0;
-
-      /* Condition to check whether content type is char or not. If content type is char
-      dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
-      */
-      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-        let audioFile;
-
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-
-          // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
-
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-
-          if (similarityDenoisedText <= similarityNonDenoisedText) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
-
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
-          }
-        }
-
-        responseText = CreateLearnerProfileDto.output[0].source;
-
-        // Get All hexcode for this selected language
-        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-
-        // Constructed Logic starts from here
-        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        constructText = constructedTextRepCountData.constructText;
-        
-        reptitionCount = constructedTextRepCountData.reptitionCount;
-        constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-        
-
-        // Comparison Logic for identify correct and missing tokens
-        for (const originalTokenArrEle of originalTokenArr) {
-          if (constructTokenArr.includes(originalTokenArrEle)) {
-            correctTokens.push(originalTokenArrEle);
-          } else {
-            missingTokens.push(originalTokenArrEle);
-          }
-        }
-        const missingTokenSet = new Set(missingTokens);
-        missingTokens = Array.from(missingTokenSet);
-
-        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
-
-        confidence_scoresArr = identifyTokens.confidence_scoresArr;
-        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
-        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
-
-        // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -511,295 +212,6 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
-        // calculate fluencyScore
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
-
-        let createdAt = new Date().toISOString().replace('Z', '+00:00')
-
-        createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
-          session: {
-            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
-            contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
-            contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            createdAt: createdAt,
-            language: language, // content language
-            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
-            response_text: responseText, // text return by ai after converting audio to text
-            construct_text: constructText, // this will be constructed by matching response text with original text.
-            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
-            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
-            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
-            error_rate: {
-              character: textEvalMatrices.cer,
-              word: textEvalMatrices.wer,
-            },
-            count_diff: {
-              character: Math.abs(
-                CreateLearnerProfileDto.original_text.length -
-                CreateLearnerProfileDto.output[0].source.length,
-              ),
-              word: Math.abs(
-                CreateLearnerProfileDto.original_text.split(' ').length -
-                CreateLearnerProfileDto.output[0].source.split(' ').length,
-              ),
-            },
-            eucledian_distance: {
-              insertions: {
-                chars: textEvalMatrices.insertion,
-                count: textEvalMatrices.insertion.length,
-              },
-              deletions: {
-                chars: textEvalMatrices.deletion,
-                count: textEvalMatrices.deletion.length,
-              },
-              substitutions: {
-                chars: textEvalMatrices.substitution,
-                count: textEvalMatrices.substitution.length,
-              },
-            },
-            fluencyScore: fluencyScore.toFixed(3),
-            silence_Pause: {
-              total_duration: 0,
-              count: pause_count,
-            },
-            reptitionsCount: reptitionCount,
-            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false,
-          },
-        };
-
-        // For retry attempt detection
-        const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
-          CreateLearnerProfileDto.contentId,
-        );
-
-        // Store Array to DB
-        const data = await this.scoresService.create(createScoreData);
-      }
-
-      // Cal the subsessionWise and content_id wise target.
-      let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
-      const totalTargets = targets.length;
-
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      return response.status(HttpStatus.CREATED).send({
-        status: 'success',
-        msg: 'Successfully stored data to learner profile',
-        originalText: originalText,
-        responseText: responseText,
-        subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2))
-      });
-    } catch (err) {
-      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        status: 'error',
-        message: 'Server error - ' + err,
-      });
-    }
-  }
-
-  @ApiBody({
-    description: 'Request body for storing data to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        original_text: { type: 'string', example: 'ବିଲେଇ' },
-        audio: { type: 'string', example: 'Add odiya Wav file base64 string here' },
-        user_id: { type: 'string', example: '8819167684' },
-        session_id: { type: 'string', example: 'IYmeBW1g3GpJb1AE0fOpHCPhKxJG4zq6' },
-        language: { type: 'string', example: 'or' },
-        date: { type: 'string', format: 'date-time', example: '2024-05-07T12:24:51.779Z' },
-        sub_session_id: { type: 'string', example: '4TsVQ28LWibb8Yi2uJg4DtLK3svIbIHe' },
-        contentId: { type: 'string', example: 'b70af0e5-0d74-4287-9548-4d491c714b0d' },
-        contentType: { type: 'string', example: 'word' },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 201,
-    description: 'Success message when data is stored to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', example: 'success' },
-        msg: { type: 'string', example: 'Successfully stored data to learner profile' },
-        responseText: { type: 'string', example: 'ବିଲେଇ' },
-        subsessionTargetsCount: { type: 'number', example: 17 },
-        subsessionFluency: { type: 'number', example: 1.54 },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Error while data is being stored to the learner profile',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string', example: 'error' },
-        msg: { type: 'string', example: 'Server error - error message' },
-      },
-    },
-  })
-  @ApiForbiddenResponse({ description: 'Forbidden.' })
-  @ApiOperation({
-    summary:
-      'Store students learner ai profile, from the ASR output for a given wav file. This API will work for odiya',
-  })
-  @Post('/updateLearnerProfile/or')
-  async updateLearnerProfileOr(
-    @Res() response: FastifyReply,
-    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
-  ) {
-    try {
-      const vowelSignArr = or_config.vowel;
-      const language = or_config.language_code;
-      
-      let createScoreData;
-
-      let asrOutDenoised;
-      let asrOutBeforeDenoised;
-
-      let nonDenoisedresponseText = "";
-      let DenoisedresponseText = "";
-
-      let similarityNonDenoisedText = 0;
-      let similarityDenoisedText = 0;
-
-      let constructTokenArr = [];
-      let correctTokens = [];
-      let missingTokens = [];
-
-      let reptitionCount = 0;
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-  
-      const originalText = CreateLearnerProfileDto.original_text;
-      
-      let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      let responseText = '';
-      let constructText = '';
-
-      let pause_count = 0;
-
-      /* Condition to check whether content type is char or not. If content type is char
-      dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
-      */
-      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-        let audioFile;
-
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-
-          // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
-
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-
-          if (similarityDenoisedText <= similarityNonDenoisedText) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
-
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
-          }
-        }
-
-        responseText = CreateLearnerProfileDto.output[0].source;
-
-        // Get All hexcode for this selected language
-        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        
-        // Constructed Logic starts from here
-        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        constructText = constructedTextRepCountData.constructText;
-        reptitionCount = constructedTextRepCountData.reptitionCount;
-        constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-
-        // Comparison Logic for identify correct and missing tokens
-        for (const originalTokenArrEle of originalTokenArr) {
-          if (constructTokenArr.includes(originalTokenArrEle)) {
-            correctTokens.push(originalTokenArrEle);
-          } else {
-            missingTokens.push(originalTokenArrEle);
-          }
-        }
-        const missingTokenSet = new Set(missingTokens);
-        missingTokens = Array.from(missingTokenSet);
-
-        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
-
-        confidence_scoresArr = identifyTokens.confidence_scoresArr;
-        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
-        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
-
-        // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
-
-          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
-          let similarityScoreDenoisedResText = similarityDenoisedText;
-
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
-          }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
-
-        // calculate fluencyScore
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
 
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
@@ -870,24 +282,26 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
       
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+    
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-     
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
-        originalText: originalText,
         responseText: responseText,
         subsessionTargetsCount: totalTargets,
         subsessionFluency: parseFloat(fluency.toFixed(2))
@@ -899,7 +313,6 @@ export class ScoresController {
       });
     }
   }
-
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
@@ -954,230 +367,336 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const vowelSignArr = hi_config.vowel;
-      const language = hi_config.language_code;
-      let createScoreData;
-
-      let asrOutDenoised;
-      let asrOutBeforeDenoised;
-
-      let nonDenoisedresponseText = "";
-      let DenoisedresponseText = "";
-
-      let similarityNonDenoisedText = 0;
-      let similarityDenoisedText = 0;
-
-      let constructTokenArr = [];
-      let correctTokens = [];
-      let missingTokens = [];
-
-      let reptitionCount = 0;
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-
-      const originalText = CreateLearnerProfileDto.original_text
-
-      let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      let responseText = '';
-      let constructText = '';
-      let pause_count = 0;
-
-      /* Condition to check whether content type is char or not. If content type is char
-      dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
-      */
-      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-        let audioFile;
-
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-
-          // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
-
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-
-          if (similarityDenoisedText <= similarityNonDenoisedText) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
-
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
-          }
-        }
-
-        responseText = CreateLearnerProfileDto.output[0].source;
-
-        // Get All hexcode for this selected language
-        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-
-        // Constructed Logic starts from here
-        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        constructText = constructedTextRepCountData.constructText;
-        reptitionCount = constructedTextRepCountData.reptitionCount;
-        constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-
-        // Comparison Logic for identify correct and missing tokens
-        for (const originalTokenArrEle of originalTokenArr) {
-          if (constructTokenArr.includes(originalTokenArrEle)) {
-            correctTokens.push(originalTokenArrEle);
-          } else {
-            missingTokens.push(originalTokenArrEle);
-          }
-        }
-        const missingTokenSet = new Set(missingTokens);
-        missingTokens = Array.from(missingTokenSet);
-
-        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
-
-        confidence_scoresArr = identifyTokens.confidence_scoresArr;
-        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
-        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
-
-        // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
-
-          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
-          let similarityScoreDenoisedResText = similarityDenoisedText;
-
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
-          }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
-
-        // calculate fluencyScore
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
-        let createdAt = new Date().toISOString().replace('Z', '+00:00')
-
-        createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
-          session: {
-            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
-            contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
-            contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            createdAt: createdAt,
-            language: language, // content language
-            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
-            response_text: responseText, // text return by ai after converting audio to text
-            construct_text: constructText, // this will be constructed by matching response text with original text.
-            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
-            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
-            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
-            error_rate: {
-              character: textEvalMatrices.cer,
-              word: textEvalMatrices.wer,
-            },
-            count_diff: {
-              character: Math.abs(
-                CreateLearnerProfileDto.original_text.length -
-                CreateLearnerProfileDto.output[0].source.length,
-              ),
-              word: Math.abs(
-                CreateLearnerProfileDto.original_text.split(' ').length -
-                CreateLearnerProfileDto.output[0].source.split(' ').length,
-              ),
-            },
-            eucledian_distance: {
-              insertions: {
-                chars: textEvalMatrices.insertion,
-                count: textEvalMatrices.insertion.length,
-              },
-              deletions: {
-                chars: textEvalMatrices.deletion,
-                count: textEvalMatrices.deletion.length,
-              },
-              substitutions: {
-                chars: textEvalMatrices.substitution,
-                count: textEvalMatrices.substitution.length,
-              },
-            },
-            fluencyScore: fluencyScore.toFixed(3),
-            silence_Pause: {
-              total_duration: 0,
-              count: pause_count,
-            },
-            reptitionsCount: reptitionCount,
-            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false,
-          },
-        };
-
-        // For retry attempt detection
-        const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
-          CreateLearnerProfileDto.contentId,
+      if (
+        CreateLearnerProfileDto['output'] === undefined &&
+        CreateLearnerProfileDto.audio !== undefined
+      ) {
+        const audioFile = CreateLearnerProfileDto.audio;
+        const decoded = audioFile.toString('base64');
+        const audioOutput = await this.scoresService.audioFileToAsrOutput(
+          decoded,
+          'hi',
+          CreateLearnerProfileDto['contentType']
         );
+        CreateLearnerProfileDto['output'] = audioOutput.output;
 
-        // Store Array to DB
-        const data = await this.scoresService.create(createScoreData);
+        if (CreateLearnerProfileDto.output[0].source === '') {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            status: 'error',
+            message:
+              'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+          });
+        }
       }
 
-      // Cal the subsessionWise and content_id wise target.
-      let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
+      const confidence_scoresArr = [];
+      const anomaly_scoreArr = [];
+      const missing_token_scoresArr = [];
+
+      const originalText = CreateLearnerProfileDto.original_text;
+      const responseText = CreateLearnerProfileDto.output[0].source;
+      const originalTextTokensArr = originalText.split('');
+      const responseTextTokensArr = responseText.split('');
+
+      const correctTokens = [];
+      let missingTokens = [];
+
+      const hindiVowelSignArr = [
+        'ा',
+        'ि',
+        'ी',
+        'ु',
+        'ू',
+        'ृ',
+        'े',
+        'ै',
+        'ो',
+        'ौ',
+        'ं',
+        'ः',
+        'ँ',
+        'ॉ',
+        'ों',
+        '्',
+        '़',
+        '़ा',
+      ];
+
+      let vowelSignArr = [];
+
+      const language = 'hi';
+
+      vowelSignArr = hindiVowelSignArr;
+
+      const tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
+      let tokenHexcodeDataArr = [];
+
+      await tokenHexcodeData.then((tokenHexcodedata: any) => {
+        tokenHexcodeDataArr = tokenHexcodedata;
+      });
+
+      let prevEle = '';
+      let isPrevVowel = false;
+
+      const originalTokenArr = [];
+      const responseTokenArr = [];
+
+      for (const originalTextELE of originalText.split('')) {
+        if (originalTextELE != ' ') {
+          if (vowelSignArr.includes(originalTextELE)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + originalTextELE;
+              originalTokenArr.push(prevEle);
+            } else {
+              prevEle = prevEle + originalTextELE;
+              originalTokenArr.push(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            originalTokenArr.push(originalTextELE);
+            prevEle = originalTextELE;
+            isPrevVowel = false;
+          }
+        }
+      }
+
+      for (const responseTextELE of responseText.split('')) {
+        if (responseTextELE != ' ') {
+          if (vowelSignArr.includes(responseTextELE)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + responseTextELE;
+              responseTokenArr.push(prevEle);
+            } else {
+              prevEle = prevEle + responseTextELE;
+              responseTokenArr.push(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            responseTokenArr.push(responseTextELE);
+            prevEle = responseTextELE;
+            isPrevVowel = false;
+          }
+        }
+      }
+
+      // Comparison Logic
+
+      for (const originalTokenArrEle of originalTokenArr) {
+        if (responseTokenArr.includes(originalTokenArrEle)) {
+          correctTokens.push(originalTokenArrEle);
+        } else {
+          missingTokens.push(originalTokenArrEle);
+        }
+      }
+
+      const missingTokenSet = new Set(missingTokens);
+
+      missingTokens = Array.from(missingTokenSet);
+
+      const filteredTokenArr = [];
+
+      //token list for ai4bharat response
+      const tokenArr = [];
+      const anamolyTokenArr = [];
+
+      // Create Single Array from AI4bharat tokens array
+      CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+        element.tokens.forEach((token) => {
+          const key = Object.keys(token)[0];
+          const value = Object.values(token)[0];
+
+          let insertObj = {};
+          insertObj[key] = value;
+          tokenArr.push(insertObj);
+
+          const key1 = Object.keys(token)[1];
+          const value1 = Object.values(token)[1];
+          insertObj = {};
+          insertObj[key1] = value1;
+          anamolyTokenArr.push(insertObj);
+        });
+      });
+
+      const uniqueChar = new Set();
+      prevEle = '';
+      isPrevVowel = false;
+
+      // Create Unique token array
+      for (const tokenArrEle of tokenArr) {
+        const tokenString = Object.keys(tokenArrEle)[0];
+        for (const keyEle of tokenString.split('')) {
+          if (vowelSignArr.includes(keyEle)) {
+            if (isPrevVowel) {
+              prevEle = prevEle + keyEle;
+              uniqueChar.add(prevEle);
+            } else {
+              prevEle = prevEle + keyEle;
+              uniqueChar.add(prevEle);
+            }
+            isPrevVowel = true;
+          } else {
+            uniqueChar.add(keyEle);
+            isPrevVowel = false;
+            prevEle = keyEle;
+          }
+        }
+      }
+
+      //unique token list for ai4bharat response
+      const uniqueCharArr = Array.from(uniqueChar);
+
+      isPrevVowel = false;
+
+      // Get best score for Each Char
+      for (const char of uniqueCharArr) {
+        let score = 0.0;
+        let prevChar = '';
+        let isPrevVowel = false;
+
+        for (const tokenArrEle of tokenArr) {
+          const tokenString = Object.keys(tokenArrEle)[0];
+          const tokenValue = Object.values(tokenArrEle)[0];
+
+          for (const keyEle of tokenString.split('')) {
+            const scoreVal: any = tokenValue;
+            let charEle: any = keyEle;
+
+            if (vowelSignArr.includes(charEle)) {
+              if (isPrevVowel) {
+                prevChar = prevChar + charEle;
+                charEle = prevChar;
+              } else {
+                prevChar = prevChar + charEle;
+                charEle = prevChar;
+              }
+              isPrevVowel = true;
+            } else {
+              prevChar = charEle;
+              isPrevVowel = false;
+            }
+
+            if (char === charEle) {
+              if (scoreVal > score) {
+                score = scoreVal;
+              }
+            }
+          }
+        }
+
+        filteredTokenArr.push({ charkey: char, charvalue: score });
+      }
+
+      // Create confidence score array and anomoly array
+      for (const value of filteredTokenArr) {
+        const score: any = value.charvalue;
+
+        let identification_status = 0;
+
+        if (score >= 0.9) {
+          identification_status = 1;
+        } else if (score >= 0.4) {
+          identification_status = -1;
+        }
+
+        if (value.charkey !== '' && value.charkey !== '▁') {
+          if (
+            correctTokens.includes(value.charkey) ||
+            originalTokenArr.includes(value.charkey)
+          ) {
+            const hexcode = getTokenHexcode(value.charkey);
+
+            if (hexcode !== '') {
+              confidence_scoresArr.push({
+                token: value.charkey,
+                hexcode: hexcode,
+                confidence_score: value.charvalue,
+                identification_status: identification_status,
+              });
+            } else {
+              anomaly_scoreArr.push({
+                token: value.charkey.replaceAll('_', ''),
+                hexcode: hexcode,
+                confidence_score: value.charvalue,
+                identification_status: identification_status,
+              });
+            }
+          }
+        }
+      }
+
+      for (const missingTokensEle of missingTokens) {
+        const hexcode = getTokenHexcode(missingTokensEle);
+
+        if (hexcode !== '') {
+          if (hindiVowelSignArr.includes(missingTokensEle)) {
+          } else {
+            if (!uniqueChar.has(missingTokensEle)) {
+              missing_token_scoresArr.push({
+                token: missingTokensEle,
+                hexcode: hexcode,
+                confidence_score: 0.1,
+                identification_status: 0,
+              });
+            }
+          }
+        }
+      }
+
+      for (const anamolyTokenArrEle of anamolyTokenArr) {
+        const tokenString = Object.keys(anamolyTokenArrEle)[0];
+        const tokenValue = Object.values(anamolyTokenArrEle)[0];
+
+        if (tokenString != '') {
+          const hexcode = getTokenHexcode(tokenString);
+          if (hexcode !== '') {
+            if (hindiVowelSignArr.includes(tokenString)) {
+            } else {
+              anomaly_scoreArr.push({
+                token: tokenString.replaceAll('_', ''),
+                hexcode: hexcode,
+                confidence_score: tokenValue,
+                identification_status: 0,
+              });
+            }
+          }
+        }
+      }
+
+      const createdAt = new Date().toISOString().replace('Z', '+00:00');
+
+      const createScoreData = {
+        user_id: CreateLearnerProfileDto.user_id,
+        session: {
+          session_id: CreateLearnerProfileDto.session_id,
+          createdAt: createdAt,
+          language: language,
+          original_text: CreateLearnerProfileDto.original_text,
+          response_text: responseText,
+          confidence_scores: confidence_scoresArr,
+          missing_token_scores: missing_token_scoresArr,
+          anamolydata_scores: anomaly_scoreArr,
+          isRetry: false,
+        },
+      };
+
+      // For retry attempt detection
+      const retryAttempt = await this.scoresService.getRetryStatus(
+        CreateLearnerProfileDto.user_id,
+        CreateLearnerProfileDto.contentId,
       );
 
-      let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
-      const totalTargets = targets.length;
+      // Store Array to DB
+      const data = this.scoresService.create(createScoreData);
 
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
+      function getTokenHexcode(token: string) {
+        const result = tokenHexcodeDataArr.find((item) => item.token === token);
+        return result?.hexcode || '';
+      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
-        originalText: originalText,
         responseText: responseText,
-        subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2))
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -1254,14 +773,32 @@ export class ScoresController {
       let DenoisedresponseText;
       let asrOutBeforeDenoised;
 
-      const mode = CreateLearnerProfileDto.mode;
-
-      const language = kn_config.language_code;
+      const language = 'kn';
 
       const originalText = CreateLearnerProfileDto.original_text;
       const originalTextTokensArr = originalText.split('');
 
-      const kannadaVowelSignArr = kn_config.vowel
+      const kannadaVowelSignArr = [
+        'ಾ',
+        'ಿ',
+        'ೀ',
+        'ು',
+        'ೂ',
+        'ೃ',
+        'ೆ',
+        'ೇ',
+        'ೈ',
+        'ೊ',
+        'ೋ',
+        'ೌ',
+        'ಂ',
+        'ಃ',
+        'ೄ',
+        '್',
+        'ಀ',
+        'ಁ',
+        '಼',
+      ];
       vowelSignArr = kannadaVowelSignArr;
 
       let responseText = '';
@@ -1271,24 +808,9 @@ export class ScoresController {
       let createScoreData: any;
 
       let pause_count = 0;
-      let audioFile;
-      let avg_pause = 0;
-
-      let pitch_classification = "";
-      let pitch_mean = 0;
-      let pitch_std = 0;
-      let intensity_classification = "";
-      let intensity_mean = 0;
-      let intensity_std = 0;
-      let expression_classification = "";
-      let smoothness_classification = "";
-      let tokenArrandAnamolyArrdefine = false;
-      let tokenArr = [];
-      let anamolyTokenArr = [];
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-      
-      if(mode == 'online' || mode == undefined){
+        let audioFile;
         if (
           CreateLearnerProfileDto['output'] === undefined &&
           CreateLearnerProfileDto.audio !== undefined
@@ -1303,15 +825,6 @@ export class ScoresController {
           asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
-          avg_pause = audioOutput.avg_pause;
-          pitch_classification = audioOutput.pitch_classification; 
-          pitch_mean = audioOutput.pitch_mean;
-          pitch_std = audioOutput.pitch_std;       
-          intensity_classification = audioOutput.intensity_classification; 
-          intensity_mean = audioOutput.intensity_mean;
-          intensity_std = audioOutput.intensity_std;
-          expression_classification = audioOutput.expression_classification;
-          smoothness_classification = audioOutput.smoothness_classification; 
 
           if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -1331,52 +844,8 @@ export class ScoresController {
             });
           }
         }
-        let constructTokens = [];
 
-        if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word'){ // If it is word check for Token combinations and agreeable substitutes for word improvements
-          let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
-          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)  
-          const wordsWithValues = await this.scoresService.generateWords(constructTokens); // Form all possible words from ASR tokens
-          const replacements = kn_config.replacements;
-          const firstChar = originalText[0]
-          if (replacements.hasOwnProperty(firstChar)) { // If it is agreeable , construct the possible orignal words and compare all construted words for better possible response
-            let agreeableResults = replacements[firstChar] + originalText.slice(1);
-            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, agreeableResults]);
-            if (originalSimilarity >= agreeableHighestSimilarity[3]) {
-              responseText = nonDenoisedresponseText;
-              tokenArrandAnamolyArrdefine = true;
-            }
-
-            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-              responseText = agreeableHighestSimilarity[0];
-              tokenArr = agreeableHighestSimilarity[1];
-              anamolyTokenArr = agreeableHighestSimilarity[2];
-            }
-
-          }
-          else { // If is not agreeable, compare the costructed words with original and get hisghest
-            let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText]);
-            if (originalSimilarity >= constructedHighestSimilarity[3]) {
-              responseText = nonDenoisedresponseText;
-              tokenArrandAnamolyArrdefine = true;
-            }
-            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-              responseText = constructedHighestSimilarity[0];
-              tokenArr = constructedHighestSimilarity[1];
-              anamolyTokenArr = constructedHighestSimilarity[2];
-            }
-          }
-          
-        }
-        else  {  // If it is not a word use reeponse given by ASR
-          responseText = CreateLearnerProfileDto.output[0].source;
-        }
-      }else{
-        responseText = CreateLearnerProfileDto.response_text;
-        pause_count = CreateLearnerProfileDto.pause_count;
-      }
-
-
+        responseText = CreateLearnerProfileDto.output[0].source;
         const responseTextTokensArr = responseText.split('');
 
         let constructText = '';
@@ -1558,27 +1027,26 @@ export class ScoresController {
         const filteredTokenArr = [];
 
         //token list for ai4bharat response
+        const tokenArr = [];
+        const anamolyTokenArr = [];
 
         // Create Single Array from AI4bharat tokens array
-        // generate tokenArr and anamolytokenArr if it is not word or using ASR returned resposne for content type word
-        if (CreateLearnerProfileDto.contentType.toLowerCase() != 'word' || tokenArrandAnamolyArrdefine) {
-          CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
-            element.tokens.forEach((token) => {
-              const key = Object.keys(token)[0];
-              const value = Object.values(token)[0];
+        CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+          element.tokens.forEach((token) => {
+            const key = Object.keys(token)[0];
+            const value = Object.values(token)[0];
 
-              let insertObj = {};
-              insertObj[key] = value;
-              tokenArr.push(insertObj);
+            let insertObj = {};
+            insertObj[key] = value;
+            tokenArr.push(insertObj);
 
-              const key1 = Object.keys(token)[1];
-              const value1 = Object.values(token)[1];
-              insertObj = {};
-              insertObj[key1] = value1;
-              anamolyTokenArr.push(insertObj);
-            });
+            const key1 = Object.keys(token)[1];
+            const value1 = Object.values(token)[1];
+            insertObj = {};
+            insertObj[key1] = value1;
+            anamolyTokenArr.push(insertObj);
           });
-        }
+        });
 
         const uniqueChar = new Set();
         prevEle = '';
@@ -1668,12 +1136,11 @@ export class ScoresController {
               const hexcode = getTokenHexcode(value.charkey);
 
               if (hexcode !== '') {
-                let confidenceScore = value.charvalue>0.7 ? value.charvalue : 0.777
                 confidence_scoresArr.push({
                   token: value.charkey,
                   hexcode: hexcode,
-                  confidence_score: confidenceScore,
-                  identification_status: 1,
+                  confidence_score: value.charvalue,
+                  identification_status: identification_status,
                 });
               } else {
                 if (
@@ -1737,7 +1204,7 @@ export class ScoresController {
           reference: CreateLearnerProfileDto.original_text,
           hypothesis: CreateLearnerProfileDto.output[0].source,
           language: 'kn',
-          base64_string: audioFile?.toString('base64'),
+          base64_string: audioFile.toString('base64'),
         };
 
         const textEvalMatrices = await lastValueFrom(
@@ -1754,11 +1221,6 @@ export class ScoresController {
               }),
             ),
         );
-        let tempo_classification = textEvalMatrices.tempo_classification;
-        let pause_count_textEval = textEvalMatrices.pause_count;
-        let words_per_minute = textEvalMatrices.words_per_minute;
-        let rate_classification = textEvalMatrices.rate_classification;
-        if (mode !== 'offline') {
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1787,17 +1249,15 @@ export class ScoresController {
           await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
-        }
-
         const wer = textEvalMatrices.wer;
         const cercal = textEvalMatrices.cer * 2;
         const charCount = Math.abs(
           CreateLearnerProfileDto.original_text.length -
-          responseText.length,
+          CreateLearnerProfileDto.output[0].source.length,
         );
         const wordCount = Math.abs(
           CreateLearnerProfileDto.original_text.split(' ').length -
-          responseText.split(' ').length,
+          CreateLearnerProfileDto.output[0].source.split(' ').length,
         );
         const repetitions = reptitionCount;
         const pauseCount = pause_count;
@@ -1818,7 +1278,6 @@ export class ScoresController {
           100;
 
         const createdAt = new Date().toISOString().replace('Z', '+00:00');
-        let accuracy_classification = this.scoresService.getAccuracyClassification(CreateLearnerProfileDto.contentType, fluencyScore);
 
         createScoreData = {
           user_id: CreateLearnerProfileDto.user_id,
@@ -1835,9 +1294,6 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer,
@@ -1845,11 +1301,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                responseText.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                responseText.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -1871,41 +1327,9 @@ export class ScoresController {
               total_duration: 0,
               count: pause_count,
             },
-            prosody_fluency: {
-              pitch: { 
-                pitch_classification: pitch_classification,
-                pitch_mean: pitch_mean,
-                pitch_std: pitch_std
-              },
-              intensity: {
-                intensity_classification: intensity_classification,
-                intensity_mean: intensity_mean,
-                intensity_std: intensity_std
-              },
-              tempo: {
-                tempo_classification: tempo_classification,
-                words_per_minute: words_per_minute,
-                pause_count: pause_count_textEval,
-               },
-              expression_classification: expression_classification,
-              smoothness: {
-                smoothness_classification: smoothness_classification,
-                pause_count:pause_count,
-                avg_pause: avg_pause
-              },
-              rate: {
-                rate_classification: rate_classification,
-                words_per_minute: words_per_minute,
-              },
-              accuracy: {
-                accuracy_classification: accuracy_classification,
-                fluencyScore: fluencyScore.toFixed(3),
-              }
-            },
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false,
-            mode:mode
+            isRetry: false
           },
         };
 
@@ -1928,21 +1352,23 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -2013,7 +1439,6 @@ export class ScoresController {
   ) {
     try {
       const originalText = await this.scoresService.processText(CreateLearnerProfileDto.original_text);
-      const mode = CreateLearnerProfileDto.mode;
 
       let createScoreData;
       let language = en_config.language_code;
@@ -2033,89 +1458,113 @@ export class ScoresController {
       let similarityDenoisedText = 0;
 
       let pause_count = 0;
-      let avg_pause = 0;
-
-      let pitch_classification = "";
-      let pitch_mean = 0;
-      let pitch_std = 0;
-      let intensity_classification = "";
-      let intensity_mean = 0;
-      let intensity_std = 0;
-      let expression_classification = "";
-      let smoothness_classification = "";
-      
       let correct_choice_score = 0;
       let correctness_score = 0;
       let is_correct_choice = CreateLearnerProfileDto.is_correct_choice;
+      let comprehension;
 
 
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
-
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
 
-        if (mode == 'online' || mode == undefined) {
-          if (
-            CreateLearnerProfileDto['output'] === undefined &&
-            CreateLearnerProfileDto.audio !== undefined
-          ) {
-            audioFile = CreateLearnerProfileDto.audio;
-            const decoded = audioFile.toString('base64');
+        if (
+          CreateLearnerProfileDto['output'] === undefined &&
+          CreateLearnerProfileDto.audio !== undefined
+        ) {
+          audioFile = CreateLearnerProfileDto.audio;
+          const decoded = audioFile.toString('base64');
 
-            // Send Audio file to ASR to process and provide vector with char and score
-            let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
+          // Send Audio file to ASR to process and provide vector with char and score
+          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
 
-            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-            pause_count = audioOutput.pause_count || 0;
-            avg_pause = audioOutput.avg_pause;
-            pitch_classification = audioOutput.pitch_classification; 
-            pitch_mean = audioOutput.pitch_mean;
-            pitch_std = audioOutput.pitch_std;       
-            intensity_classification = audioOutput.intensity_classification; 
-            intensity_mean = audioOutput.intensity_mean;
-            intensity_std = audioOutput.intensity_std;
-            expression_classification = audioOutput.expression_classification;
-            smoothness_classification = audioOutput.smoothness_classification; 
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+          pause_count = audioOutput.pause_count || 0;
 
-            similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-            similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
+          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
 
-            if (similarityDenoisedText <= similarityNonDenoisedText) {
-              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-              DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
-              nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
-            } else {
-              CreateLearnerProfileDto['output'] = asrOutDenoised;
-              DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
-              nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
-            }
-
-            if (CreateLearnerProfileDto.output[0].source === '') {
-              return response.status(HttpStatus.BAD_REQUEST).send({
-                status: 'error',
-                message:
-                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-              });
-            }
+          if (similarityDenoisedText <= similarityNonDenoisedText) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = await this.scoresService.processText(asrOutDenoised[0]?.source || "");
+            nonDenoisedresponseText = await this.scoresService.processText(asrOutBeforeDenoised[0]?.source || "");
           }
 
-          responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
+          if (CreateLearnerProfileDto.output[0].source === '') {
+            return response.status(HttpStatus.BAD_REQUEST).send({
+              status: 'error',
+              message:
+                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+            });
+          }
         }
-        else {
-          responseText = await this.scoresService.processText(CreateLearnerProfileDto.response_text);
-          pause_count = CreateLearnerProfileDto.pause_count;
-        }
+
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-        let tempo_classification = textEvalMatrices.tempo_classification;
-        let pause_count_textEval = textEvalMatrices.pause_count;
-        let words_per_minute = textEvalMatrices.words_per_minute;
-        let rate_classification = textEvalMatrices.rate_classification;
- 
+        responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
+      
+        if(CreateLearnerProfileDto.ans_key && CreateLearnerProfileDto.ans_key.length >0 &&  DenoisedresponseText.length>0) {
+          comprehension = await this.scoresService.getComprehensionFromLLM(CreateLearnerProfileDto.question_text,DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
+          
+          let createLlmOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            questionText: CreateLearnerProfileDto.question_text || "",
+            teacherText: originalText,
+            studentText: responseText,
+            ansKey: CreateLearnerProfileDto.ans_key,
+            marks: comprehension.marks,
+            semantics: comprehension.semantics,
+            grammar: comprehension.grammar,
+            accuracy: comprehension.accuracy,
+            overall: comprehension.overall,
+           
+          }
+          await this.scoresService.addLlmOutputLog(createLlmOutputLog);
+        }
+
+        let textEvalMatrices;
+
+        if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
+        Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
+        CreateLearnerProfileDto.hallucination_alternative.length > 0){
+
+          function checkResponseTextAnomaly(responseText: string): boolean {
+            const phrasesToCheck = ["thank you", "and", "yes"];
+            return phrasesToCheck.some(phrase => responseText.includes(phrase));
+          }
+
+          const checkHallucinationAlternatives = async (responseText: string, hallucinationAlternatives: any): Promise<boolean> => {
+            const similarityThreshold = 0.5; // 50% similarity
+            for (const alternative of hallucinationAlternatives) {
+              const similarityScore = await this.scoresService.getTextSimilarity(responseText, alternative);
+              if (similarityScore >= similarityThreshold) {
+                return true;
+              }
+            }
+            return false;
+          };
+
+          const checkConstructTextSimilarity = async (constructText: string): Promise<boolean> => {
+            const similarityThreshold = 0.5;
+            const similarityScore = await this.scoresService.getTextSimilarity(constructText, originalText);
+            return similarityScore >= similarityThreshold;
+          }
+
+          if(await checkResponseTextAnomaly(responseText) || await checkHallucinationAlternatives(responseText, CreateLearnerProfileDto.hallucination_alternative) || await checkConstructTextSimilarity(responseText)){
+            responseText = originalText;
+          }
+        }
+
+        textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
@@ -2157,32 +1606,31 @@ export class ScoresController {
           }
         }
 
-        if (mode !== 'offline') {
-          if (process.env.denoiserEnabled === "true") {
-            let improved = false;
-            let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
-            let similarityScoreDenoisedResText = similarityDenoisedText;
+        if (process.env.denoiserEnabled === "true") {
+          let improved = false;
 
-            if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-              improved = true;
-            }
+          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
+          let similarityScoreDenoisedResText = similarityDenoisedText;
 
-            let createDenoiserOutputLog = {
-              user_id: CreateLearnerProfileDto.user_id,
-              session_id: CreateLearnerProfileDto.session_id,
-              sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-              contentType: CreateLearnerProfileDto.contentType,
-              contentId: CreateLearnerProfileDto.contentId || "",
-              language: language,
-              original_text: originalText,
-              response_text: nonDenoisedresponseText,
-              denoised_response_text: DenoisedresponseText,
-              improved: improved,
-              comment: ""
-            }
-
-            await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+            improved = true;
           }
+
+          let createDenoiserOutputLog = {
+            user_id: CreateLearnerProfileDto.user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || "",
+            language: language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved: improved,
+            comment: ""
+          }
+
+          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
         }
 
         // Constructed Logic starts from here
@@ -2192,7 +1640,6 @@ export class ScoresController {
 
         let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, repetitions, originalText, responseText, pause_count);
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
-        let accuracy_classification = this.scoresService.getAccuracyClassification(CreateLearnerProfileDto.contentType, fluencyScore);
 
         // Add check for the correct choice
 
@@ -2219,6 +1666,7 @@ export class ScoresController {
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
             contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
             contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
+            comprehension:comprehension, // Response from LLM for mechanics
             createdAt: createdAt,
             language: language, // content language
             original_text: originalText, // content text shown to speak
@@ -2227,9 +1675,6 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
             is_correct_choice: is_correct_choice,
             correctness_score: correctness_score,
             error_rate: {
@@ -2261,41 +1706,10 @@ export class ScoresController {
               total_duration: 0,
               count: pause_count,
             },
-            prosody_fluency: {
-              pitch: { 
-                pitch_classification: pitch_classification,
-                pitch_mean: pitch_mean,
-                pitch_std: pitch_std
-              },
-              intensity: {
-                intensity_classification: intensity_classification,
-                intensity_mean: intensity_mean,
-                intensity_std: intensity_std
-              },
-              tempo: {
-                tempo_classification: tempo_classification,
-                words_per_minute: words_per_minute,
-                pause_count: pause_count_textEval,
-               },
-              expression_classification: expression_classification,
-              smoothness: {
-                smoothness_classification: smoothness_classification,
-                pause_count:pause_count,
-                avg_pause: avg_pause
-              },
-              rate: {
-                rate_classification: rate_classification,
-                words_per_minute: words_per_minute,
-              },
-              accuracy: {
-                accuracy_classification: accuracy_classification,
-                fluencyScore: fluencyScore.toFixed(3),
-              }
-            },
             reptitionsCount: reptitionCount,
-            asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
+            mechanics_id : CreateLearnerProfileDto.mechanics_id || "",
+            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
-            mode:mode
           },
         };
 
@@ -2311,12 +1725,15 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language
       );
+      
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -2467,7 +1884,7 @@ export class ScoresController {
           asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
           pause_count = audioOutput.pause_count || 0;
 
-          if (await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "") <= await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
             CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
             DenoisedresponseText = asrOutDenoised[0]?.source;
             nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
@@ -2493,46 +1910,103 @@ export class ScoresController {
         let flag = 0;
         let tokenArr = [];
         let anamolyTokenArr = [];
-        let constructTokens = [];// Storing the chars and their scores from the ASR Output for the constructed text
+        const word = CreateLearnerProfileDto.original_text
+        let data_arr = [];// Storing the chars and their scores from the ASR Output for the construvcted text
         if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') {
+          CreateLearnerProfileDto.output[0].nBestTokens.forEach((element) => {
+            element.tokens.forEach((token) => {
+              let insertObj = {}; // Create an empty object for each iteration
+              let key = Object.keys(token)[0]; // Check if the first key is valid (non-empty and defined)
+              if (key && key.trim() !== '') { // Ensure key is valid
+                let value = Object.values(token)[0];
+                insertObj[key] = value; // Add the first key-value pair
+              }
+              // Check if there's a second key and if it's valid
+              if (Object.keys(token).length > 1) { // Ensure there's a second key
+                let key1 = Object.keys(token)[1];
+                if (key1 && key1.trim() !== '') { // Ensure key is valid
+                  let value1 = Object.values(token)[1];
+                  insertObj[key1] = value1; // Add the second key-value pair
+                }
+              }
+              if (Object.keys(insertObj).length > 0) { // Only push to data_arr if there's at least one valid key-value pair
+                data_arr.push(insertObj);
+              }
+            });
+          });
+          const response_word = CreateLearnerProfileDto.output[0].source;
+          /*  Function for generating the constructed text without  issing the sequence and for every constructed text
+              we are storing used chars and that are not used we are storing it in unused char array  */
+          function generateWords(dataArr) {
+            const generateRecursive = (currentWord, usedKeyValueArr, index) => {
+              if (index === dataArr.length) {
+                return [[currentWord, usedKeyValueArr]];
+              }
+              const possibleWords = [];
+              const currentObject = dataArr[index];
+              for (const key in currentObject) {
+                if (currentObject.hasOwnProperty(key)) {
+                  const newWord = currentWord + key;
+                  const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
+                  possibleWords.push(
+                    ...generateRecursive(newWord, newUsedKeyValueArr, index + 1)
+                  );
+                }
+              }
+              return possibleWords;
+            };
+            const generatedWords = generateRecursive("", [], 0); // Generate all possible words
+            const results = generatedWords.map(([word, usedKeyValueArr]) => { // Identify unused key-value pairs for each generated word
+              const usedKeys = usedKeyValueArr.map(pair => Object.keys(pair)[0]); // Get a list of keys that are used
+              const unusedKeyValueArr = []; // Find unused key-value pairs
+              dataArr.forEach(data => {  //fetching the unused char for a particular constructed text and storing it
+                Object.entries(data).forEach(([key, value]) => {
+                  if (!usedKeys.includes(key)) {
+                    unusedKeyValueArr.push({ [key]: value });
+                  }
+                });
+              });
 
-          // const responseWord = CreateLearnerProfileDto.output[0].source;
-          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
-          const wordsWithValues = await this.scoresService.generateWords(constructTokens);
-
-          if (originalText.includes('ం') || originalText.includes('ర')) {
-
-            let agreeableResults = await this.scoresService.replaceCharacters(originalText);
-            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, ...agreeableResults]);
-
-            responseText = agreeableHighestSimilarity[0];
-            tokenArr = agreeableHighestSimilarity[1];
-            anamolyTokenArr = agreeableHighestSimilarity[2];
-
+              return [word, usedKeyValueArr, unusedKeyValueArr]; // Return an array with word, used key-value pairs, and unused key-value pairs
+            });
+            return results;
           }
-          else {
-
-            let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText])
-            /*checks whether the ASR has highest similarity or constructed has highest
-              and assign to the response text*/
-            let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
-
-            if (originalSimilarity >= constructedHighestSimilarity[3]) {
-              responseText = nonDenoisedresponseText;
-              flag = 1;
-            }
-
-            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-              responseText = constructedHighestSimilarity[0];
-              tokenArr = constructedHighestSimilarity[1];
-              anamolyTokenArr = constructedHighestSimilarity[2];
-            }
+          const words_with_values = generateWords(data_arr);
+          /* Function for generating the simnilarities for each and every word with the
+            original word and sort it in descending order */
+          function findAllSimilarities(wordArray, s1) {
+            const similarityList = wordArray.map((wordWithVal) => {
+              const word = wordWithVal[0];
+              const usedarr = wordWithVal[1];
+              const unusedarr = wordWithVal[2];
+              const score = similarity(s1, word);
+              return [word, usedarr, unusedarr, score];
+            });
+            similarityList.sort((a, b) => b[3] - a[3]); // Sort the list in descending order based on similarity score
+            return similarityList;
+          }
+          let restext = [...findAllSimilarities(words_with_values, word)][0];
+          /*checks whether the ASR has highest similarity or constructed has highest
+            and assign to the response text*/
+          if (similarity(CreateLearnerProfileDto.output[0].source, word) >= restext[3]) {
+            responseText = CreateLearnerProfileDto.output[0].source;
+            flag = 1;
+          }
+          else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+            responseText = restext[0];
+            tokenArr = restext[1];
+            anamolyTokenArr = restext[2];
           }
         }
         else { //if the response has higher then response will be same as ASR output
           responseText = CreateLearnerProfileDto.output[0].source;
         }
         let constructText = '';
+        let originalTextTokensArr = originalText.split("");
+        let responseTextTokensArr = responseText.split("");
+
+        let originalTextArr = originalText.split(" ");
+        let responseTextArr = responseText.split(" ");
 
         // Get All hexcode for this selected language
         let tokenHexcodeData = this.scoresService.gethexcodeMapping(language);
@@ -2552,9 +2026,9 @@ export class ScoresController {
         for (let originalEle of CreateLearnerProfileDto.original_text.split(" ")) {
           let originalRepCount = 0;
           for (let sourceEle of responseText.split(" ")) {
-            let similarityScore = await this.scoresService.getTextSimilarity(originalEle, sourceEle)
+            let similarityScore = similarity(originalEle, sourceEle)
             if (similarityScore >= 0.40) {
-              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: await this.scoresService.getTextSimilarity(originalEle, sourceEle) });
+              compareCharArr.push({ original_text: originalEle, response_text: sourceEle, score: similarity(originalEle, sourceEle) });
               //break;
             }
             if (similarityScore >= 0.60) {
@@ -2584,6 +2058,47 @@ export class ScoresController {
           constructText += constructTextSetEle + ' ';
         }
         constructText = constructText.trim();
+
+        function similarity(s1, s2) {
+          var longer = s1;
+          var shorter = s2;
+          if (s1.length < s2.length) {
+            longer = s2;
+            shorter = s1;
+          }
+          var longerLength = longer.length;
+          if (longerLength == 0) {
+            return 1.0;
+          }
+          return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength);
+        }
+
+        function editDistance(s1, s2) {
+          s1 = s1.toLowerCase();
+          s2 = s2.toLowerCase();
+
+          var costs = new Array();
+          for (var i = 0; i <= s1.length; i++) {
+            var lastValue = i;
+            for (var j = 0; j <= s2.length; j++) {
+              if (i == 0)
+                costs[j] = j;
+              else {
+                if (j > 0) {
+                  var newValue = costs[j - 1];
+                  if (s1.charAt(i - 1) != s2.charAt(j - 1))
+                    newValue = Math.min(Math.min(newValue, lastValue),
+                      costs[j]) + 1;
+                  costs[j - 1] = lastValue;
+                  lastValue = newValue;
+                }
+              }
+            }
+            if (i > 0)
+              costs[s2.length] = lastValue;
+          }
+          return costs[s2.length];
+        }
 
         for (let constructTextELE of constructText.split("")) {
           if (constructTextELE != ' ') {
@@ -2828,8 +2343,8 @@ export class ScoresController {
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
-          let similarityScoreNonDenoisedResText = await this.scoresService.getTextSimilarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = await this.scoresService.getTextSimilarity(originalText, DenoisedresponseText);
+          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
 
           if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
             improved = true;
@@ -2881,9 +2396,6 @@ export class ScoresController {
             confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
             anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
             missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
             error_rate: {
               character: textEvalMatrices.cer,
               word: textEvalMatrices.wer
@@ -2924,7 +2436,7 @@ export class ScoresController {
         );
 
         // Store Array to DB
-        await this.scoresService.create(createScoreData);
+        let data = this.scoresService.create(createScoreData);
 
         function getTokenHexcode(token: string) {
           let result = tokenHexcodeDataArr.find(item => item.token === token);
@@ -2933,16 +2445,18 @@ export class ScoresController {
       }
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -3109,6 +2623,7 @@ export class ScoresController {
     try {
       const targetResult = await this.scoresService.getTargetsBysubSession(
         id,
+        id,
         language
       );
       return response.status(HttpStatus.OK).send(targetResult);
@@ -3164,6 +2679,7 @@ export class ScoresController {
     try {
       const familiarityResult =
         await this.scoresService.getFamiliarityBysubSession(
+          id,
           id,
           language
         );
@@ -3621,6 +3137,7 @@ export class ScoresController {
     },
   })
 
+
  
   async GetContentSentencebyUser(
   @Param('userId') id: string, 
@@ -3634,6 +3151,7 @@ export class ScoresController {
   @Query('mechanics_id') mechanics_id,
   @Query('type_of_learner') type_of_learner, 
   @Res() response: FastifyReply) {
+
     try {
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
@@ -3701,9 +3219,6 @@ export class ScoresController {
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
-        "category": category || "",
-        "type_of_learner" : type_of_learner, 
-        "story_mode": story_mode,
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || [],
         "story_mode": story_mode || false
@@ -3978,40 +3493,52 @@ export class ScoresController {
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
       let targetPerThreshold = 30;
-      let contentLimit = 5;
       let milestoneEntry = true;
       let totalSyllables = 0;
-      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       let originalTextSyllables = [];
       let is_mechanics = getSetResult.is_mechanics;
+      let overallScore, isComprehension;
+      let sessionResult = 'No Result';
+      let max_level = getSetResult.max_level;
+
       
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
+
+      if (is_mechanics && isComprehension) {
+        if (overallScore >= 14) {
+          sessionResult = 'pass';
+        } else {
+          sessionResult = 'fail';
+        }
+      }
+
       if (getSetResult.language != 'en') {
-        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.sub_session_id);
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id,getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       }
       let totalTargets = targets.length;
 
-
-      if(getSetResult.totalSyllableCount != undefined && getSetResult.language === "en"){
-        if (getSetResult.totalSyllableCount > 50) {
-          totalSyllables = 50;
-        } else {
-          totalSyllables = getSetResult.totalSyllableCount;
-        }
-      }
-      else{
+      if (getSetResult.totalSyllableCount == undefined) {
         totalSyllables = totalTargets + familiarity.length;
+      } else {
+        if (getSetResult.language === "en") {
+          if (getSetResult.totalSyllableCount > 50) {
+            totalSyllables = 50;
+          } else {
+            totalSyllables = getSetResult.totalSyllableCount;
+          }
+        } else {
+          totalSyllables = getSetResult.totalSyllableCount
+        }
       }
 
       let targetsPercentage = Math.min(Math.floor((totalTargets / totalSyllables) * 100));
       let passingPercentage = Math.floor(100 - targetsPercentage);
       targetsPercentage = targetsPercentage < 0 ? 0 : targetsPercentage;
       passingPercentage = passingPercentage < 0 ? 0 : passingPercentage;
-
-      let sessionResult = 'No Result';
 
       let recordData: any = await this.scoresService.getlatestmilestone(
         getSetResult.user_id,
@@ -4032,312 +3559,180 @@ export class ScoresController {
       } else if (totalSyllables > 500) {
         targetPerThreshold = 5;
       }
-      
-      if (targetsPercentage <= targetPerThreshold) {
-        // Add logic for the study the pic mechnics
-        if (is_mechanics) {
-          let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
+      if (!isComprehension) {
+        if (targetsPercentage <= targetPerThreshold) {
+          // Add logic for the study the pic mechnics
+          if (is_mechanics) {
+            let correctness_score = correct_score[0]?.count_scores_gte_50 ?? 0;
 
-          if (correctness_score >= 3) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        }
-        else if (getSetResult.contentType.toLowerCase() === 'word') {
-          if (fluency < 2) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        } else if (getSetResult.contentType.toLowerCase() === 'sentence') {
-          if (fluency < 6) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        } else if (getSetResult.contentType.toLowerCase() === 'paragraph') {
-          if (fluency < 10) {
-            sessionResult = 'pass';
-          } else {
-            sessionResult = 'fail';
-          }
-        }
-      } else {
-        sessionResult = 'fail';
-      }
-      // NEW: Compute fluencyResult only for English showcase.
-      let fluencyResult: string;
-      if (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) {
-        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
-          // Determine pass threshold based on milestone level.
-          // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
-          const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
-          const passThreshold = (userLevelNum >= 4) ? 3.0 : 2.6;
-        
-          // Retrieve all audio records for the given sub-session and language 'en' or kn
-          
-          const allAudioRecords = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
-        
-          const totalAudios = allAudioRecords.length;
-          let passCount = 0;
-        
-          // Loop through each audio record.
-          for (const record of allAudioRecords) {
-            const prosody = record.prosody_fluency || {};
-            const exprClass = prosody.expression_classification || "Very Disfluent";
-            const smoothClass = (prosody.smoothness && prosody.smoothness.smoothness_classification) || "Very Disfluent";
-            const accClass = (prosody.accuracy && prosody.accuracy.accuracy_classification) || "Very Disfluent";
-            const rateClass = (prosody.rate && prosody.rate.rate_classification) || "Very Disfluent";
-        
-            // Convert the classification strings to numeric scores.
-            const exprScore = this.scoresService.classificationToScore(exprClass);
-            const smoothScore = this.scoresService.classificationToScore(smoothClass);
-            const accScore = this.scoresService.classificationToScore(accClass);
-            const rateScore = this.scoresService.classificationToScore(rateClass);
-        
-            // Compute the weighted score.
-            const weightedScore = (exprScore * 0.20) + (smoothScore * 0.10) + (accScore * 0.40) + (rateScore * 0.30);
-
-            // Determine if this record passes.
-            let recordPass = false;
-            if (userLevelNum >= 4) {
-              if (weightedScore >= passThreshold) {
-                recordPass = true;
-              } else {
-                // Exception: for M4+, if weightedScore is below 3.0, then check for these combinations.
-                if (
-                  (exprClass === 'Moderately Fluent' && smoothClass === 'Disfluent' && accClass === 'Moderately Fluent' && rateClass === 'Moderately Fluent') ||
-                  (exprClass === 'Disfluent' && smoothClass === 'Fluent' && accClass === 'Moderately Fluent' && rateClass === 'Moderately Fluent') ||
-                  (exprClass === 'Very Disfluent' && smoothClass === 'Moderately Fluent' && accClass === 'Moderately Fluent' && rateClass === 'Fluent')
-                ) {
-                  recordPass = true;
-                }
-              }
+            if (correctness_score >= 3) {
+              sessionResult = 'pass';
             } else {
-              // For levels below M4, use the normal threshold.
-              recordPass = (weightedScore >= passThreshold);
-            }
-        
-            if (weightedScore >= passThreshold) {
-              passCount++;
+              sessionResult = 'fail';
             }
           }
-        
-          // Even/odd logic: 
-          // For even total audios: pass if passCount >= (totalAudios / 2)
-          // For odd total audios: pass if passCount > (totalAudios / 2)
-          if (totalAudios > 0) {
-            if (totalAudios % 2 === 0) {
-              fluencyResult = (passCount >= totalAudios / 2) ? 'pass' : 'fail';
+          else if (getSetResult.contentType.toLowerCase() === 'word') {
+            if (fluency < 2) {
+              sessionResult = 'pass';
             } else {
-              fluencyResult = (passCount > totalAudios / 2) ? 'pass' : 'fail';
+              sessionResult = 'fail';
             }
-          } else {
-            // If no audio records are present, assign a default value.
-            fluencyResult = 'fail';
-          }
-        }
-      }
-      let prosodyResult: string;
-      if (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) {
-        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
-          const userLevelNum = previous_level ? parseInt(previous_level.replace('m', ''), 10) : 0;
-          if (userLevelNum >= 6) {
-            const allAudioRecordsProsody = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
-          
-            const totalAudiosProsody = allAudioRecordsProsody.length;
-            let passCountProsody = 0;
-          
-            // Helper function: normalize classification – valid values are 'natural', 'flat', 'exaggerated', 'erratic'
-            const normalizeClassification = (cls: string): string => {
-              const valid = ['natural', 'flat', 'exaggerated', 'erratic'];
-              const lower = cls.toLowerCase();
-              return valid.includes(lower) ? lower : 'erratic';
-            };
-          
-            for (const record of allAudioRecordsProsody) {
-              const prosody = record.prosody_fluency || {};
-              const pitchClass = normalizeClassification(prosody.pitch?.pitch_classification || "erratic");
-              const intensityClass = normalizeClassification(prosody.intensity?.intensity_classification || "erratic");
-              const tempoClass = normalizeClassification(prosody.tempo?.tempo_classification || "erratic");
-          
-              // Rule 1: If any feature is 'erratic', record fails.
-              let recordProsodyPass = true;
-              if (pitchClass === 'erratic' || intensityClass === 'erratic' || tempoClass === 'erratic') {
-                recordProsodyPass = false;
-              } else {
-                // Rule 2: If 2 or more features are 'exaggerated', record fails.
-                let exaggeratedCount = 0;
-                if (pitchClass === 'exaggerated') exaggeratedCount++;
-                if (intensityClass === 'exaggerated') exaggeratedCount++;
-                if (tempoClass === 'exaggerated') exaggeratedCount++;
-                if (exaggeratedCount >= 2) {
-                  recordProsodyPass = false;
-                }
-              }
-              if (recordProsodyPass) {
-                passCountProsody++;
-              }
-            }
-          
-            if (totalAudiosProsody > 0) {
-              prosodyResult = (totalAudiosProsody % 2 === 0)
-                ? ((passCountProsody >= totalAudiosProsody / 2) ? 'pass' : 'fail')
-                : ((passCountProsody > totalAudiosProsody / 2) ? 'pass' : 'fail');
+          } else if (getSetResult.contentType.toLowerCase() === 'sentence') {
+            if (fluency < 6) {
+              sessionResult = 'pass';
             } else {
-              prosodyResult = 'fail';
+              sessionResult = 'fail';
             }
-          } else {
-            // For users below level m6, we do not compute prosodyResult.
-            prosodyResult = undefined;
+          } else if (getSetResult.contentType.toLowerCase() === 'paragraph') {
+            if (fluency < 10) {
+              sessionResult = 'pass';
+            } else {
+              sessionResult = 'fail';
+            }
           }
+        } else {
+          sessionResult = 'fail';
         }
-      }
-      
-      // If fluencyResult is computed and is 'fail', enforce overall sessionResult to 'fail'
-      if ((typeof fluencyResult !== 'undefined' && fluencyResult === 'fail') ||
-          (typeof prosodyResult !== 'undefined' && prosodyResult === 'fail')) {
-        sessionResult = 'fail';
       }
 
       let milestone_level = previous_level;
 
       // For Showcase, We are not sending collectionId based on this are calculating milestone
-      if (!getSetResult.hasOwnProperty('collectionId') || getSetResult.collectionId === '' || getSetResult?.collectionId === undefined) {
-
-        let previous_level_id =
-          previous_level === undefined ? 0 : parseInt(previous_level[1]);
+      if (
+        !getSetResult.hasOwnProperty('collectionId') ||
+        getSetResult.collectionId === '' ||
+        getSetResult?.collectionId === undefined
+      ) {
+        let previous_level_id = previous_level === undefined ? 0 : parseInt(previous_level.replace("m", ""));
 
         if (sessionResult === 'pass') {
-          if (getSetResult.language === "en" && previous_level_id === en_config.max_milestone_level) {
-            milestone_level = "m" + en_config.max_milestone_level;
-          } else if(getSetResult.language === "ta" && previous_level_id === ta_config.max_milestone_level){
+          if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level && max_level == undefined) {
+            milestone_level = en_config.max_milestone_level;
+          }else if (getSetResult.language === en_config.language_code && previous_level_id >= max_level) {
+            milestone_level = max_level;
+          } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
-          } else if(previous_level_id === 9) {
-            milestone_level = 'm9';
-          }else {
-            previous_level_id++;
-            milestone_level = 'm' + previous_level_id;
+          } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
+            milestone_level = ta_config.max_milestone_level;
+          } else {
+            milestone_level = 'm' + (previous_level_id + 1);
           }
+
         }
       } else {
-        // This collection_id is for the M0 collection
-        // This collection_id is for the Ta
-        if (getSetResult.collectionId === '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
-          getSetResult.collectionId === 'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
-          getSetResult.collectionId === '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
-          (getSetResult.collectionId === '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
-            getSetResult.language === 'ta')) {
-          milestone_level = 'm0';
-
-          if (previous_level === undefined) {
-            previous_level = 'm0';
-          }
-
-          // This collection_id is for the Kn
-        } else if (getSetResult.collectionId === '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
-          getSetResult.collectionId === '976a7631-3887-4d18-9576-7ca8205b82e8' ||
-          getSetResult.collectionId === '9374ae97-80e4-419b-8e96-784734317e82' ||
-          (getSetResult.collectionId === 'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
-            getSetResult.language === 'kn')) {
+        if (
+          getSetResult.collectionId ===
+          '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
+          getSetResult.collectionId ===
+          'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
+          getSetResult.collectionId ===
+          '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
+          (getSetResult.collectionId ===
+            '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
+            getSetResult.language === 'ta')
+        ) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-
-          // This collection_id is for the En
-        } else if (getSetResult.collectionId === '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
-          getSetResult.collectionId === 'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
-          getSetResult.collectionId === '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
-          (getSetResult.collectionId === 'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
-            getSetResult.language === 'en')) {
+        } else if (
+          getSetResult.collectionId ===
+          '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
+          getSetResult.collectionId ===
+          '976a7631-3887-4d18-9576-7ca8205b82e8' ||
+          getSetResult.collectionId ===
+          '9374ae97-80e4-419b-8e96-784734317e82' ||
+          (getSetResult.collectionId ===
+            'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
+            getSetResult.language === 'kn')
+        ) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-
-          // This collection_id is for the Te
-        } else if (getSetResult.collectionId === '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
+        } else if (
+          getSetResult.collectionId ===
+          '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
+          getSetResult.collectionId ===
+          'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
+          getSetResult.collectionId ===
+          '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
+          (getSetResult.collectionId ===
+            'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
+            getSetResult.language === 'en')
+        ) {
+          milestone_level = 'm0';
+          if (previous_level === undefined) {
+            previous_level = 'm0';
+          }
+        } else if (
+          getSetResult.collectionId === '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
           getSetResult.collectionId === '1df7cb53-4609-4ba0-a0dc-2e4dc188619a' ||
           getSetResult.collectionId === 'cfbd93f9-10f6-4064-ab0f-f2f8d6e45e6a' ||
           (getSetResult.collectionId === 'd6f84966-53fa-44bb-93d9-598c84974f04' &&
-            getSetResult.language === 'te')) {
+            getSetResult.language === 'te')
+        ) {
           milestone_level = 'm0';
           if (previous_level === undefined) {
             previous_level = 'm0';
           }
-
-          // This collection_id is for the Gu
-        } else if (getSetResult.collectionId === '1394ade3-cc95-48cd-98ca-f3288860b0e1' ||
-          getSetResult.collectionId === 'eea19621-ae97-4a5d-9933-882a493c84d8' ||
-          getSetResult.collectionId === '61ef8260-98c5-4bc0-9ccd-43cd34c6ecab' ||
-          (getSetResult.collectionId === '3ac7bf14-4455-4e20-9dd4-2af2a04a8227' &&
-            getSetResult.language === 'gu')) {
-          milestone_level = 'm0';
-          if (previous_level === undefined) {
-            previous_level = 'm0';
-          }
-
-          // This collection_id is for the Hi
-        } else if (getSetResult.collectionId === '0d00c89d-5c73-4de1-9153-c300c972ad64' ||
-          getSetResult.collectionId === 'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
-          getSetResult.collectionId === '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
-          (getSetResult.collectionId === '7765ff21-e07a-4a68-9b42-18751f504ef0' &&
-            getSetResult.language === 'hi')) {
-          milestone_level = 'm0';
-          if (previous_level === undefined) {
-            previous_level = 'm0';
-          }
-          // This collection_id is for the or
-        } else if (getSetResult.collectionId === '010ba3e3-f6b4-4a4a-856e-e323a288b98e' ||
-          getSetResult.collectionId === '971cdd0b-989f-429b-999a-620c10c670b5' ||
-          getSetResult.collectionId === '104fff5c-9f00-4268-92bb-9697f943035a' ||
-          (getSetResult.collectionId === 'a4947dd3-e9af-4e0c-b8e9-52ed77a1e8cf' &&
-            getSetResult.language === 'or')) {
-          milestone_level = 'm0';
-          if (previous_level === undefined) {
-            previous_level = 'm0';
-          }
-
         } else {
-          if (getSetResult.language === 'ta' &&
+          if (
+            getSetResult.language === 'ta' &&
             getSetResult.collectionId !== '' &&
             getSetResult.collectionId !== undefined
           ) {
-
-            // this collection id is for M2
-            if (getSetResult.collectionId === 'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
-              getSetResult.collectionId === '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
-              getSetResult.collectionId === '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
-              getSetResult.collectionId === '55767bfa-0e12-4d8f-999b-e84daf6c7587') {
+            if (
+              getSetResult.collectionId ===
+              'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
+              getSetResult.collectionId ===
+              '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
+              getSetResult.collectionId ===
+              '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
+              getSetResult.collectionId ===
+              '55767bfa-0e12-4d8f-999b-e84daf6c7587'
+            ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
               } else {
                 milestone_level = 'm1';
               }
-              // this collection id is for M3
-            } else if (getSetResult.collectionId === '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
-              getSetResult.collectionId === '85d58650-0771-4b28-b185-d074b5a5982d' ||
-              getSetResult.collectionId === '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
-              getSetResult.collectionId === '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b') {
+            } else if (
+              getSetResult.collectionId ===
+              '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
+              getSetResult.collectionId ===
+              '85d58650-0771-4b28-b185-d074b5a5982d' ||
+              getSetResult.collectionId ===
+              '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
+              getSetResult.collectionId ===
+              '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
+            ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
               } else {
                 milestoneEntry = false;
               }
-              // This collection id is for m4
-            } else if (getSetResult.collectionId === '67b820f5-096d-42c2-acce-b781d59efe7e' ||
-              getSetResult.collectionId === '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
-              getSetResult.collectionId === 'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
-              getSetResult.collectionId === '68dfd9cb-a33d-4d15-a3ea-54755f8311c8') {
+            } else if (
+              getSetResult.collectionId ===
+              '67b820f5-096d-42c2-acce-b781d59efe7e' ||
+              getSetResult.collectionId ===
+              '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
+              getSetResult.collectionId ===
+              'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
+              getSetResult.collectionId ===
+              '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
+            ) {
               milestone_level = 'm4';
-
-              // This Collection id is for m1
-            } else if (getSetResult.collectionId === '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
-              getSetResult.collectionId === '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
-              getSetResult.collectionId === 'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
-              getSetResult.collectionId === 'ed47eb63-87c8-41f4-821d-1400fef37b78') {
+            } else if (
+              getSetResult.collectionId ===
+              '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
+              getSetResult.collectionId ===
+              '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
+              getSetResult.collectionId ===
+              'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
+              getSetResult.collectionId ===
+              'ed47eb63-87c8-41f4-821d-1400fef37b78'
+            ) {
               milestone_level = 'm1';
             }
           } else if (
@@ -4346,10 +3741,14 @@ export class ScoresController {
             getSetResult.collectionId !== undefined
           ) {
             if (
-              getSetResult.collectionId === 'b755df98-198b-440a-90e0-391579ef4bfb' ||
-              getSetResult.collectionId === '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
-              getSetResult.collectionId === 'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
-              getSetResult.collectionId === '6a89f990-8727-49da-b128-b7ea1839d025'
+              getSetResult.collectionId ===
+              'b755df98-198b-440a-90e0-391579ef4bfb' ||
+              getSetResult.collectionId ===
+              '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
+              getSetResult.collectionId ===
+              'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
+              getSetResult.collectionId ===
+              '6a89f990-8727-49da-b128-b7ea1839d025'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -4357,10 +3756,14 @@ export class ScoresController {
                 milestone_level = 'm1';
               }
             } else if (
-              getSetResult.collectionId === '29bb9cff-9510-4693-bec5-9436a686b836' ||
-              getSetResult.collectionId === '5828539f-4b1f-4502-b648-b2843d61f35d' ||
-              getSetResult.collectionId === '37a406a5-d82e-447d-9762-17c76f5005ef' ||
-              getSetResult.collectionId === '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
+              getSetResult.collectionId ===
+              '29bb9cff-9510-4693-bec5-9436a686b836' ||
+              getSetResult.collectionId ===
+              '5828539f-4b1f-4502-b648-b2843d61f35d' ||
+              getSetResult.collectionId ===
+              '37a406a5-d82e-447d-9762-17c76f5005ef' ||
+              getSetResult.collectionId ===
+              '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -4368,17 +3771,25 @@ export class ScoresController {
                 milestoneEntry = false;
               }
             } else if (
-              getSetResult.collectionId === 'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
-              getSetResult.collectionId === '390c8719-fc52-42f3-b49d-41547a0639d7' ||
-              getSetResult.collectionId === 'aee5f3f4-213c-4596-8074-0addab60122a' ||
-              getSetResult.collectionId === 'e28d2463-adca-46e6-8159-04c99d6158d3'
+              getSetResult.collectionId ===
+              'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
+              getSetResult.collectionId ===
+              '390c8719-fc52-42f3-b49d-41547a0639d7' ||
+              getSetResult.collectionId ===
+              'aee5f3f4-213c-4596-8074-0addab60122a' ||
+              getSetResult.collectionId ===
+              'e28d2463-adca-46e6-8159-04c99d6158d3'
             ) {
               milestone_level = 'm4';
             } else if (
-              getSetResult.collectionId === 'ac930427-4a73-41a8-94d5-be74defd2993' ||
-              getSetResult.collectionId === '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
-              getSetResult.collectionId === '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
-              getSetResult.collectionId === '61b65b9b-94b8-4212-94e5-33ce8e80435a'
+              getSetResult.collectionId ===
+              'ac930427-4a73-41a8-94d5-be74defd2993' ||
+              getSetResult.collectionId ===
+              '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
+              getSetResult.collectionId ===
+              '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
+              getSetResult.collectionId ===
+              '61b65b9b-94b8-4212-94e5-33ce8e80435a'
             ) {
               milestone_level = 'm1';
             }
@@ -4388,10 +3799,14 @@ export class ScoresController {
             getSetResult.collectionId !== undefined
           ) {
             if (
-              getSetResult.collectionId === '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
-              getSetResult.collectionId === 'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
-              getSetResult.collectionId === 'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
-              getSetResult.collectionId === '775c974a-4bda-4cfc-bc47-2aff56e39c46'
+              getSetResult.collectionId ===
+              '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
+              getSetResult.collectionId ===
+              'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
+              getSetResult.collectionId ===
+              'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
+              getSetResult.collectionId ===
+              '775c974a-4bda-4cfc-bc47-2aff56e39c46'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -4399,10 +3814,14 @@ export class ScoresController {
                 milestone_level = 'm1';
               }
             } else if (
-              getSetResult.collectionId === 'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
-              getSetResult.collectionId === 'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
-              getSetResult.collectionId === 'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
-              getSetResult.collectionId === '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
+              getSetResult.collectionId ===
+              'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
+              getSetResult.collectionId ===
+              'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
+              getSetResult.collectionId ===
+              'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
+              getSetResult.collectionId ===
+              '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -4410,17 +3829,25 @@ export class ScoresController {
                 milestoneEntry = false;
               }
             } else if (
-              getSetResult.collectionId === 'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
-              getSetResult.collectionId === 'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
-              getSetResult.collectionId === 'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
-              getSetResult.collectionId === '809039e5-119d-42ae-925f-b2546b1e3d7b'
+              getSetResult.collectionId ===
+              'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
+              getSetResult.collectionId ===
+              'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
+              getSetResult.collectionId ===
+              'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
+              getSetResult.collectionId ===
+              '809039e5-119d-42ae-925f-b2546b1e3d7b'
             ) {
               milestone_level = 'm4';
             } else if (
-              getSetResult.collectionId === '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
-              getSetResult.collectionId === '30c5800e-4a02-4259-8328-abf57e4255ca' ||
-              getSetResult.collectionId === 'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
-              getSetResult.collectionId === 'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
+              getSetResult.collectionId ===
+              '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
+              getSetResult.collectionId ===
+              '30c5800e-4a02-4259-8328-abf57e4255ca' ||
+              getSetResult.collectionId ===
+              'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
+              getSetResult.collectionId ===
+              'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
             ) {
               milestone_level = 'm1';
             }
@@ -4466,141 +3893,6 @@ export class ScoresController {
             ) {
               milestone_level = 'm1';
             }
-          } else if (
-            getSetResult.language === 'gu' &&
-            getSetResult.collectionId !== '' &&
-            getSetResult.collectionId !== undefined
-
-            // this collection id is for M2
-          ) {
-            if (
-              getSetResult.collectionId === 'e1e87800-f530-4868-aebe-4f2402d29eb8' ||
-              getSetResult.collectionId === '9fa1173e-307f-4c47-af07-482228667f2c' ||
-              getSetResult.collectionId === '3d0a5345-2acb-4ed1-919d-fc6511417ed2' ||
-              getSetResult.collectionId === '42e4140b-4294-424f-b488-f0c53fc376c9'
-            ) {
-              if (sessionResult === 'pass') {
-                milestone_level = 'm2';
-              } else {
-                milestone_level = 'm1';
-              }
-              // this collection id is for M3
-            } else if (
-              getSetResult.collectionId === '6e856dc6-073d-43fe-9086-2bc5869eca86' ||
-              getSetResult.collectionId === '4c7e2f94-25e1-4bd7-a04c-7bfa7a54d187' ||
-              getSetResult.collectionId === '8da5ddf4-8e22-4c69-97bc-2edf1f5d5e18' ||
-              getSetResult.collectionId === 'f70b2c60-f321-4ddf-90c9-5038a23b6595'
-            ) {
-              if (sessionResult === 'fail') {
-                milestone_level = 'm3';
-              } else {
-                milestoneEntry = false;
-              }
-              // This collection id is for m4
-            } else if (
-              getSetResult.collectionId === '0601c390-01a8-4887-8029-1cd9852abac6' ||
-              getSetResult.collectionId === '85e45847-bdc1-4421-b9d0-b3592b9a068a' ||
-              getSetResult.collectionId === '4299a52a-0932-4ebd-b33f-5dab9ecb7e76' ||
-              getSetResult.collectionId === 'c78fdc09-11d9-4209-acd1-3e4d550857bf'
-            ) {
-              milestone_level = 'm4';
-              // This Collection id is for m1
-            } else if (
-              getSetResult.collectionId === '24d4b913-1f5a-45cd-8b72-7e7125f56920' ||
-              getSetResult.collectionId === '5eb9babf-2ec1-4760-9e6e-d515ddb8f405' ||
-              getSetResult.collectionId === 'b8830bb6-dee3-46f9-b7e3-09aca044ceef' ||
-              getSetResult.collectionId === '14209021-7373-42ac-b02d-a32f0ee89ef9'
-            ) {
-              milestone_level = 'm1';
-            }
-          }
-          else if (
-            getSetResult.language === 'hi' &&
-            getSetResult.collectionId !== '' &&
-            getSetResult.collectionId !== undefined
-
-            // this collection id is for M2
-          ) {
-            if (
-              getSetResult.collectionId === '6f64d4a2-b6e5-4a2b-91e5-f6be9f2d4d8b' ||
-              getSetResult.collectionId === '00644696-a8b6-48fc-b73f-25a0da567a14' ||
-              getSetResult.collectionId === '2a1a6894-d953-4a26-a294-a7f66469b209' ||
-              getSetResult.collectionId === 'e0bdd73c-dd8b-4c2b-92cf-be753fd32c46'
-            ) {
-              if (sessionResult === 'pass') {
-                milestone_level = 'm2';
-              } else {
-                milestone_level = 'm1';
-              }
-              // this collection id is for M3
-            } else if (
-              getSetResult.collectionId === 'ab289254-45b1-40ed-9b84-3e414577120f' ||
-              getSetResult.collectionId === '98a53df5-c4e3-4045-870d-1154f1e5023a' ||
-              getSetResult.collectionId === '8c438757-e35b-4beb-ae5f-015a9ed3f7f6' ||
-              getSetResult.collectionId === 'a8492aad-b904-406a-bae1-e3f6ebda48ca'
-            ) {
-              if (sessionResult === 'fail') {
-                milestone_level = 'm3';
-              } else {
-                milestoneEntry = false;
-              }
-              // This collection id is for m4
-            } else if (
-              getSetResult.collectionId === 'ee548dec-f599-47a4-8767-bddadb20ed70' ||
-              getSetResult.collectionId === 'a1cd9d37-2fe1-429f-8830-dde473b9e87f' ||
-              getSetResult.collectionId === '1da05e37-8ddc-4a5e-b059-abaa3ef45198' ||
-              getSetResult.collectionId === '62fca34f-12da-4017-83f5-ae88bf99c48d'
-            ) {
-              milestone_level = 'm4';
-              // This Collection id is for m1
-            } else if (
-              getSetResult.collectionId === '919aba0b-7443-4d6c-a1dc-e7b42a803496' ||
-              getSetResult.collectionId === 'd95a1672-70d3-437f-92da-9013a4e5e593' ||
-              getSetResult.collectionId === 'dfe36bd6-91d5-436e-b283-0dc3704f19f5' ||
-              getSetResult.collectionId === 'e0021945-8948-4467-a256-13b5bfbbe6af'
-            ) {
-              milestone_level = 'm1';
-            }
-          }
-          if (getSetResult.language === 'or' &&
-            getSetResult.collectionId !== '' &&
-            getSetResult.collectionId !== undefined
-          ) {
-
-            // this collection id is for M2
-            if (getSetResult.collectionId === 'f1c48b67-9876-4058-a2d0-d38c8bb4e3fd' ||
-              getSetResult.collectionId === '7dcb258c-8cb8-41cd-971f-15e46fa2136d' ||
-              getSetResult.collectionId === '647d40b3-35d6-415f-9a41-2388d8ca147f' ||
-              getSetResult.collectionId === '52e6cdfc-3f1e-4ca6-84ff-4a2ab04c2cfc') {
-              if (sessionResult === 'pass') {
-                milestone_level = 'm2';
-              } else {
-                milestone_level = 'm1';
-              }
-              // this collection id is for M3
-            } else if (getSetResult.collectionId === 'baf0e828-caad-4597-80c3-e76503b62bbe' ||
-              getSetResult.collectionId === 'ea3c6696-498b-4827-bc6c-3740fad6adfd' ||
-              getSetResult.collectionId === '543a324d-9ade-4621-aa04-2ef16540ac87' ||
-              getSetResult.collectionId === '19b1e674-e633-4339-9365-e1ade2fc5f59') {
-              if (sessionResult === 'fail') {
-                milestone_level = 'm3';
-              } else {
-                milestoneEntry = false;
-              }
-              // This collection id is for m4
-            } else if (getSetResult.collectionId === '3ffd72bc-d45d-4148-a3d5-b786b0a00924' ||
-              getSetResult.collectionId === 'c647f7e8-29f8-4b92-98f4-7995d6dd05e4' ||
-              getSetResult.collectionId === '1501b007-1136-4360-838f-84c4a2a50a8c' ||
-              getSetResult.collectionId === '4a261a24-187e-4616-954c-c2e9d38189ac') {
-              milestone_level = 'm4';
-
-              // This Collection id is for m1
-            } else if (getSetResult.collectionId === '59f80fb8-5ff4-4739-b7ad-3811af25b575' ||
-              getSetResult.collectionId === 'e5f7a86f-3b9f-4dc4-b64f-ff8ade0b88c3' ||
-              getSetResult.collectionId === 'c9564b7a-7854-4989-a43c-1a20a253d6b2' ||
-              getSetResult.collectionId === 'bf48828e-2b54-462d-a12b-59025e2c1fd7') {
-              milestone_level = 'm1';
-            }
           }
         }
       }
@@ -4623,6 +3915,7 @@ export class ScoresController {
             );
 
             currentLevel = recordData[0]?.milestone_level || undefined;
+
             if (currentLevel === undefined) {
               currentLevel = previous_level;
             } else if (getSetResult.contentType.toLowerCase() === 'char') {
@@ -4630,25 +3923,19 @@ export class ScoresController {
             }
           });
       }
-      if (!( (getSetResult.language.toLowerCase() === 'en' || getSetResult.language.toLowerCase() === 'kn') && (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) )) {
-        fluencyResult = undefined; 
-        prosodyResult = undefined;
-      }
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
           sessionResult: sessionResult,
-          totalTargets: totalTargets,
+          totalTargets: totalTargets || 0,
           currentLevel: currentLevel,
           previous_level: previous_level,
-          targetsCount: totalTargets,
           totalSyllables: totalSyllables,
           fluency: fluency,
-          fluencyResult: fluencyResult,  
-          prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / contentLimit
+          comprehensionScore: overallScore
         },
       });
     } catch (err) {
@@ -4770,6 +4057,7 @@ export class ScoresController {
     });
     const notIncludedTotal = notIncluded.length;
 
+    console.log(uniqueCharArr);
     return response.status(HttpStatus.CREATED).send({
       status: 'success',
       matched: matched,
@@ -5181,4 +4469,32 @@ export class ScoresController {
       });
     }
   }
+
+  @Patch('/updateMilestone/user/:userId')
+  async updateMilestone(
+    @Param('userId') userId: string,
+    @Body() body: { subSessionId: string; newMilestoneLevel: string },
+    @Res() response: FastifyReply,
+  ) {
+    try {
+      const updateResult = await this.scoresService.updateMilestoneLevel(
+        userId,
+        body.subSessionId,
+        body.newMilestoneLevel,
+      );
+
+
+      return response.status(HttpStatus.OK).send({
+        status: 'success',
+        result : updateResult.modifiedCount,
+        message: 'Milestone updated successfully',
+      });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: 'error',
+        message: 'Server error - ' + err.message,
+      });
+    }
+  }
+  
 }
