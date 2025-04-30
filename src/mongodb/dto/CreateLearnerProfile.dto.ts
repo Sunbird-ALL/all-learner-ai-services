@@ -51,11 +51,17 @@ export class CreateLearnerProfileDto {
   @ApiProperty()
   language: string;
 
+  @ApiProperty()
+  hallucination_alternative: string[];
+
   @ApiPropertyOptional()
   correctness?: CorrectnessDto[];
 
   @ApiProperty()
   date: Date;
+
+  @ApiPropertyOptional()
+  mechanics_id: string;
 }
 
 export class OutputDTO {

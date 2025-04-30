@@ -3620,6 +3620,7 @@ export class ScoresController {
       },
     },
   })
+
  
   async GetContentSentencebyUser(
   @Param('userId') id: string, 
@@ -3704,8 +3705,8 @@ export class ScoresController {
         "type_of_learner" : type_of_learner, 
         "story_mode": story_mode,
         "mechanics_id":mechanics_id,
-        "level_competency" : level_competency || []
-
+        "level_competency" : level_competency || [],
+        "story_mode": story_mode || false
       };
 
       const newContent = await lastValueFrom(
@@ -4209,9 +4210,13 @@ export class ScoresController {
           previous_level === undefined ? 0 : parseInt(previous_level[1]);
 
         if (sessionResult === 'pass') {
-          if (previous_level_id === 9) {
+          if (getSetResult.language === "en" && previous_level_id === en_config.max_milestone_level) {
+            milestone_level = "m" + en_config.max_milestone_level;
+          } else if(getSetResult.language === "ta" && previous_level_id === ta_config.max_milestone_level){
+            milestone_level = "m" + ta_config.max_milestone_level;
+          } else if(previous_level_id === 9) {
             milestone_level = 'm9';
-          } else {
+          }else {
             previous_level_id++;
             milestone_level = 'm' + previous_level_id;
           }

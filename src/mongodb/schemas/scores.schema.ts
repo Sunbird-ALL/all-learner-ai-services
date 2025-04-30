@@ -81,6 +81,7 @@ export class Score {
           count: { type: Number },
         },
         reptitionsCount: { type: Number },
+        mechanics_id: { type: String, required: false },
         asrOutput: { type: String, required: true },
         prosody_fluency: {
           pitch: { 
@@ -181,6 +182,7 @@ export class Score {
       count: number;
     };
     reptitionsCount: number;
+    mechanics_id: string;
     asrOutput: string;
     prosody_fluency: {
       pitch: { 
