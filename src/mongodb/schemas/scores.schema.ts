@@ -4,7 +4,7 @@ import { Document, Mixed } from 'mongoose';
 @Schema({ timestamps: true })
 export class Score {
   @Prop({ required: true, unique: true, index: true })
-  user_id: string; // userid sent by client
+  user_id: string;
 
   @Prop({
     type: [
