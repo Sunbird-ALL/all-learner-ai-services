@@ -90,8 +90,7 @@ export class ScoresController {
       const vowelSignArr = ta_config.vowel;
       const language = ta_config.language_code;
       const mode = CreateLearnerProfileDto.mode;
-      const vowelSignArr = ta_config.vowel;
-      const language = ta_config.language_code;
+    
       let createScoreData;
 
       let asrOutDenoised;
@@ -674,10 +673,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/or')
   async updateLearnerProfileOr(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const vowelSignArr = or_config.vowel;
       const language = or_config.language_code;
       
@@ -962,283 +963,267 @@ export class ScoresController {
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Hindi',
   })
   @Post('/updateLearnerProfile/hi')
-  async updateLearnerProfileHi(
-    @Req() request: FastifyRequest,
-    @Res() response: FastifyReply,
-    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
-  ) {
-    try {
-      const user_id = ((request as any).user.virtual_id).toString();
+async updateLearnerProfileHi(
+  @Req() request: FastifyRequest,
+  @Res() response: FastifyReply,
+  @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
+) {
+  try {
+    const user_id = ((request as any).user.virtual_id).toString();
+
+    if (
+      CreateLearnerProfileDto['output'] === undefined &&
+      CreateLearnerProfileDto.audio !== undefined
+    ) {
+      const audioFile = CreateLearnerProfileDto.audio;
+      const decoded = Buffer.isBuffer(audioFile)
+        ? audioFile.toString('base64')
+        : audioFile; // if it's already a base64 string
+
+      const audioOutput = await this.scoresService.audioFileToAsrOutput(
+        decoded,
+        'hi',
+        CreateLearnerProfileDto['contentType'],
+      );
+      CreateLearnerProfileDto['output'] = audioOutput.output;
+    }
+
+    const vowelSignArr = hi_config.vowel;
+    const language = hi_config.language_code;
+    const originalText = CreateLearnerProfileDto.original_text;
+
+    let asrOutDenoised, asrOutBeforeDenoised;
+    let responseText = '';
+    let constructText = '';
+    let pause_count = 0;
+    let similarityNonDenoisedText = 0;
+    let similarityDenoisedText = 0;
+    let nonDenoisedresponseText = '';
+    let DenoisedresponseText = '';
+    let reptitionCount = 0;
+    let constructTokenArr = [];
+    let correctTokens = [];
+    let missingTokens = [];
+    let confidence_scoresArr = [];
+    let missing_token_scoresArr = [];
+    let anomaly_scoreArr = [];
+
+    const originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
+
+    if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
       if (
         CreateLearnerProfileDto['output'] === undefined &&
         CreateLearnerProfileDto.audio !== undefined
       ) {
         const audioFile = CreateLearnerProfileDto.audio;
-        const decoded = audioFile.toString('base64');
+        const decoded = Buffer.isBuffer(audioFile)
+          ? audioFile.toString('base64')
+          : audioFile;
+
         const audioOutput = await this.scoresService.audioFileToAsrOutput(
           decoded,
-          'hi',
-          CreateLearnerProfileDto['contentType']
+          CreateLearnerProfileDto.language,
+          CreateLearnerProfileDto['contentType'],
         );
-        CreateLearnerProfileDto['output'] = audioOutput.output;
 
-      const vowelSignArr = hi_config.vowel;
-      const language = hi_config.language_code;
-      let createScoreData;
+        asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || '';
+        asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || '';
+        pause_count = audioOutput.pause_count || 0;
 
-      let asrOutDenoised;
-      let asrOutBeforeDenoised;
+        similarityDenoisedText = await this.scoresService.getTextSimilarity(
+          originalText,
+          asrOutDenoised[0]?.source || '',
+        );
 
-      let nonDenoisedresponseText = "";
-      let DenoisedresponseText = "";
+        similarityNonDenoisedText = await this.scoresService.getTextSimilarity(
+          originalText,
+          asrOutBeforeDenoised[0]?.source || '',
+        );
 
-      let similarityNonDenoisedText = 0;
-      let similarityDenoisedText = 0;
-
-      let constructTokenArr = [];
-      let correctTokens = [];
-      let missingTokens = [];
-
-      let reptitionCount = 0;
-
-      let confidence_scoresArr = [];
-      let missing_token_scoresArr = [];
-      let anomaly_scoreArr = [];
-
-      const originalText = CreateLearnerProfileDto.original_text
-
-      let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-      let responseText = '';
-      let constructText = '';
-      let pause_count = 0;
-
-      /* Condition to check whether content type is char or not. If content type is char
-      dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
-      */
-      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-        let audioFile;
-
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-
-          // Send Audio file to ASR to process and provide vector with char and score
-          let audioOutput = await this.scoresService.audioFileToAsrOutput(decoded, CreateLearnerProfileDto.language, CreateLearnerProfileDto['contentType']);
-
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
-
-          similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
-          similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
-
-          if (similarityDenoisedText <= similarityNonDenoisedText) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
-
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
-          }
+        if (similarityDenoisedText <= similarityNonDenoisedText) {
+          CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+          DenoisedresponseText = asrOutDenoised[0]?.source;
+          nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+        } else {
+          CreateLearnerProfileDto['output'] = asrOutDenoised;
+          DenoisedresponseText = asrOutDenoised[0]?.source;
+          nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
         }
 
-        responseText = CreateLearnerProfileDto.output[0].source;
-
-        // Get All hexcode for this selected language
-        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-
-        // Constructed Logic starts from here
-        let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-        constructText = constructedTextRepCountData.constructText;
-        reptitionCount = constructedTextRepCountData.reptitionCount;
-        constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-
-        // Comparison Logic for identify correct and missing tokens
-        for (const originalTokenArrEle of originalTokenArr) {
-          if (constructTokenArr.includes(originalTokenArrEle)) {
-            correctTokens.push(originalTokenArrEle);
-          } else {
-            missingTokens.push(originalTokenArrEle);
-          }
+        if (CreateLearnerProfileDto.output[0].source === '') {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            status: 'error',
+            message: 'Audio to Text functionality responded with an empty response. Please check the audio file or speak louder.',
+          });
         }
-        const missingTokenSet = new Set(missingTokens);
-        missingTokens = Array.from(missingTokenSet);
+      }
 
-        let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
+      responseText = CreateLearnerProfileDto.output[0].source;
 
-        confidence_scoresArr = identifyTokens.confidence_scoresArr;
-        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
-        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
+      const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
+      const constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
+      constructText = constructedTextRepCountData.constructText;
+      reptitionCount = constructedTextRepCountData.reptitionCount;
+      constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
 
-        // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
-
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
-
-          let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
-          let similarityScoreDenoisedResText = similarityDenoisedText;
-
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
-          }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+      for (const originalToken of originalTokenArr) {
+        if (constructTokenArr.includes(originalToken)) {
+          correctTokens.push(originalToken);
+        } else {
+          missingTokens.push(originalToken);
         }
+      }
 
-        // calculate fluencyScore
-        let fluencyScore = await this.scoresService.getCalculatedFluency(textEvalMatrices, reptitionCount, originalText, responseText, pause_count);
-        let createdAt = new Date().toISOString().replace('Z', '+00:00')
+      missingTokens = Array.from(new Set(missingTokens));
 
-        createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
-          session: {
-            session_id: CreateLearnerProfileDto.session_id, // working logged in session id
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
-            contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
-            contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            createdAt: createdAt,
-            language: language, // content language
-            original_text: CreateLearnerProfileDto.original_text, // content text shown to speak
-            response_text: responseText, // text return by ai after converting audio to text
-            construct_text: constructText, // this will be constructed by matching response text with original text.
-            confidence_scores: confidence_scoresArr, // confidence score array will include char's has identified by ai and has score
-            anamolydata_scores: anomaly_scoreArr, // this char's recognise as noise in audio
-            missing_token_scores: missing_token_scoresArr, // this char's missed to spoke or recognise by ai
-            read_duration: CreateLearnerProfileDto.read_duration, // This is for cal the fluency duration.
-            practice_duration: CreateLearnerProfileDto.practice_duration,
-            retry_count: CreateLearnerProfileDto.retry_count,
-            error_rate: {
-              character: textEvalMatrices.cer,
-              word: textEvalMatrices.wer,
-            },
-            count_diff: {
-              character: Math.abs(
-                CreateLearnerProfileDto.original_text.length -
-                CreateLearnerProfileDto.output[0].source.length,
-              ),
-              word: Math.abs(
-                CreateLearnerProfileDto.original_text.split(' ').length -
-                CreateLearnerProfileDto.output[0].source.split(' ').length,
-              ),
-            },
-            eucledian_distance: {
-              insertions: {
-                chars: textEvalMatrices.insertion,
-                count: textEvalMatrices.insertion.length,
-              },
-              deletions: {
-                chars: textEvalMatrices.deletion,
-                count: textEvalMatrices.deletion.length,
-              },
-              substitutions: {
-                chars: textEvalMatrices.substitution,
-                count: textEvalMatrices.substitution.length,
-              },
-            },
-            fluencyScore: fluencyScore.toFixed(3),
-            silence_Pause: {
-              total_duration: 0,
-              count: pause_count,
-            },
-            reptitionsCount: reptitionCount,
-            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-            isRetry: false,
-          },
+      const identifyTokens = await this.scoresService.identifyTokens(
+        CreateLearnerProfileDto.output[0].nBestTokens,
+        correctTokens,
+        missingTokens,
+        tokenHexcodeDataArr,
+        vowelSignArr,
+      );
+
+      confidence_scoresArr = identifyTokens.confidence_scoresArr;
+      missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
+      anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
+
+      const textEvalMatrices = await this.scoresService.getTextMetrics(
+        originalText,
+        constructText,
+        language,
+        Buffer.isBuffer(CreateLearnerProfileDto.audio)
+          ? CreateLearnerProfileDto.audio.toString('base64')
+          : CreateLearnerProfileDto.audio,
+      );
+
+      if (process.env.denoiserEnabled === 'true') {
+        const improved = similarityDenoisedText > similarityNonDenoisedText;
+
+        const createDenoiserOutputLog = {
+          user_id: CreateLearnerProfileDto.user_id,
+          session_id: CreateLearnerProfileDto.session_id,
+          sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
+          contentType: CreateLearnerProfileDto.contentType,
+          contentId: CreateLearnerProfileDto.contentId || '',
+          language,
+          original_text: originalText,
+          response_text: nonDenoisedresponseText,
+          denoised_response_text: DenoisedresponseText,
+          improved,
+          comment: '',
         };
 
-        // For retry attempt detection
-        const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
-          CreateLearnerProfileDto.contentId,
-        );
-
-        // Store Array to DB
-        const data = await this.scoresService.create(createScoreData);
+        await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
       }
+
+      const fluencyScore = await this.scoresService.getCalculatedFluency(
+        textEvalMatrices,
+        reptitionCount,
+        originalText,
+        responseText,
+        pause_count,
+      );
 
       const createdAt = new Date().toISOString().replace('Z', '+00:00');
 
       const createScoreData = {
-        user_id: user_id,
+        user_id: CreateLearnerProfileDto.user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
-          createdAt: createdAt,
-          language: language,
-          original_text: CreateLearnerProfileDto.original_text,
+          sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
+          contentType: CreateLearnerProfileDto.contentType,
+          contentId: CreateLearnerProfileDto.contentId || '',
+          createdAt,
+          language,
+          original_text: originalText,
           response_text: responseText,
+          construct_text: constructText,
           confidence_scores: confidence_scoresArr,
-          missing_token_scores: missing_token_scoresArr,
           anamolydata_scores: anomaly_scoreArr,
+          missing_token_scores: missing_token_scoresArr,
+          read_duration: CreateLearnerProfileDto.read_duration,
+          practice_duration: CreateLearnerProfileDto.practice_duration,
+          retry_count: CreateLearnerProfileDto.retry_count,
+          error_rate: {
+            character: textEvalMatrices.cer,
+            word: textEvalMatrices.wer,
+          },
+          count_diff: {
+            character: Math.abs(originalText.length - responseText.length),
+            word: Math.abs(
+              originalText.split(' ').length - responseText.split(' ').length,
+            ),
+          },
+          eucledian_distance: {
+            insertions: {
+              chars: textEvalMatrices.insertion,
+              count: textEvalMatrices.insertion.length,
+            },
+            deletions: {
+              chars: textEvalMatrices.deletion,
+              count: textEvalMatrices.deletion.length,
+            },
+            substitutions: {
+              chars: textEvalMatrices.substitution,
+              count: textEvalMatrices.substitution.length,
+            },
+          },
+          fluencyScore: fluencyScore.toFixed(3),
+          silence_Pause: {
+            total_duration: 0,
+            count: pause_count,
+          },
+          reptitionsCount: reptitionCount,
+          asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
           isRetry: false,
         },
       };
 
-      // For retry attempt detection
-      const retryAttempt = await this.scoresService.getRetryStatus(
-        user_id,
-        CreateLearnerProfileDto.contentId,
-        );
-
-      // Cal the subsessionWise and content_id wise target.
-      let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
-      const totalTargets = targets.length;
-
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
-      return response.status(HttpStatus.CREATED).send({
-        status: 'success',
-        msg: 'Successfully stored data to learner profile',
-        originalText: originalText,
-        responseText: responseText,
-        subsessionTargetsCount: totalTargets,
-        subsessionFluency: parseFloat(fluency.toFixed(2))
-      });
-    } catch (err) {
-      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        status: 'error',
-        message: 'Server error - ' + err,
-      });
+      await this.scoresService.create(createScoreData);
     }
+
+    const retryAttempt = await this.scoresService.getRetryStatus(
+      user_id,
+      CreateLearnerProfileDto.contentId,
+    );
+
+    let targets = await this.scoresService.getTargetsBysubSession(
+      CreateLearnerProfileDto.user_id,
+      CreateLearnerProfileDto.sub_session_id,
+      CreateLearnerProfileDto.language,
+    );
+
+    const originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(
+      CreateLearnerProfileDto.user_id,
+      CreateLearnerProfileDto.sub_session_id,
+    );
+
+    targets = targets.filter((target) => originalTextSyllables.includes(target.character));
+
+    const fluency = await this.scoresService.getFluencyBysubSession(
+      CreateLearnerProfileDto.user_id,
+      CreateLearnerProfileDto.sub_session_id,
+      CreateLearnerProfileDto.language,
+    );
+
+    return response.status(HttpStatus.CREATED).send({
+      status: 'success',
+      msg: 'Successfully stored data to learner profile',
+      originalText,
+      responseText,
+      subsessionTargetsCount: targets.length,
+      subsessionFluency: parseFloat(fluency.toFixed(2)),
+    });
+  } catch (err) {
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+      status: 'error',
+      message: 'Server error - ' + err,
+    });
   }
+}
+
+ 
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
@@ -3795,7 +3780,6 @@ export class ScoresController {
     @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
     @Query('mechanics_id') mechanics_id, 
     @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], 
-    @Res() response: FastifyReply) {
     @Query('story_mode') story_mode, 
     @Query('category') category:string,
     @Query('type_of_learner') type_of_learner:string,
@@ -5391,5 +5375,4 @@ export class ScoresController {
       });
     }
   }
-
 }
