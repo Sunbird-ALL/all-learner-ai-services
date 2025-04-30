@@ -2616,13 +2616,14 @@ export class ScoresController {
     },
   })
   async GetTargetsbysubsession(
+    @Param('userId') user_id:string,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
     try {
       const targetResult = await this.scoresService.getTargetsBysubSession(
-        id,
+        user_id,
         id,
         language
       );
@@ -2672,6 +2673,7 @@ export class ScoresController {
     },
   })
   async GetFamiliaritybysubsession(
+    @Param('userId') user_id:string,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -2679,7 +2681,7 @@ export class ScoresController {
     try {
       const familiarityResult =
         await this.scoresService.getFamiliarityBysubSession(
-          id,
+          user_id,
           id,
           language
         );
@@ -3592,9 +3594,9 @@ export class ScoresController {
 
         if (sessionResult === 'pass') {
           if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level && max_level == undefined) {
-            milestone_level = en_config.max_milestone_level;
+            milestone_level = "m" + en_config.max_milestone_level;
           }else if (getSetResult.language === en_config.language_code && previous_level_id >= max_level) {
-            milestone_level = max_level;
+            milestone_level = "m" + max_level;
           } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
           } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
@@ -4455,31 +4457,4 @@ export class ScoresController {
     }
   }
 
-  @Patch('/updateMilestone/user/:userId')
-  async updateMilestone(
-    @Param('userId') userId: string,
-    @Body() body: { subSessionId: string; newMilestoneLevel: string },
-    @Res() response: FastifyReply,
-  ) {
-    try {
-      const updateResult = await this.scoresService.updateMilestoneLevel(
-        userId,
-        body.subSessionId,
-        body.newMilestoneLevel,
-      );
-
-
-      return response.status(HttpStatus.OK).send({
-        status: 'success',
-        result : updateResult.modifiedCount,
-        message: 'Milestone updated successfully',
-      });
-    } catch (err) {
-      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-        status: 'error',
-        message: 'Server error - ' + err.message,
-      });
-    }
-  }
-  
 }
