@@ -16,7 +16,7 @@ export class AppController {
   checkHealth(): { status: boolean; message: string } {
     return {
       status: true,
-      message: 'Learner Ai service App is working',
+      message: 'Learner ai service App is working',
     };
   }
 }

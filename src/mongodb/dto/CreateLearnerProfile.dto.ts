@@ -13,6 +13,27 @@ export class CreateLearnerProfileDto {
   audio: Buffer;
 
   @ApiProperty()
+  response_text: string;
+
+  @ApiProperty()
+  mode: string;
+
+  @ApiProperty()
+  pause_count: number;
+
+  @ApiProperty()
+  read_duration: number;
+
+  @ApiProperty()
+  practice_duration: number;
+
+  @ApiProperty()
+  retry_count: number;
+
+  @ApiProperty()
+  user_id: string;
+
+  @ApiProperty()
   session_id: string;
 
   @ApiProperty()
@@ -31,10 +52,22 @@ export class CreateLearnerProfileDto {
   language: string;
 
   @ApiPropertyOptional()
+  ans_key?: string[];
+
+  @ApiPropertyOptional()
+  question_text?: string;
+
+  @ApiProperty()
+  hallucination_alternative: string[];
+
+  @ApiPropertyOptional()
   correctness?: CorrectnessDto[];
 
   @ApiProperty()
   date: Date;
+
+  @ApiPropertyOptional()
+  mechanics_id: string;
 }
 
 export class OutputDTO {
