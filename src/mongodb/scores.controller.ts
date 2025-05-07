@@ -293,16 +293,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -585,16 +587,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -1160,16 +1164,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -2147,7 +2153,6 @@ export class ScoresController {
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
 
-        let textEvalMatrices;
 
         if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
         Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
@@ -2180,7 +2185,6 @@ export class ScoresController {
           }
         }
 
-        textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, audioFile)
 
 
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
@@ -3764,8 +3768,6 @@ export class ScoresController {
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
-        "category": category || "",
-        "type_of_learner" : type_of_learner, 
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || [],
         "story_mode": story_mode || false
@@ -4729,7 +4731,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / contentLimit
+          total_correctness_score:correct_score[0].total_correctness_score / contentLimit,
           comprehensionScore: overallScore
         },
       });
