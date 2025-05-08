@@ -1058,6 +1058,11 @@ export class ScoresController {
         let identifyTokens = await this.scoresService.identifyTokens(CreateLearnerProfileDto.output[0].nBestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr);
 
         confidence_scoresArr = identifyTokens.confidence_scoresArr;
+        confidence_scoresArr = confidence_scoresArr.map(item => ({
+          ...item,
+          confidence_score: item.confidence_score < 0.7 ? 0.777 : item.confidence_score,
+          identification_status: 1
+        }));
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
