@@ -4165,9 +4165,10 @@ async updateLearnerProfileHi(
       let max_level = getSetResult.max_level;
 
       
-      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let targets = await this.scoresService.getTargetsBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
+      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
 
       if (is_mechanics && isComprehension) {
@@ -4179,7 +4180,7 @@ async updateLearnerProfileHi(
       }
 
       if (getSetResult.language != 'en') {
-        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id,getSetResult.sub_session_id);
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       }
       let totalTargets = targets.length;
