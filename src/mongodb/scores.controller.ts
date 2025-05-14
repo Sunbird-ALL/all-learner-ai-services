@@ -1205,12 +1205,6 @@ async updateLearnerProfileHi(
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
-      const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
-        CreateLearnerProfileDto.sub_session_id,
-        CreateLearnerProfileDto.language,
-      );
-
     const fluency = await this.scoresService.getFluencyBysubSession(
       CreateLearnerProfileDto.user_id,
       CreateLearnerProfileDto.sub_session_id,
