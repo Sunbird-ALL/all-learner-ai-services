@@ -1085,6 +1085,11 @@ async updateLearnerProfileHi(
       );
 
       confidence_scoresArr = identifyTokens.confidence_scoresArr;
+      confidence_scoresArr = confidence_scoresArr.map(item => ({
+        ...item,
+        confidence_score: item.confidence_score < 0.7 ? 0.777 : item.confidence_score,
+        identification_status: 1
+      }));
       missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
       anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
@@ -1188,18 +1193,23 @@ async updateLearnerProfileHi(
       CreateLearnerProfileDto.contentId,
     );
 
-    let targets = await this.scoresService.getTargetsBysubSession(
-      CreateLearnerProfileDto.user_id,
-      CreateLearnerProfileDto.sub_session_id,
-      CreateLearnerProfileDto.language,
-    );
+      // Cal the subsessionWise and content_id wise target.
+      let targets = await this.scoresService.getTargetsBysubSession(
+        CreateLearnerProfileDto.user_id,
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
 
-    const originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(
-      CreateLearnerProfileDto.user_id,
-      CreateLearnerProfileDto.sub_session_id,
-    );
+      let originalTextSyllables = [];
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+      const totalTargets = targets.length;
 
-    targets = targets.filter((target) => originalTextSyllables.includes(target.character));
+      const fluency = await this.scoresService.getFluencyBysubSession(
+        CreateLearnerProfileDto.user_id,
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
 
     const fluency = await this.scoresService.getFluencyBysubSession(
       CreateLearnerProfileDto.user_id,
@@ -2215,6 +2225,7 @@ async updateLearnerProfileHi(
             responseText = originalText;
           }
         }
+
         for (const confidence_char of textEvalMatrices.confidence_char_list) {
           const hexcode = await this.scoresService.getTokenHexcode(tokenHexcodeDataArr, confidence_char);
 
@@ -3861,8 +3872,6 @@ async updateLearnerProfileHi(
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
-        "category": category || "",
-        "type_of_learner" : type_of_learner, 
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || [],
         "story_mode": story_mode || false

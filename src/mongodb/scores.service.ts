@@ -112,7 +112,7 @@ export class ScoresService {
         serviceId = 'ai4bharat/whisper--gpu-t4';
         break;
       case 'hi':
-        serviceId = 'ai4bharat/conformer-hi--gpu-t4';
+        serviceId = 'ai4bharat/conformer-multilingual-all--gpu-t4';
         break;
       case 'gu':
         serviceId = 'ai4bharat/conformer-gujarati--gpu-t4';
