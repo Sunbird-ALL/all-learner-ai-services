@@ -11,7 +11,9 @@ import { ScoresService } from './scores.service';
 import { CacheService } from './cache/cache.service';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
+import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
+
 
 
 @Module({
@@ -45,7 +47,7 @@ import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
     CacheModule.register()
   ],
   controllers: [ScoresController],
-  providers: [ScoresService, CacheService],
+  providers: [ScoresService, CacheService, JwtService],
   
 })
 export class MongodbModule { }
