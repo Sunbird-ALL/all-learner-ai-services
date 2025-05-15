@@ -210,7 +210,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -231,7 +231,7 @@ export class ScoresController {
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
+          user_id: user_id, // userid sent by client
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
@@ -288,7 +288,7 @@ export class ScoresController {
         };
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -298,18 +298,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -378,10 +378,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/gu')
   async updateLearnerProfileGu(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
+      const user_id = ((request as any).user.virtual_id).toString();
       const vowelSignArr = gu_config.vowel;
       const language = gu_config.language_code;
       let createScoreData;
@@ -502,7 +504,7 @@ export class ScoresController {
           }
 
           let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             contentType: CreateLearnerProfileDto.contentType,
@@ -524,7 +526,7 @@ export class ScoresController {
         let createdAt = new Date().toISOString().replace('Z', '+00:00')
 
         createScoreData = {
-          user_id: CreateLearnerProfileDto.user_id, // userid sent by client
+          user_id: user_id, // userid sent by client
           session: {
             session_id: CreateLearnerProfileDto.session_id, // working logged in session id
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
@@ -582,7 +584,7 @@ export class ScoresController {
 
         // For retry attempt detection
         const retryAttempt = await this.scoresService.getRetryStatus(
-          CreateLearnerProfileDto.user_id,
+          user_id,
           CreateLearnerProfileDto.contentId,
         );
 
@@ -592,18 +594,18 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -881,19 +883,19 @@ export class ScoresController {
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
       
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( user_id,CreateLearnerProfileDto.sub_session_id);
     
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -1106,7 +1108,7 @@ async updateLearnerProfileHi(
         const improved = similarityDenoisedText > similarityNonDenoisedText;
 
         const createDenoiserOutputLog = {
-          user_id: CreateLearnerProfileDto.user_id,
+          user_id: user_id,
           session_id: CreateLearnerProfileDto.session_id,
           sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
           contentType: CreateLearnerProfileDto.contentType,
@@ -1133,7 +1135,7 @@ async updateLearnerProfileHi(
       const createdAt = new Date().toISOString().replace('Z', '+00:00');
 
       const createScoreData = {
-        user_id: CreateLearnerProfileDto.user_id,
+        user_id: user_id,
         session: {
           session_id: CreateLearnerProfileDto.session_id,
           sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
@@ -1195,18 +1197,18 @@ async updateLearnerProfileHi(
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
     const fluency = await this.scoresService.getFluencyBysubSession(
-      CreateLearnerProfileDto.user_id,
+      user_id,
       CreateLearnerProfileDto.sub_session_id,
       CreateLearnerProfileDto.language,
     );
@@ -1972,19 +1974,19 @@ async updateLearnerProfileHi(
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -2172,7 +2174,7 @@ async updateLearnerProfileHi(
           comprehension = await this.scoresService.getComprehensionFromLLM(CreateLearnerProfileDto.question_text,DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
           
           let createLlmOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
+            user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
             sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
             questionText: CreateLearnerProfileDto.question_text || "",
@@ -2296,7 +2298,7 @@ async updateLearnerProfileHi(
             }
 
             let createDenoiserOutputLog = {
-              user_id: CreateLearnerProfileDto.user_id,
+              user_id: user_id,
               session_id: CreateLearnerProfileDto.session_id,
               sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
               contentType: CreateLearnerProfileDto.contentType,
@@ -2441,7 +2443,7 @@ async updateLearnerProfileHi(
 
       // Cal the subsessionWise and content_id wise target.
       const targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language
       );
@@ -2449,7 +2451,7 @@ async updateLearnerProfileHi(
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
@@ -3069,18 +3071,18 @@ async updateLearnerProfileHi(
       }
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
-        CreateLearnerProfileDto.user_id,
+        user_id,
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
