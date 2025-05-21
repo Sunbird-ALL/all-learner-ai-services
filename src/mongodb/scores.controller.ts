@@ -4154,10 +4154,10 @@ export class ScoresController {
       // NEW: Compute fluencyResult only for English showcase.
       let fluencyResult: string;
       if (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) {
-        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
+        const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
+        if (['en', 'kn'].includes(getSetResult.language.toLowerCase()) && userLevelNum < 10) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
-          const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
           const passThreshold = (userLevelNum >= 4) ? 3.0 : 2.6;
         
           // Retrieve all audio records for the given sub-session and language 'en' or kn
