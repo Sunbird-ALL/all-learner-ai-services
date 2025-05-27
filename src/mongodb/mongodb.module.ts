@@ -12,6 +12,7 @@ import { CacheService } from './cache/cache.service';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
+import { getSetResultSchema } from './schemas/getSetResult';
 
 
 @Module({
@@ -40,7 +41,8 @@ import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
-      { name: 'llmOutputLogs', schema: llmOutputLogsSchema }
+      { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
+      { name: 'getSetResult', schema: getSetResultSchema }
     ]),
     CacheModule.register()
   ],

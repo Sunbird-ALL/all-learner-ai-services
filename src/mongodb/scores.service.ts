@@ -17,6 +17,7 @@ import { CacheService } from './cache/cache.service';
 import lang_common_config from "./config/language/common/commonConfig";
 import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
+import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 
 @Injectable()
 export class ScoresService {
@@ -31,6 +32,8 @@ export class ScoresService {
     private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
     @InjectModel('llmOutputLogs') 
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
+    @InjectModel('getSetResult') 
+    private readonly getSetResultModel: Model<getSetResultDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -2221,6 +2224,22 @@ export class ScoresService {
       return err;
     }
   }
+
+  async addGetSetResultLog(getSetResultLog: any): Promise<any> {
+    try {
+      const createGetSetResultLog = new this.getSetResultModel(getSetResultLog);
+      console.log("createGetSetResultLog-------", createGetSetResultLog);
+      
+      const result = await createGetSetResultLog.save();
+      console.log("result-------", result);
+      
+      return result;
+    } catch (err) {
+      console.error("Error saving getSetResultLog:", err);
+      throw err; // or return some error response
+    }
+  }
+
 
   async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([

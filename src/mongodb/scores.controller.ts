@@ -4062,7 +4062,8 @@ export class ScoresController {
       
       let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
       let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
 
       if (is_mechanics && isComprehension) {
@@ -4725,6 +4726,25 @@ export class ScoresController {
         fluencyResult = undefined; 
         prosodyResult = undefined;
       }
+     
+      // log the responce data into the collection
+      await this.scoresService.addGetSetResultLog({
+        userId:getSetResult.user_id,
+        sessionId:getSetResult.session_id,
+        subSessionId:getSetResult.sub_session_id,
+        sessionResult:sessionResult,
+        totalTargets: totalTargets,
+        currentLevel: currentLevel,
+        previousLevel: previous_level,
+        totalSyllables: totalSyllables,
+        fluency: fluency,
+        fluencyResult: fluencyResult,  
+        prosodyResult: prosodyResult,
+        targetsPercentage: targetsPercentage,
+        totalCorrectnesScore:(correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
+        comprehensionScore: overallScore
+      })
+  
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
@@ -4738,7 +4758,7 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0].total_correctness_score / contentLimit,
+          total_correctness_score:(correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
           comprehensionScore: overallScore
         },
       });
