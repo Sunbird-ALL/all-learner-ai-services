@@ -22,10 +22,10 @@ export class getSetResult extends Document {
     previousLevel: string;
 
     @Prop()
-    totalSyllables: string;
+    totalSyllables: number;
 
     @Prop()
-    fluency: string;
+    fluency: number;
 
     @Prop()
     fluencyResult: string;
@@ -37,7 +37,7 @@ export class getSetResult extends Document {
     targetsPercentage: number;
 
     @Prop()
-    totalCorrectnesScore: number;
+    totalCorrectnessScore: number;
 
     @Prop()
     comprehensionScore: number;
