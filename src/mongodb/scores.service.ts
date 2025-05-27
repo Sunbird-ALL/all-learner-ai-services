@@ -2228,15 +2228,11 @@ export class ScoresService {
   async addGetSetResultLog(getSetResultLog: any): Promise<any> {
     try {
       const createGetSetResultLog = new this.getSetResultModel(getSetResultLog);
-      console.log("createGetSetResultLog-------", createGetSetResultLog);
-      
       const result = await createGetSetResultLog.save();
-      console.log("result-------", result);
-      
       return result;
     } catch (err) {
       console.error("Error saving getSetResultLog:", err);
-      throw err; // or return some error response
+      throw err;
     }
   }
 
