@@ -158,9 +158,9 @@ export class ScoresController {
             }
           }
           responseText = CreateLearnerProfileDto.output[0].source;
-        }else{
-            responseText =CreateLearnerProfileDto.response_text;
-            pause_count = CreateLearnerProfileDto.pause_count;
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
 
 
@@ -193,7 +193,7 @@ export class ScoresController {
         missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, CreateLearnerProfileDto.audio.toString(('base64')))
         if (mode !== 'offline' && process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -299,7 +299,7 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
@@ -462,10 +462,10 @@ export class ScoresController {
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
-        
+
         reptitionCount = constructedTextRepCountData.reptitionCount;
         constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-        
+
 
         // Comparison Logic for identify correct and missing tokens
         for (const originalTokenArrEle of originalTokenArr) {
@@ -485,7 +485,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -593,7 +593,7 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
@@ -674,7 +674,7 @@ export class ScoresController {
     try {
       const vowelSignArr = or_config.vowel;
       const language = or_config.language_code;
-      
+
       let createScoreData;
 
       let asrOutDenoised;
@@ -695,9 +695,9 @@ export class ScoresController {
       let confidence_scoresArr = [];
       let missing_token_scoresArr = [];
       let anomaly_scoreArr = [];
-  
+
       const originalText = CreateLearnerProfileDto.original_text;
-      
+
       let originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
       let responseText = '';
       let constructText = '';
@@ -750,7 +750,7 @@ export class ScoresController {
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-        
+
         // Constructed Logic starts from here
         let constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
         constructText = constructedTextRepCountData.constructText;
@@ -775,7 +775,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, CreateLearnerProfileDto.audio.toString(('base64')))
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
 
@@ -878,10 +878,10 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
-    
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
+
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
@@ -1067,7 +1067,7 @@ export class ScoresController {
         anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
 
         // Send a call to text eval serivce
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, constructText, language, CreateLearnerProfileDto.audio.toString(('base64')))
 
         if (process.env.denoiserEnabled === "true") {
           let improved = false;
@@ -1175,7 +1175,7 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       const totalTargets = targets.length;
 
@@ -1301,94 +1301,94 @@ export class ScoresController {
       let anamolyTokenArr = [];
 
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
-      
-      if(mode == 'online' || mode == undefined){
-        if (
-          CreateLearnerProfileDto['output'] === undefined &&
-          CreateLearnerProfileDto.audio !== undefined
-        ) {
-          audioFile = CreateLearnerProfileDto.audio;
-          const decoded = audioFile.toString('base64');
-          const audioOutput = await this.scoresService.audioFileToAsrOutput(
-            decoded,
-            'kn',
-            CreateLearnerProfileDto['contentType']
-          );
-          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
-          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
-          pause_count = audioOutput.pause_count || 0;
-          avg_pause = audioOutput.avg_pause;
-          pitch_classification = audioOutput.pitch_classification; 
-          pitch_mean = audioOutput.pitch_mean;
-          pitch_std = audioOutput.pitch_std;       
-          intensity_classification = audioOutput.intensity_classification; 
-          intensity_mean = audioOutput.intensity_mean;
-          intensity_std = audioOutput.intensity_std;
-          expression_classification = audioOutput.expression_classification;
-          smoothness_classification = audioOutput.smoothness_classification; 
 
-          if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
-            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          } else {
-            CreateLearnerProfileDto['output'] = asrOutDenoised;
-            DenoisedresponseText = asrOutDenoised[0]?.source;
-            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-          }
+        if (mode == 'online' || mode == undefined) {
+          if (
+            CreateLearnerProfileDto['output'] === undefined &&
+            CreateLearnerProfileDto.audio !== undefined
+          ) {
+            audioFile = CreateLearnerProfileDto.audio;
+            const decoded = audioFile.toString('base64');
+            const audioOutput = await this.scoresService.audioFileToAsrOutput(
+              decoded,
+              'kn',
+              CreateLearnerProfileDto['contentType']
+            );
+            asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || "";
+            asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
+            pause_count = audioOutput.pause_count || 0;
+            avg_pause = audioOutput.avg_pause;
+            pitch_classification = audioOutput.pitch_classification;
+            pitch_mean = audioOutput.pitch_mean;
+            pitch_std = audioOutput.pitch_std;
+            intensity_classification = audioOutput.intensity_classification;
+            intensity_mean = audioOutput.intensity_mean;
+            intensity_std = audioOutput.intensity_std;
+            expression_classification = audioOutput.expression_classification;
+            smoothness_classification = audioOutput.smoothness_classification;
 
-          if (CreateLearnerProfileDto.output[0].source === '') {
-            return response.status(HttpStatus.BAD_REQUEST).send({
-              status: 'error',
-              message:
-                'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
-            });
+            if (similarity(originalText, asrOutDenoised[0]?.source || "") <= similarity(originalText, asrOutBeforeDenoised[0]?.source || "")) {
+              CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            } else {
+              CreateLearnerProfileDto['output'] = asrOutDenoised;
+              DenoisedresponseText = asrOutDenoised[0]?.source;
+              nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+            }
+
+            if (CreateLearnerProfileDto.output[0].source === '') {
+              return response.status(HttpStatus.BAD_REQUEST).send({
+                status: 'error',
+                message:
+                  'Audio to Text functionality Responded Empty Response. Please check audio file or speak Loudly',
+              });
+            }
           }
+          let constructTokens = [];
+
+          if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word') { // If it is word check for Token combinations and agreeable substitutes for word improvements
+            let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
+            constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)
+            const wordsWithValues = await this.scoresService.generateWords(constructTokens); // Form all possible words from ASR tokens
+            const replacements = kn_config.replacements;
+            const firstChar = originalText[0]
+            if (replacements.hasOwnProperty(firstChar)) { // If it is agreeable , construct the possible orignal words and compare all construted words for better possible response
+              let agreeableResults = replacements[firstChar] + originalText.slice(1);
+              let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, agreeableResults]);
+              if (originalSimilarity >= agreeableHighestSimilarity[3]) {
+                responseText = nonDenoisedresponseText;
+                tokenArrandAnamolyArrdefine = true;
+              }
+
+              else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+                responseText = agreeableHighestSimilarity[0];
+                tokenArr = agreeableHighestSimilarity[1];
+                anamolyTokenArr = agreeableHighestSimilarity[2];
+              }
+
+            }
+            else { // If is not agreeable, compare the costructed words with original and get hisghest
+              let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText]);
+              if (originalSimilarity >= constructedHighestSimilarity[3]) {
+                responseText = nonDenoisedresponseText;
+                tokenArrandAnamolyArrdefine = true;
+              }
+              else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
+                responseText = constructedHighestSimilarity[0];
+                tokenArr = constructedHighestSimilarity[1];
+                anamolyTokenArr = constructedHighestSimilarity[2];
+              }
+            }
+
+          }
+          else {  // If it is not a word use reeponse given by ASR
+            responseText = CreateLearnerProfileDto.output[0].source;
+          }
+        } else {
+          responseText = CreateLearnerProfileDto.response_text;
+          pause_count = CreateLearnerProfileDto.pause_count;
         }
-        let constructTokens = [];
-
-        if (CreateLearnerProfileDto.contentType.toLowerCase() == 'word'){ // If it is word check for Token combinations and agreeable substitutes for word improvements
-          let originalSimilarity = await this.scoresService.getTextSimilarity(nonDenoisedresponseText, originalText)
-          constructTokens = await this.scoresService.processTokens(CreateLearnerProfileDto.output[0].nBestTokens)  
-          const wordsWithValues = await this.scoresService.generateWords(constructTokens); // Form all possible words from ASR tokens
-          const replacements = kn_config.replacements;
-          const firstChar = originalText[0]
-          if (replacements.hasOwnProperty(firstChar)) { // If it is agreeable , construct the possible orignal words and compare all construted words for better possible response
-            let agreeableResults = replacements[firstChar] + originalText.slice(1);
-            let agreeableHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText, agreeableResults]);
-            if (originalSimilarity >= agreeableHighestSimilarity[3]) {
-              responseText = nonDenoisedresponseText;
-              tokenArrandAnamolyArrdefine = true;
-            }
-
-            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-              responseText = agreeableHighestSimilarity[0];
-              tokenArr = agreeableHighestSimilarity[1];
-              anamolyTokenArr = agreeableHighestSimilarity[2];
-            }
-
-          }
-          else { // If is not agreeable, compare the costructed words with original and get hisghest
-            let constructedHighestSimilarity = await this.scoresService.findAllSimilarities(wordsWithValues, [originalText]);
-            if (originalSimilarity >= constructedHighestSimilarity[3]) {
-              responseText = nonDenoisedresponseText;
-              tokenArrandAnamolyArrdefine = true;
-            }
-            else { //if the constructed has highesr similarity we'll be pushing the usedArr into tokenArr and unusedArr into anamolyTokenArr
-              responseText = constructedHighestSimilarity[0];
-              tokenArr = constructedHighestSimilarity[1];
-              anamolyTokenArr = constructedHighestSimilarity[2];
-            }
-          }
-          
-        }
-        else  {  // If it is not a word use reeponse given by ASR
-          responseText = CreateLearnerProfileDto.output[0].source;
-        }
-      }else{
-        responseText = CreateLearnerProfileDto.response_text;
-        pause_count = CreateLearnerProfileDto.pause_count;
-      }
 
 
         const responseTextTokensArr = responseText.split('');
@@ -1682,7 +1682,7 @@ export class ScoresController {
               const hexcode = getTokenHexcode(value.charkey);
 
               if (hexcode !== '') {
-                let confidenceScore = value.charvalue>0.7 ? value.charvalue : 0.777
+                let confidenceScore = value.charvalue > 0.7 ? value.charvalue : 0.777
                 confidence_scoresArr.push({
                   token: value.charkey,
                   hexcode: hexcode,
@@ -1774,32 +1774,32 @@ export class ScoresController {
         let rate_classification = textEvalMatrices.rate_classification;
         if (mode !== 'offline') {
 
-        if (process.env.denoiserEnabled === "true") {
-          let improved = false;
+          if (process.env.denoiserEnabled === "true") {
+            let improved = false;
 
-          let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
-          let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
+            let similarityScoreNonDenoisedResText = similarity(originalText, nonDenoisedresponseText);
+            let similarityScoreDenoisedResText = similarity(originalText, DenoisedresponseText);
 
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
-            improved = true;
+            if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+              improved = true;
+            }
+
+            let createDenoiserOutputLog = {
+              user_id: CreateLearnerProfileDto.user_id,
+              session_id: CreateLearnerProfileDto.session_id,
+              sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+              contentType: CreateLearnerProfileDto.contentType,
+              contentId: CreateLearnerProfileDto.contentId || "",
+              language: language,
+              original_text: originalText,
+              response_text: nonDenoisedresponseText,
+              denoised_response_text: DenoisedresponseText,
+              improved: improved,
+              comment: ""
+            }
+
+            await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
           }
-
-          let createDenoiserOutputLog = {
-            user_id: CreateLearnerProfileDto.user_id,
-            session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
-            contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
-            language: language,
-            original_text: originalText,
-            response_text: nonDenoisedresponseText,
-            denoised_response_text: DenoisedresponseText,
-            improved: improved,
-            comment: ""
-          }
-
-          await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
-        }
 
         }
 
@@ -1886,7 +1886,7 @@ export class ScoresController {
               count: pause_count,
             },
             prosody_fluency: {
-              pitch: { 
+              pitch: {
                 pitch_classification: pitch_classification,
                 pitch_mean: pitch_mean,
                 pitch_std: pitch_std
@@ -1900,11 +1900,11 @@ export class ScoresController {
                 tempo_classification: tempo_classification,
                 words_per_minute: words_per_minute,
                 pause_count: pause_count_textEval,
-               },
+              },
               expression_classification: expression_classification,
               smoothness: {
                 smoothness_classification: smoothness_classification,
-                pause_count:pause_count,
+                pause_count: pause_count,
                 avg_pause: avg_pause
               },
               rate: {
@@ -1919,7 +1919,7 @@ export class ScoresController {
             reptitionsCount: reptitionCount,
             asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -1948,7 +1948,7 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
@@ -1958,7 +1958,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -2059,7 +2059,7 @@ export class ScoresController {
       let intensity_std = 0;
       let expression_classification = "";
       let smoothness_classification = "";
-      
+
       let correct_choice_score = 0;
       let correctness_score = 0;
       let is_correct_choice = CreateLearnerProfileDto.is_correct_choice;
@@ -2088,14 +2088,14 @@ export class ScoresController {
             asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || "";
             pause_count = audioOutput.pause_count || 0;
             avg_pause = audioOutput.avg_pause;
-            pitch_classification = audioOutput.pitch_classification; 
+            pitch_classification = audioOutput.pitch_classification;
             pitch_mean = audioOutput.pitch_mean;
-            pitch_std = audioOutput.pitch_std;       
-            intensity_classification = audioOutput.intensity_classification; 
+            pitch_std = audioOutput.pitch_std;
+            intensity_classification = audioOutput.intensity_classification;
             intensity_mean = audioOutput.intensity_mean;
             intensity_std = audioOutput.intensity_std;
             expression_classification = audioOutput.expression_classification;
-            smoothness_classification = audioOutput.smoothness_classification; 
+            smoothness_classification = audioOutput.smoothness_classification;
 
             similarityDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutDenoised[0]?.source || "");
             similarityNonDenoisedText = await this.scoresService.getTextSimilarity(originalText, asrOutBeforeDenoised[0]?.source || "");
@@ -2128,18 +2128,18 @@ export class ScoresController {
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
 
-        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language,CreateLearnerProfileDto.audio.toString(('base64')))
+        const textEvalMatrices = await this.scoresService.getTextMetrics(originalText, responseText, language, CreateLearnerProfileDto.audio.toString(('base64')))
         let tempo_classification = textEvalMatrices.tempo_classification;
         let pause_count_textEval = textEvalMatrices.pause_count;
         let words_per_minute = textEvalMatrices.words_per_minute;
         let rate_classification = textEvalMatrices.rate_classification;
- 
+
 
         responseText = await this.scoresService.processText(CreateLearnerProfileDto.output[0].source);
-      
-        if(CreateLearnerProfileDto.ans_key && CreateLearnerProfileDto.ans_key.length >0 &&  DenoisedresponseText.length>0) {
-          comprehension = await this.scoresService.getComprehensionFromLLM(CreateLearnerProfileDto.question_text,DenoisedresponseText,CreateLearnerProfileDto.ans_key[0]);
-          
+
+        if (CreateLearnerProfileDto.ans_key && CreateLearnerProfileDto.ans_key.length > 0 && DenoisedresponseText.length > 0) {
+          comprehension = await this.scoresService.getComprehensionFromLLM(CreateLearnerProfileDto.question_text, DenoisedresponseText, CreateLearnerProfileDto.ans_key[0]);
+
           let createLlmOutputLog = {
             user_id: CreateLearnerProfileDto.user_id,
             session_id: CreateLearnerProfileDto.session_id,
@@ -2153,15 +2153,15 @@ export class ScoresController {
             grammar: comprehension.grammar,
             accuracy: comprehension.accuracy,
             overall: comprehension.overall,
-           
+
           }
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
 
 
-        if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
-        Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
-        CreateLearnerProfileDto.hallucination_alternative.length > 0){
+        if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative &&
+          Array.isArray(CreateLearnerProfileDto.hallucination_alternative) &&
+          CreateLearnerProfileDto.hallucination_alternative.length > 0) {
 
           function checkResponseTextAnomaly(responseText: string): boolean {
             const phrasesToCheck = ["thank you", "and", "yes"];
@@ -2185,7 +2185,7 @@ export class ScoresController {
             return similarityScore >= similarityThreshold;
           }
 
-          if(await checkResponseTextAnomaly(responseText) || await checkHallucinationAlternatives(responseText, CreateLearnerProfileDto.hallucination_alternative) || await checkConstructTextSimilarity(responseText)){
+          if (await checkResponseTextAnomaly(responseText) || await checkHallucinationAlternatives(responseText, CreateLearnerProfileDto.hallucination_alternative) || await checkConstructTextSimilarity(responseText)) {
             responseText = originalText;
           }
         }
@@ -2272,7 +2272,7 @@ export class ScoresController {
         // Add check for the correct choice
 
         if (is_correct_choice !== undefined && is_correct_choice !== null) {
-         
+
           // calculation for the correct choice final score 
           let similarityDenoised = similarityDenoisedText * 100
           let key_word = CreateLearnerProfileDto.correctness['50%']
@@ -2294,7 +2294,7 @@ export class ScoresController {
             sub_session_id: CreateLearnerProfileDto.sub_session_id || '', // used to club set recorded data within session
             contentType: CreateLearnerProfileDto.contentType, // contentType could be Char, Word, Sentence and Paragraph
             contentId: CreateLearnerProfileDto.contentId || '', // contentId of original text content shown to user to speak
-            comprehension:comprehension, // Response from LLM for mechanics
+            comprehension: comprehension, // Response from LLM for mechanics
             createdAt: createdAt,
             language: language, // content language
             original_text: originalText, // content text shown to speak
@@ -2338,7 +2338,7 @@ export class ScoresController {
               count: pause_count,
             },
             prosody_fluency: {
-              pitch: { 
+              pitch: {
                 pitch_classification: pitch_classification,
                 pitch_mean: pitch_mean,
                 pitch_std: pitch_std
@@ -2352,11 +2352,11 @@ export class ScoresController {
                 tempo_classification: tempo_classification,
                 words_per_minute: words_per_minute,
                 pause_count: pause_count_textEval,
-               },
+              },
               expression_classification: expression_classification,
               smoothness: {
                 smoothness_classification: smoothness_classification,
-                pause_count:pause_count,
+                pause_count: pause_count,
                 avg_pause: avg_pause
               },
               rate: {
@@ -2370,9 +2370,9 @@ export class ScoresController {
             },
             reptitionsCount: reptitionCount,
             asrOutput: CreateLearnerProfileDto.output ? JSON.stringify(CreateLearnerProfileDto.output) : "No Asr call",
-            mechanics_id : CreateLearnerProfileDto.mechanics_id || "",
+            mechanics_id: CreateLearnerProfileDto.mechanics_id || "",
             isRetry: false,
-            mode:mode
+            mode: mode
           },
         };
 
@@ -2392,7 +2392,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language
       );
-      
+
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -3018,7 +3018,7 @@ export class ScoresController {
         CreateLearnerProfileDto.language,
       );
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(CreateLearnerProfileDto.user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
@@ -3184,7 +3184,7 @@ export class ScoresController {
     },
   })
   async GetTargetsbysubsession(
-    @Param('userId') user_id:string,
+    @Param('userId') user_id: string,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -3241,7 +3241,7 @@ export class ScoresController {
     },
   })
   async GetFamiliaritybysubsession(
-    @Param('userId') user_id:string,
+    @Param('userId') user_id: string,
     @Param('subsessionId') id: string,
     @Query('language') language: string,
     @Res() response: FastifyReply,
@@ -3775,8 +3775,8 @@ export class ScoresController {
         "cLevel": contentLevel,
         "complexityLevel": complexityLevel,
         "graphemesMappedObj": graphemesMappedObj,
-        "mechanics_id":mechanics_id,
-        "level_competency" : level_competency || [],
+        "mechanics_id": mechanics_id,
+        "level_competency": level_competency || [],
         "story_mode": story_mode || false
       };
 
@@ -4059,10 +4059,10 @@ export class ScoresController {
       let sessionResult = 'No Result';
       let max_level = getSetResult.max_level;
 
-      
-      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id,getSetResult.sub_session_id, getSetResult.language);
+
+      let targets = await this.scoresService.getTargetsBysubSession(getSetResult.user_id, getSetResult.sub_session_id, getSetResult.language);
+      let fluency = await this.scoresService.getFluencyBysubSession(getSetResult.user_id, getSetResult.sub_session_id, getSetResult.language);
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(getSetResult.user_id, getSetResult.sub_session_id, getSetResult.language);
       let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
       ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
 
@@ -4075,20 +4075,20 @@ export class ScoresController {
       }
 
       if (getSetResult.language != 'en') {
-        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id,getSetResult.sub_session_id);
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(getSetResult.user_id, getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
       }
       let totalTargets = targets.length;
 
 
-      if(getSetResult.totalSyllableCount != undefined && getSetResult.language === "en"){
+      if (getSetResult.totalSyllableCount != undefined && getSetResult.language === "en") {
         if (getSetResult.totalSyllableCount > 50) {
           totalSyllables = 50;
         } else {
           totalSyllables = getSetResult.totalSyllableCount;
         }
       }
-      else{
+      else {
         totalSyllables = totalTargets + familiarity.length;
       }
 
@@ -4160,14 +4160,14 @@ export class ScoresController {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
           const passThreshold = (userLevelNum >= 4) ? 3.0 : 2.6;
-        
+
           // Retrieve all audio records for the given sub-session and language 'en' or kn
-          
+
           const allAudioRecords = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
-        
+
           const totalAudios = allAudioRecords.length;
           let passCount = 0;
-        
+
           // Loop through each audio record.
           for (const record of allAudioRecords) {
             const prosody = record.prosody_fluency || {};
@@ -4175,13 +4175,13 @@ export class ScoresController {
             const smoothClass = (prosody.smoothness && prosody.smoothness.smoothness_classification) || "Very Disfluent";
             const accClass = (prosody.accuracy && prosody.accuracy.accuracy_classification) || "Very Disfluent";
             const rateClass = (prosody.rate && prosody.rate.rate_classification) || "Very Disfluent";
-        
+
             // Convert the classification strings to numeric scores.
             const exprScore = this.scoresService.classificationToScore(exprClass);
             const smoothScore = this.scoresService.classificationToScore(smoothClass);
             const accScore = this.scoresService.classificationToScore(accClass);
             const rateScore = this.scoresService.classificationToScore(rateClass);
-        
+
             // Compute the weighted score.
             const weightedScore = (exprScore * 0.20) + (smoothScore * 0.10) + (accScore * 0.40) + (rateScore * 0.30);
 
@@ -4204,12 +4204,12 @@ export class ScoresController {
               // For levels below M4, use the normal threshold.
               recordPass = (weightedScore >= passThreshold);
             }
-        
+
             if (weightedScore >= passThreshold) {
               passCount++;
             }
           }
-        
+
           // Even/odd logic: 
           // For even total audios: pass if passCount >= (totalAudios / 2)
           // For odd total audios: pass if passCount > (totalAudios / 2)
@@ -4231,23 +4231,23 @@ export class ScoresController {
           const userLevelNum = previous_level ? parseInt(previous_level.replace('m', ''), 10) : 0;
           if (userLevelNum >= 6) {
             const allAudioRecordsProsody = await this.scoresService.getSubSessionScores(getSetResult.sub_session_id, getSetResult.language.toLowerCase());
-          
+
             const totalAudiosProsody = allAudioRecordsProsody.length;
             let passCountProsody = 0;
-          
+
             // Helper function: normalize classification – valid values are 'natural', 'flat', 'exaggerated', 'erratic'
             const normalizeClassification = (cls: string): string => {
               const valid = ['natural', 'flat', 'exaggerated', 'erratic'];
               const lower = cls.toLowerCase();
               return valid.includes(lower) ? lower : 'erratic';
             };
-          
+
             for (const record of allAudioRecordsProsody) {
               const prosody = record.prosody_fluency || {};
               const pitchClass = normalizeClassification(prosody.pitch?.pitch_classification || "erratic");
               const intensityClass = normalizeClassification(prosody.intensity?.intensity_classification || "erratic");
               const tempoClass = normalizeClassification(prosody.tempo?.tempo_classification || "erratic");
-          
+
               // Rule 1: If any feature is 'erratic', record fails.
               let recordProsodyPass = true;
               if (pitchClass === 'erratic' || intensityClass === 'erratic' || tempoClass === 'erratic') {
@@ -4266,7 +4266,7 @@ export class ScoresController {
                 passCountProsody++;
               }
             }
-          
+
             if (totalAudiosProsody > 0) {
               prosodyResult = (totalAudiosProsody % 2 === 0)
                 ? ((passCountProsody >= totalAudiosProsody / 2) ? 'pass' : 'fail')
@@ -4280,10 +4280,10 @@ export class ScoresController {
           }
         }
       }
-      
+
       // If fluencyResult is computed and is 'fail', enforce overall sessionResult to 'fail'
       if ((typeof fluencyResult !== 'undefined' && fluencyResult === 'fail') ||
-          (typeof prosodyResult !== 'undefined' && prosodyResult === 'fail')) {
+        (typeof prosodyResult !== 'undefined' && prosodyResult === 'fail')) {
         sessionResult = 'fail';
       }
 
@@ -4301,12 +4301,12 @@ export class ScoresController {
         if (sessionResult === 'pass') {
           if (getSetResult.language === en_config.language_code && previous_level_id >= en_config.max_milestone_level && max_level == undefined) {
             milestone_level = "m" + en_config.max_milestone_level;
-          }else if (getSetResult.language === en_config.language_code && previous_level_id >= max_level) {
+          } else if (getSetResult.language === en_config.language_code && previous_level_id >= max_level) {
             milestone_level = "m" + max_level;
           } else if (getSetResult.language === ta_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
             milestone_level = "m" + ta_config.max_milestone_level;
           } else if (getSetResult.language != en_config.language_code && previous_level_id >= ta_config.max_milestone_level) {
-            milestone_level = ta_config.max_milestone_level;
+            milestone_level = "m" + ta_config.max_milestone_level;
           } else {
             milestone_level = 'm' + (previous_level_id + 1);
           }
@@ -4722,29 +4722,33 @@ export class ScoresController {
             }
           });
       }
-      if (!( (getSetResult.language.toLowerCase() === 'en' || getSetResult.language.toLowerCase() === 'kn') && (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId) )) {
-        fluencyResult = undefined; 
+      if (!((getSetResult.language.toLowerCase() === 'en' || getSetResult.language.toLowerCase() === 'kn') && (!getSetResult.hasOwnProperty('collectionId') || !getSetResult.collectionId))) {
+        fluencyResult = undefined;
         prosodyResult = undefined;
       }
-     
+
       // log the responce data into the collection
-      await this.scoresService.addGetSetResultLog({
-        userId:getSetResult.user_id,
-        sessionId:getSetResult.session_id,
-        subSessionId:getSetResult.sub_session_id,
-        sessionResult:sessionResult,
-        totalTargets: totalTargets,
-        currentLevel: currentLevel,
-        previousLevel: previous_level,
-        totalSyllables: totalSyllables,
-        fluency: fluency,
-        fluencyResult: fluencyResult,  
-        prosodyResult: prosodyResult,
-        targetsPercentage: targetsPercentage,
-        totalCorrectnesScore:(correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
-        comprehensionScore: overallScore
-      })
-  
+      try {
+        await this.scoresService.addGetSetResultLog({
+          userId: getSetResult.user_id,
+          sessionId: getSetResult.session_id,
+          subSessionId: getSetResult.sub_session_id,
+          sessionResult: sessionResult,
+          totalTargets: totalTargets,
+          currentLevel: currentLevel,
+          previousLevel: previous_level,
+          totalSyllables: totalSyllables,
+          fluency: fluency,
+          fluencyResult: fluencyResult,
+          prosodyResult: prosodyResult,
+          targetsPercentage: targetsPercentage,
+          totalCorrectnessScore: (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
+          comprehensionScore: overallScore
+        })
+      } catch (logError) {
+        console.error('Failed to log session result:', logError);
+      }
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
@@ -4754,11 +4758,11 @@ export class ScoresController {
           previous_level: previous_level,
           totalSyllables: totalSyllables,
           fluency: fluency,
-          fluencyResult: fluencyResult,  
+          fluencyResult: fluencyResult,
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:(correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
+          total_correctness_score: (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
           comprehensionScore: overallScore
         },
       });
