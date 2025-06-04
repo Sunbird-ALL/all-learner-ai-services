@@ -5,7 +5,7 @@ import mongodbConfig from '../config/mongodb.config';
 import { ScoreSchema } from './schemas/scores.schema';
 import { hexcodeMappingSchema } from './schemas/hexcodeMapping.schema';
 import { assessmentInputSchema } from './schemas/assessmentInput.schema';
-import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema'
+import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema';
 import { ScoresController } from './scores.controller';
 import { ScoresService } from './scores.service';
 import { CacheService } from './cache/cache.service';
@@ -13,7 +13,6 @@ import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { getSetResultSchema } from './schemas/getSetResult';
-
 
 @Module({
   imports: [
@@ -35,19 +34,18 @@ import { getSetResultSchema } from './schemas/getSetResult';
         },
       }),
     }),
-    
+
     MongooseModule.forFeature([
       { name: 'Score', schema: ScoreSchema },
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
       { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
-      { name: 'getSetResult', schema: getSetResultSchema }
+      { name: 'getSetResult', schema: getSetResultSchema },
     ]),
-    CacheModule.register()
+    CacheModule.register(),
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService],
-  
 })
-export class MongodbModule { }
+export class MongodbModule {}
