@@ -3046,4 +3046,84 @@ export class ScoresService {
 
     return comprehension;
   }
+
+    public readonly ones: string[] = [
+      'zero', 'one', 'two', 'three', 'four',
+      'five', 'six', 'seven', 'eight', 'nine',
+    ];
+  
+    public readonly teens: string[] = [
+      'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+      'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+    ];
+  
+    public readonly tens: string[] = [
+      '', '', 'twenty', 'thirty', 'forty',
+      'fifty', 'sixty', 'seventy', 'eighty', 'ninety',
+    ];
+  
+    // Map word => digit
+    async wordToNumber(word: string): Promise<number | null> {
+      word = word.toLowerCase().replace(/-/g, ' ');
+      const parts = word.split(' ');
+  
+      if (this.ones.includes(parts[0])) return this.ones.indexOf(parts[0]);
+      if (this.teens.includes(parts[0])) return this.teens.indexOf(parts[0]) + 10;
+  
+      const tensIndex = this.tens.indexOf(parts[0]);
+      if (tensIndex > 0 && parts.length === 1) return tensIndex * 10;
+      if (tensIndex > 0 && parts.length === 2 && this.ones.includes(parts[1])) {
+        return tensIndex * 10 + this.ones.indexOf(parts[1]);
+      }
+  
+      return null;
+    }
+  
+    // Map digit => word
+    async numberToWords(num: number): Promise<string> {
+      if (num < 10) return this.ones[num];
+      if (num < 20) return this.teens[num - 10];
+      if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const one = num % 10;
+        return one === 0 ? this.tens[ten] : `${this.tens[ten]}-${this.ones[one]}`;
+      }
+      if (num === 100) return 'one hundred';
+      return num.toString();
+    }
+  
+    async normalizeResponseText(
+      original_text: string,
+      response_text: string,
+    ): Promise<string> {
+      console.log("original_text----------", original_text);
+      console.log("response_text-----------", response_text);
+      
+      const originalWords = original_text.split(/\s+/);
+      const responseWords = response_text.split(/\s+/);
+  
+      const resultPromises = responseWords.map(async (word, i) => {
+        const originalWord = originalWords[i];
+  
+        const originalNum = parseInt(originalWord);
+        const responseNum = parseInt(word);
+  
+        // Case: original is digit, response is word => convert word to number
+        if (!isNaN(originalNum)) {
+          const fromWord = await this.wordToNumber(word);
+          if (fromWord !== null) return fromWord.toString();
+        }
+  
+        // Case: original is word, response is digit => convert number to word
+        if (isNaN(originalNum) && !isNaN(responseNum)) {
+          return await this.numberToWords(responseNum);
+        }
+  
+        return word;
+      });
+  
+      const resultWords = await Promise.all(resultPromises);
+      return resultWords.join(' ');
+    }
+  
 }
