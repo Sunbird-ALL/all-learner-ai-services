@@ -2481,25 +2481,28 @@ export class ScoresController {
             intensity_std = audioOutput.intensity_std;
             expression_classification = audioOutput.expression_classification;
             smoothness_classification = audioOutput.smoothness_classification;
-            
-            console.log("asrOutDenoised--------", asrOutDenoised[0]?.source);
-            console.log("asrOutBeforeDenoised--------", asrOutBeforeDenoised[0]?.source);
 
-            const converted_text = await this.scoresService.normalizeResponseText(originalText,asrOutDenoised[0]?.source || '' )
-            console.log("converted_text------", converted_text);
+            const denoised_converted_text =
+              await this.scoresService.normalizeResponseText(
+                originalText,
+                asrOutDenoised[0]?.source || '',
+              );
+            const nonDenoised_converted_text =
+              await this.scoresService.normalizeResponseText(
+                originalText,
+                asrOutDenoised[0]?.source || '',
+              );
 
             similarityDenoisedText = await this.scoresService.getTextSimilarity(
               originalText,
-              asrOutDenoised[0]?.source || '',
+              denoised_converted_text || '',
             );
-            console.log("similarityDenoisedText-------", similarityDenoisedText);
 
             similarityNonDenoisedText =
               await this.scoresService.getTextSimilarity(
                 originalText,
-                asrOutBeforeDenoised[0]?.source || '',
+                nonDenoised_converted_text || '',
               );
-            console.log("similarityNonDenoisedText-------", similarityNonDenoisedText);
 
             if (similarityDenoisedText <= similarityNonDenoisedText) {
               CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
@@ -2891,7 +2894,6 @@ export class ScoresController {
       });
     }
   }
- 
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
