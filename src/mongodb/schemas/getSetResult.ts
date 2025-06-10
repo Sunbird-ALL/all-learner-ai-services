@@ -3,50 +3,49 @@ import { Document } from 'mongoose';
 
 @Schema()
 export class getSetResult extends Document {
-    @Prop({ required: true })
-    userId: string;
+  @Prop({ required: true })
+  userId: string;
 
-    @Prop({ required: true })
-    sessionId: string;
+  @Prop({ required: true })
+  sessionId: string;
 
-    @Prop({ required: true })
-    subSessionId: string;
+  @Prop({ required: true })
+  subSessionId: string;
 
-    @Prop({ required: true })
-    totalTargets: number;
+  @Prop({ required: true })
+  totalTargets: number;
 
-    @Prop()
-    currentLevel: string;
+  @Prop()
+  currentLevel: string;
 
-    @Prop()
-    previousLevel: string;
+  @Prop()
+  previousLevel: string;
 
-    @Prop()
-    totalSyllables: number;
+  @Prop()
+  totalSyllables: number;
 
-    @Prop()
-    fluency: number;
+  @Prop()
+  fluency: number;
 
-    @Prop()
-    fluencyResult: string;
+  @Prop()
+  fluencyResult: string;
 
-    @Prop()
-    prosodyResult: string;
+  @Prop()
+  prosodyResult: string;
 
-    @Prop()
-    targetsPercentage: number;
+  @Prop()
+  targetsPercentage: number;
 
-    @Prop()
-    totalCorrectnessScore: number;
+  @Prop()
+  totalCorrectnessScore: number;
 
-    @Prop()
-    comprehensionScore: number;
+  @Prop()
+  comprehensionScore: number;
 
-    @Prop({ default: Date.now })
-    createdAt: Date;
+  @Prop({ default: Date.now })
+  createdAt: Date;
 }
 
 export type getSetResultDocument = getSetResult & Document;
 
-export const getSetResultSchema =
-    SchemaFactory.createForClass(getSetResult);
+export const getSetResultSchema = SchemaFactory.createForClass(getSetResult);
