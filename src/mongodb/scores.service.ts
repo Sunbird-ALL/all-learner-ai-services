@@ -3146,4 +3146,25 @@ export class ScoresService {
     const resultWords = await Promise.all(resultPromises);
     return resultWords.join(' ');
   }
+
+  async mergeResponseWordsUsingOriginal(original: string, response: string) {
+    const originalWordsSet = new Set(original.split(' '));
+    const responseWords = response.split(' ');
+    const mergedResponse: string[] = [];
+    let i = 0;
+    while (i < responseWords.length) {
+      if (i + 1 < responseWords.length) {
+        const merged = responseWords[i] + responseWords[i + 1];
+        if (originalWordsSet.has(merged)) {
+          mergedResponse.push(merged);
+          i += 2;
+          continue;
+        }
+      }
+      // No merge, keep original response word
+      mergedResponse.push(responseWords[i]);
+      i += 1;
+    }
+    return mergedResponse.join(' ');
+  }
 }

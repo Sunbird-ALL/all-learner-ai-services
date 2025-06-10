@@ -1292,6 +1292,7 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+        responseText = await this.scoresService.mergeResponseWordsUsingOriginal(originalText,responseText);
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
