@@ -1,12 +1,15 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash } from 'crypto';
 import { Request } from 'express';
 import * as jose from 'jose';
+import { RedisClientType } from 'redis';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) { }
+  constructor(private jwtService: JwtService,
+    @Inject('REDIS_CLIENT') private readonly redisClient: RedisClientType
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
 
@@ -17,6 +20,12 @@ export class JwtAuthGuard implements CanActivate {
     }
     const token = authHeader.split(' ')[1];
     try {
+      // Check Redis Blacklist
+      const isBlacklisted = await this.redisClient.get(`blacklist:${token}`);
+      if (isBlacklisted) {
+        throw new UnauthorizedException('Token has been logged out');
+      }
+
       //Step 1: Correctly Generate Encryption Key
       const secret_key = process.env.JOSE_SECRET || '';
       const hash = createHash('sha256').update(secret_key).digest();
