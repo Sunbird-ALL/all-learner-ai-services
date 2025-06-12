@@ -1,4 +1,3 @@
-// src/towre/dto/create-towre.dto.ts
 import { IsString, IsOptional, IsObject } from 'class-validator';
 
 export class CreateTowreDto {
