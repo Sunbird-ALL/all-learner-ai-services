@@ -1,4 +1,3 @@
-// src/towre/towre.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -15,4 +14,13 @@ export class TowreService {
     const created = new this.towreModel(data);
     return created.save();
   }
+
+  async softDeleteById(id: string): Promise<any> {
+    return this.towreModel.findByIdAndUpdate(
+      id,
+      { isDeleted: true },
+      { new: true }
+    );
+  }
+
 }

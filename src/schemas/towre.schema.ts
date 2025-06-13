@@ -20,6 +20,9 @@ export class Towre {
   @Prop({ required: true, type: Object }) 
   towre_result: Record<string, any>;
 
+  @Prop({ default: false })
+  isDeleted: boolean;
+
   @Prop({ default: Date.now })
   createdAt: Date;
 }
