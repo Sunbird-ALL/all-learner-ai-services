@@ -1,8 +1,8 @@
-name: DEV DEPLOYMENT-june
+name: DEV DEPLOYMENT
 
 on:
   push:
-    branches: [ lais-v1.1.2 ]
+    branches: [ test ]
 
 jobs:
   build:
