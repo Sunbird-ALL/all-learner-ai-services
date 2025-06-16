@@ -2648,6 +2648,7 @@ export class ScoresService {
       contentLevel = 'L1';
     } else if (milestone_level === 'm1') {
       contentLevel = 'L1';
+      complexityLevel = ['C0'];
     } else if (milestone_level === 'm2') {
       contentLevel = 'L2';
       complexityLevel = ['C1'];
