@@ -3871,8 +3871,8 @@ async updateLearnerProfileHi(
         "graphemesMappedObj": graphemesMappedObj,
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || [],
-        "story_mode": story_mode || false,
-        "CEFR_level": CEFR_level || []
+        "CEFR_level": CEFR_level || [],
+        "story_mode": story_mode || false
       };
 
       const newContent = await lastValueFrom(
