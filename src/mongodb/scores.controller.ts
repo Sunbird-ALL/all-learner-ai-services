@@ -3790,6 +3790,7 @@ async updateLearnerProfileHi(
     @Query('story_mode') story_mode, 
     @Query('category') category:string,
     @Query('type_of_learner') type_of_learner:string,
+    @Query('CEFR_level', new ParseArrayPipe({ items: String, separator: ',', optional: true })) CEFR_level: string[], 
     @Res() response: FastifyReply) {
  
     try {
@@ -3870,7 +3871,8 @@ async updateLearnerProfileHi(
         "graphemesMappedObj": graphemesMappedObj,
         "mechanics_id":mechanics_id,
         "level_competency" : level_competency || [],
-        "story_mode": story_mode || false
+        "story_mode": story_mode || false,
+        "CEFR_level": CEFR_level || []
       };
 
       const newContent = await lastValueFrom(
