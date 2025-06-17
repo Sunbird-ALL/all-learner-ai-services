@@ -17,7 +17,7 @@ export class Towre {
   @Prop({ required: false })
   milestone_level?: string;
 
-  @Prop({ required: true, type: Object }) 
+  @Prop({ required: true, type: Object })
   towre_result: Record<string, any>;
 
   @Prop({ default: false })

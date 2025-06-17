@@ -9,22 +9,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppClusterService } from './app-cluster.service';
 import compression from '@fastify/compress';
 
-
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.forRoot(process.env.DATABASE),
     new FastifyAdapter({ logger: true, bodyLimit: 30 * 1024 * 1024 }),
   );
 
-  await app.register(compression,{
+  await app.register(compression, {
     global: true,
     zlibOptions: {
       level: 6,
     },
     threshold: 512,
-    encodings: ['gzip', 'deflate','br']
-  }
-);
+    encodings: ['gzip', 'deflate', 'br'],
+  });
 
   await app.register(fastifyMultipart, {
     attachFieldsToBody: 'keyValues',
@@ -32,7 +30,7 @@ async function bootstrap() {
       fileSize: 102400000,
     },
   });
-  
+
   const config = new DocumentBuilder()
     .setTitle('ALL Learner AI')
     .setDescription(
@@ -51,7 +49,7 @@ async function bootstrap() {
     methods: ['GET', 'POST', 'HEAD', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: false,
   });
- 
+
   await app.listen(process.env.PORT, '0.0.0.0');
 }
 AppClusterService.clusterize(bootstrap);

@@ -19,8 +19,7 @@ export class TowreService {
     return this.towreModel.findByIdAndUpdate(
       id,
       { isDeleted: true },
-      { new: true }
+      { new: true },
     );
   }
-
 }
