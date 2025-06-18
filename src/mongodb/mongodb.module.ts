@@ -12,6 +12,7 @@ import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
+import { getSetResultSchema } from './schemas/getSetResult';
 import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
@@ -41,6 +42,7 @@ import { RedisModule } from 'src/redis/redis.module';
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
       { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
+      { name: 'getSetResult', schema: getSetResultSchema },
     ]),
     CacheModule.register(),
     RedisModule,

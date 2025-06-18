@@ -384,14 +384,10 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables =
-        await this.scoresService.getSubsessionOriginalTextSyllables(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-        );
-      targets = targets.filter((targetsEle) => {
-        return originalTextSyllables.includes(targetsEle.character);
-      });
+
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+      
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -750,14 +746,10 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables =
-        await this.scoresService.getSubsessionOriginalTextSyllables(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-        );
-      targets = targets.filter((targetsEle) => {
-        return originalTextSyllables.includes(targetsEle.character);
-      });
+
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -1110,15 +1102,11 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables =
-        await this.scoresService.getSubsessionOriginalTextSyllables(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-        );
 
-      targets = targets.filter((targetsEle) => {
-        return originalTextSyllables.includes(targetsEle.character);
-      });
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( user_id,CreateLearnerProfileDto.sub_session_id);
+    
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -1217,7 +1205,6 @@ export class ScoresController {
   ) {
     try {
       const user_id = (request as any).user.virtual_id.toString();
-
       if (
         CreateLearnerProfileDto['output'] === undefined &&
         CreateLearnerProfileDto.audio !== undefined
@@ -2136,6 +2123,7 @@ export class ScoresController {
             }
 
             let createDenoiserOutputLog = {
+
               user_id: user_id,
               session_id: CreateLearnerProfileDto.session_id,
               sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
@@ -2303,14 +2291,9 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables =
-        await this.scoresService.getSubsessionOriginalTextSyllables(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-        );
-      targets = targets.filter((targetsEle) => {
-        return originalTextSyllables.includes(targetsEle.character);
-      });
+
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
 
@@ -2487,14 +2470,26 @@ export class ScoresController {
             expression_classification = audioOutput.expression_classification;
             smoothness_classification = audioOutput.smoothness_classification;
 
+            const denoised_converted_text =
+              await this.scoresService.normalizeResponseText(
+                originalText,
+                asrOutDenoised[0]?.source || '',
+              );
+            const nonDenoised_converted_text =
+              await this.scoresService.normalizeResponseText(
+                originalText,
+                asrOutDenoised[0]?.source || '',
+              );
+
             similarityDenoisedText = await this.scoresService.getTextSimilarity(
               originalText,
-              asrOutDenoised[0]?.source || '',
+              denoised_converted_text || '',
             );
+
             similarityNonDenoisedText =
               await this.scoresService.getTextSimilarity(
                 originalText,
-                asrOutBeforeDenoised[0]?.source || '',
+                nonDenoised_converted_text || '',
               );
 
             if (similarityDenoisedText <= similarityNonDenoisedText) {
@@ -3620,6 +3615,7 @@ export class ScoresController {
         return originalTextSyllables.includes(targetsEle.character);
       });
 
+
       const totalTargets = targets.length;
 
       const fluency = await this.scoresService.getFluencyBysubSession(
@@ -4162,6 +4158,7 @@ export class ScoresController {
       },
     },
   })
+
   async GetContentWordbyUser(
     @Req() request: FastifyRequest,
     @Query('language') language: string,
@@ -4329,6 +4326,7 @@ export class ScoresController {
       },
     },
   })
+
   async GetContentSentencebyUser(
     @Req() request: FastifyRequest,
     @Query('language') language,
@@ -4515,6 +4513,7 @@ export class ScoresController {
       },
     },
   })
+
   async GetContentParagraphbyUser(
     @Req() request: FastifyRequest,
     @Query('language') language,
@@ -4527,6 +4526,7 @@ export class ScoresController {
     tags: string[],
     @Res() response: FastifyReply,
   ) {
+
     try {
       const id = (request as any).user.virtual_id.toString();
       const graphemesMappedObj = {};
@@ -4766,6 +4766,7 @@ export class ScoresController {
           getSetResult.language,
         ));
 
+
       if (is_mechanics && isComprehension) {
         if (overallScore >= 14) {
           sessionResult = 'pass';
@@ -4775,14 +4776,10 @@ export class ScoresController {
       }
 
       if (getSetResult.language != 'en') {
-        originalTextSyllables =
-          await this.scoresService.getSubsessionOriginalTextSyllables(
-            user_id,
-            getSetResult.sub_session_id,
-          );
-        targets = targets.filter((targetsEle) => {
-          return originalTextSyllables.includes(targetsEle.character);
-        });
+
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,getSetResult.sub_session_id);
+        targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+
       }
       let totalTargets = targets.length;
 
@@ -4866,6 +4863,7 @@ export class ScoresController {
         !getSetResult.hasOwnProperty('collectionId') ||
         !getSetResult.collectionId
       ) {
+
         if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
@@ -5086,7 +5084,7 @@ export class ScoresController {
             getSetResult.language != en_config.language_code &&
             previous_level_id >= ta_config.max_milestone_level
           ) {
-            milestone_level = ta_config.max_milestone_level;
+            milestone_level = 'm' + ta_config.max_milestone_level;
           } else {
             milestone_level = 'm' + (previous_level_id + 1);
           }
@@ -5680,6 +5678,30 @@ export class ScoresController {
         fluencyResult = undefined;
         prosodyResult = undefined;
       }
+
+      // log the responce data into the collection
+      try {
+        await this.scoresService.addGetSetResultLog({
+          userId: getSetResult.user_id,
+          sessionId: getSetResult.session_id,
+          subSessionId: getSetResult.sub_session_id,
+          sessionResult: sessionResult,
+          totalTargets: totalTargets,
+          currentLevel: currentLevel,
+          previousLevel: previous_level,
+          totalSyllables: totalSyllables,
+          fluency: fluency,
+          fluencyResult: fluencyResult,
+          prosodyResult: prosodyResult,
+          targetsPercentage: targetsPercentage,
+          totalCorrectnessScore:
+            (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
+          comprehensionScore: overallScore,
+        });
+      } catch (logError) {
+        console.error('Failed to log session result:', logError);
+      }
+
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
@@ -5706,6 +5728,11 @@ export class ScoresController {
     }
   }
 
+
+  @ApiParam({
+    name: 'userId',
+    example: '27519278861697549531193',
+  }
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -5838,6 +5865,7 @@ export class ScoresController {
   }
 
   @ApiExcludeEndpoint(true)
+
   @Get('/GetSessionIds')
   async GetSessionIdsByUser(
     @Req() request: FastifyRequest,
@@ -5846,7 +5874,8 @@ export class ScoresController {
     const user_id = (request as any).user.virtual_id.toString();
     return this.scoresService.getAllSessions(user_id, limit);
   }
-
+      
+      
   @ApiBody({
     description: `Api request body include these schema properties.
     Based on user id we will calculate targets.`,
@@ -6265,3 +6294,4 @@ export class ScoresController {
     }
   }
 }
+

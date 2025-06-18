@@ -13,6 +13,7 @@ import { CacheService } from './cache/cache.service';
 import lang_common_config from './config/language/common/commonConfig';
 import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
+import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 
 @Injectable()
 export class ScoresService {
@@ -26,6 +27,8 @@ export class ScoresService {
     private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
     @InjectModel('llmOutputLogs')
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
+    @InjectModel('getSetResult')
+    private readonly getSetResultModel: Model<getSetResultDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) {}
@@ -2218,6 +2221,17 @@ export class ScoresService {
     }
   }
 
+  async addGetSetResultLog(getSetResultLog: any): Promise<any> {
+    try {
+      const createGetSetResultLog = new this.getSetResultModel(getSetResultLog);
+      const result = await createGetSetResultLog.save();
+      return result;
+    } catch (err) {
+      console.error('Error saving getSetResultLog:', err);
+      throw err;
+    }
+  }
+
   async getSubessionIds(user_id: string) {
     const RecordData = await this.scoreModel.aggregate([
       {
@@ -2900,26 +2914,45 @@ export class ScoresService {
     // If no transformations were added, return the original word
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
   }
+  
   getAccuracyClassification(contentType: string, score: number): string {
+    const config: Record<string, [number, number, string][]> = {
+      word: [
+        [0, 1, "Fluent"],
+        [1, 2, "Moderately Fluent"],
+        [2, 3, "Disfluent"],
+        [3, Infinity, "Very Disfluent"]
+      ],
+      sentence: [
+        [0, 3, "Fluent"],
+        [3, 6, "Moderately Fluent"],
+        [6, 8, "Disfluent"],
+        [8, Infinity, "Very Disfluent"]
+      ],
+      paragraph: [
+        [0, 5, "Fluent"],
+        [5, 10, "Moderately Fluent"],
+        [10, 12, "Disfluent"],
+        [12, Infinity, "Very Disfluent"]
+      ]
+    };
+    // Normalize the content type and get its thresholds.
     const ct = contentType.toLowerCase();
-    if (ct === 'word') {
-      if (score >= 0 && score < 0.6) return 'Fluent';
-      else if (score >= 0.6 && score < 2) return 'Moderately Fluent';
-      else if (score >= 2 && score <= 3) return 'Disfluent';
-      else return 'Very Disfluent';
-    } else if (ct === 'sentence') {
-      if (score >= 0 && score < 1.5) return 'Fluent';
-      else if (score >= 1.5 && score < 4.0) return 'Moderately Fluent';
-      else if (score >= 4.0 && score <= 6) return 'Disfluent';
-      else return 'Very Disfluent';
-    } else if (ct === 'paragraph') {
-      if (score >= 0 && score < 3) return 'Fluent';
-      else if (score >= 3 && score < 6) return 'Moderately Fluent';
-      else if (score >= 6 && score <= 8) return 'Disfluent';
-      else return 'Very Disfluent';
+    const thresholds = config[ct];
+    // If the content type is not recognized, return "N/A"
+    if (!thresholds) {
+      return "N/A";
     }
-    return 'N/A';
+    // Loop through the thresholds and return the classification that matches.
+    for (const [min, max, label] of thresholds) {
+      if (score >= min && score <= max) {
+        return label;
+      }
+    }
+    // Fallback in case no classification is matched.
+    return "N/A";
   }
+  
   public classificationToScore(classification: string): number {
     switch (classification) {
       case 'Fluent':
@@ -3015,5 +3048,126 @@ export class ScoresService {
     );
 
     return comprehension;
+  }
+
+  public readonly ones: string[] = [
+    'zero',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+  ];
+
+  public readonly teens: string[] = [
+    'ten',
+    'eleven',
+    'twelve',
+    'thirteen',
+    'fourteen',
+    'fifteen',
+    'sixteen',
+    'seventeen',
+    'eighteen',
+    'nineteen',
+  ];
+
+  public readonly tens: string[] = [
+    '',
+    '',
+    'twenty',
+    'thirty',
+    'forty',
+    'fifty',
+    'sixty',
+    'seventy',
+    'eighty',
+    'ninety',
+  ];
+
+  // Map word => digit
+  async wordToNumber(word: string): Promise<number | null> {
+    word = word.toLowerCase().replace(/-/g, ' ');
+    const parts = word.split(' ');
+
+    if (this.ones.includes(parts[0])) return this.ones.indexOf(parts[0]);
+    if (this.teens.includes(parts[0])) return this.teens.indexOf(parts[0]) + 10;
+
+    const tensIndex = this.tens.indexOf(parts[0]);
+    if (tensIndex > 0 && parts.length === 1) return tensIndex * 10;
+    if (tensIndex > 0 && parts.length === 2 && this.ones.includes(parts[1])) {
+      return tensIndex * 10 + this.ones.indexOf(parts[1]);
+    }
+
+    return null;
+  }
+
+  // Map digit => word
+  async numberToWords(num: number): Promise<string> {
+    if (num < 10) return this.ones[num];
+    if (num < 20) return this.teens[num - 10];
+    if (num < 100) {
+      const ten = Math.floor(num / 10);
+      const one = num % 10;
+      return one === 0 ? this.tens[ten] : `${this.tens[ten]}-${this.ones[one]}`;
+    }
+    if (num === 100) return 'one hundred';
+    return num.toString();
+  }
+
+  async normalizeResponseText(
+    original_text: string,
+    response_text: string,
+  ): Promise<string> {
+    const originalWords = original_text.split(/\s+/);
+    const responseWords = response_text.split(/\s+/);
+
+    const resultPromises = responseWords.map(async (word, i) => {
+      const originalWord = originalWords[i];
+
+      const originalNum = parseInt(originalWord);
+      const responseNum = parseInt(word);
+
+      // Case: original is digit, response is word => convert word to number
+      if (!isNaN(originalNum)) {
+        const fromWord = await this.wordToNumber(word);
+        if (fromWord !== null) return fromWord.toString();
+      }
+
+      // Case: original is word, response is digit => convert number to word
+      if (isNaN(originalNum) && !isNaN(responseNum)) {
+        return await this.numberToWords(responseNum);
+      }
+
+      return word;
+    });
+
+    const resultWords = await Promise.all(resultPromises);
+    return resultWords.join(' ');
+  }
+
+  async mergeResponseWordsUsingOriginal(original: string, response: string) {
+    const originalWordsSet = new Set(original.split(' '));
+    const responseWords = response.split(' ');
+    const mergedResponse: string[] = [];
+    let i = 0;
+    while (i < responseWords.length) {
+      if (i + 1 < responseWords.length) {
+        const merged = responseWords[i] + responseWords[i + 1];
+        if (originalWordsSet.has(merged)) {
+          mergedResponse.push(merged);
+          i += 2;
+          continue;
+        }
+      }
+      // No merge, keep original response word
+      mergedResponse.push(responseWords[i]);
+      i += 1;
+    }
+    return mergedResponse.join(' ');
   }
 }
