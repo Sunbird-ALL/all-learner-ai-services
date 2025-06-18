@@ -37,6 +37,7 @@ import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
 import kn_config from './config/language/kn';
+import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
 
 @ApiTags('scores')
 @UseGuards(JwtAuthGuard)
@@ -2398,6 +2399,7 @@ export class ScoresController {
       const originalText = await this.scoresService.processText(
         CreateLearnerProfileDto.original_text,
       );
+      const substitutions = en_config.substitutions
       const mode = CreateLearnerProfileDto.mode;
 
       let createScoreData;
@@ -2528,6 +2530,18 @@ export class ScoresController {
           );
           pause_count = CreateLearnerProfileDto.pause_count;
         }
+
+        // Profanity Detection logic
+        const badWordResponse = filterBadWords(responseText,language)
+        if (responseText !== badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
+        // Agreeable substitution logic
+        responseText = await this.scoresService.getBestCorrectedResponse(originalText,responseText,substitutions)
+
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
           language,
@@ -2544,9 +2558,6 @@ export class ScoresController {
         let words_per_minute = textEvalMatrices.words_per_minute;
         let rate_classification = textEvalMatrices.rate_classification;
 
-        responseText = await this.scoresService.processText(
-          CreateLearnerProfileDto.output[0].source,
-        );
 
         if (
           CreateLearnerProfileDto.ans_key &&
