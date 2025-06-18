@@ -37,7 +37,6 @@ import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
 import kn_config from './config/language/kn';
-import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
 
 @ApiTags('scores')
 @UseGuards(JwtAuthGuard)
@@ -217,6 +216,14 @@ export class ScoresController {
         } else {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
+        }
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
         }
 
         // Get All hexcode for this selected language
@@ -580,6 +587,14 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
+
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
           language,
@@ -939,6 +954,14 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
@@ -1300,6 +1323,14 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
 
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
           language,
@@ -1718,6 +1749,14 @@ export class ScoresController {
         } else {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
+        }
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
         }
 
         const responseTextTokensArr = responseText.split('');
@@ -2532,8 +2571,8 @@ export class ScoresController {
         }
 
         // Profanity Detection logic
-        const badWordResponse = filterBadWords(responseText,language)
-        if (responseText !== badWordResponse) {
+        const badWordResponse = await this.scoresService.checkProfanity(responseText,language)
+        if(badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
             statusCode: HttpStatus.BAD_REQUEST,
             message: 'Profanity detected.',
