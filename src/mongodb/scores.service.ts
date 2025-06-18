@@ -3171,4 +3171,52 @@ export class ScoresService {
     }
     return mergedResponse.join(' ');
   }
+
+  async getBestCorrectedResponse(
+    original: string,
+    response: string,
+    substitutions: { [key: string]: string[] }
+  ): Promise<string> {
+    const originalClean = original.trim().toLowerCase();
+    const responseWords = response.trim().toLowerCase().split(" ");
+  
+    let bestResponse = responseWords.slice();
+    let maxSimilarity = await this.getTextSimilarity(originalClean, responseWords.join(" "));
+  
+    const backtrack = async (index: number, current: string[]) => {
+      if (index === responseWords.length) {
+        const currentStr = current.join(" ");
+        const sim = await this.getTextSimilarity(originalClean, currentStr);
+        if (sim > maxSimilarity) {
+          maxSimilarity = sim;
+          bestResponse = current.slice();
+        }
+        return;
+      }
+  
+      const word = responseWords[index];
+      let substituted = false;
+  
+      for (const key in substitutions) {
+        const subs = substitutions[key];
+        for (let i = 0; i < subs.length; i++) {
+          if (subs[i] === word) {
+            current.push(key); // substitute
+            await backtrack(index + 1, current);
+            current.pop();
+            substituted = true;
+          }
+        }
+      }
+  
+      // Try original word as-is
+      current.push(word);
+      await backtrack(index + 1, current);
+      current.pop();
+    };
+  
+    await backtrack(0, []);
+    return bestResponse.join(" ");
+  }
+  
 }
