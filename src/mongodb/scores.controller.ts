@@ -2943,7 +2943,17 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+      
+      // Recomendation api 
+      const recomendation_cout = 5;
+      const recomendation = await this.scoresService.getRecommendation(
+        originalText,
+        responseText,
+        user_id,
+        CreateLearnerProfileDto.contentType,
+        recomendation_cout,
+      )
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
