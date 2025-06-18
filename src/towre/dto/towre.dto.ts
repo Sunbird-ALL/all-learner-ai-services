@@ -1,8 +1,6 @@
 import { IsString, IsOptional, IsObject } from 'class-validator';
 
 export class CreateTowreDto {
-  @IsString()
-  user_id: string;
 
   @IsString()
   audio_file_path: string;
