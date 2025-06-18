@@ -1,11 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ScoreDocument } from './schemas/scores.schema';
-import {
-  hexcodeMappingDocument,
-} from './schemas/hexcodeMapping.schema';
-import {
-  assessmentInputDocument,
-} from './schemas/assessmentInput.schema';
+import { hexcodeMappingDocument } from './schemas/hexcodeMapping.schema';
+import { assessmentInputDocument } from './schemas/assessmentInput.schema';
 import { denoiserOutputLogsDocument } from './schemas/denoiserOutputLogs.schema';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -14,13 +10,13 @@ import { catchError, lastValueFrom, map } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import { AxiosError } from 'axios';
 import { CacheService } from './cache/cache.service';
-import lang_common_config from "./config/language/common/commonConfig";
+import lang_common_config from './config/language/common/commonConfig';
 import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
+import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 
 @Injectable()
 export class ScoresService {
-
   constructor(
     @InjectModel('Score') private readonly scoreModel: Model<ScoreDocument>,
     @InjectModel('hexcodeMapping')
@@ -29,11 +25,13 @@ export class ScoresService {
     private readonly assessmentInputModel: Model<assessmentInputDocument>,
     @InjectModel('denoiserOutputLogs')
     private readonly denoiserOutputLogsModel: Model<denoiserOutputLogsDocument>,
-    @InjectModel('llmOutputLogs') 
+    @InjectModel('llmOutputLogs')
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
+    @InjectModel('getSetResult')
+    private readonly getSetResultModel: Model<getSetResultDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
   async create(createScoreDto: any): Promise<any> {
     try {
@@ -85,20 +83,24 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(data: any, language: string, contentType: string): Promise<any> {
+  async audioFileToAsrOutput(
+    data: any,
+    language: string,
+    contentType: string,
+  ): Promise<any> {
     let asrOutDenoisedOutput: any;
     let asrOutBeforeDenoised: any;
     let audio: any = data;
     let pause_count: number = 0;
     let avg_pause: number = 0;
-    let pitch_classification : any;
-    let pitch_mean : number = 0;
-    let pitch_std : number = 0;
-    let intensity_classification : any;
-    let intensity_mean : number = 0;
-    let intensity_std : number = 0;
-    let expression_classification : any;
-    let smoothness_classification : any;
+    let pitch_classification: any;
+    let pitch_mean: number = 0;
+    let pitch_std: number = 0;
+    let intensity_classification: any;
+    let intensity_mean: number = 0;
+    let intensity_std: number = 0;
+    let expression_classification: any;
+    let smoothness_classification: any;
 
     let serviceId = '';
     switch (language) {
@@ -117,8 +119,8 @@ export class ScoresService {
       case 'gu':
         serviceId = 'ai4bharat/conformer-gujarati--gpu-t4';
         break;
-      case "te":
-        serviceId = "ai4bharat/conformer-multilingual-dravidian--gpu-t4";
+      case 'te':
+        serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
         break;
       case 'or':
         serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
@@ -127,29 +129,27 @@ export class ScoresService {
         serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
     }
 
-    if (process.env.skipNonDenoiserAsrCall !== "true") {
+    if (process.env.skipNonDenoiserAsrCall !== 'true') {
       asrOutBeforeDenoised = await asrCall();
     }
 
-
-
-    let denoiserConfig =
-    {
+    let denoiserConfig = {
       method: 'post',
       url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       data: {
-        "base64_string": audio,
-        "enableDenoiser": process.env.denoiserEnabled === "true" ? true : false,
-        "enablePauseCount": true,
-        "contentType": contentType,
-        "enable_prosody_fluency" : true
-      }
-    }
+        base64_string: audio,
+        enableDenoiser: process.env.denoiserEnabled === 'true' ? true : false,
+        enablePauseCount: true,
+        contentType: contentType,
+        enable_prosody_fluency: true,
+      },
+    };
 
-    await axios.request(denoiserConfig)
+    await axios
+      .request(denoiserConfig)
       .then((response) => {
         audio = response.data.denoised_audio_base64;
         pause_count = response.data.pause_count;
@@ -167,7 +167,7 @@ export class ScoresService {
         console.log(error);
       });
 
-    if (process.env.denoiserEnabled === "true") {
+    if (process.env.denoiserEnabled === 'true') {
       asrOutDenoisedOutput = await asrCall();
     }
 
@@ -175,26 +175,26 @@ export class ScoresService {
       let output: any;
 
       let optionsObj = {
-        "config": {
-          "serviceId": serviceId,
-          "language": {
-            "sourceLanguage": language
+        config: {
+          serviceId: serviceId,
+          language: {
+            sourceLanguage: language,
           },
-          "audioFormat": "wav",
-          "transcriptionFormat": {
-            "value": "transcript"
+          audioFormat: 'wav',
+          transcriptionFormat: {
+            value: 'transcript',
           },
-          "bestTokenCount": 2
+          bestTokenCount: 2,
         },
-        "audio": [
+        audio: [
           {
-            "audioContent": audio
-          }
-        ]
-      }
+            audioContent: audio,
+          },
+        ],
+      };
 
-      if (language === "en") {
-        delete optionsObj.config.bestTokenCount
+      if (language === 'en') {
+        delete optionsObj.config.bestTokenCount;
       }
 
       let options = JSON.stringify(optionsObj);
@@ -204,12 +204,13 @@ export class ScoresService {
         url: process.env.AI4BHARAT_URL,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': process.env.AI4BHARAT_API_KEY
+          Authorization: process.env.AI4BHARAT_API_KEY,
         },
-        data: options
+        data: options,
       };
 
-      await axios.request(config)
+      await axios
+        .request(config)
         .then((response) => {
           output = response.data;
         })
@@ -220,7 +221,20 @@ export class ScoresService {
       return output;
     }
 
-    return { asrOutDenoisedOutput: asrOutDenoisedOutput, asrOutBeforeDenoised: asrOutBeforeDenoised, pause_count: pause_count, avg_pause: avg_pause, pitch_classification: pitch_classification, pitch_mean: pitch_mean, pitch_std: pitch_std, intensity_classification: intensity_classification, intensity_mean: intensity_mean,intensity_std: intensity_std, expression_classification: expression_classification, smoothness_classification: smoothness_classification };
+    return {
+      asrOutDenoisedOutput: asrOutDenoisedOutput,
+      asrOutBeforeDenoised: asrOutBeforeDenoised,
+      pause_count: pause_count,
+      avg_pause: avg_pause,
+      pitch_classification: pitch_classification,
+      pitch_mean: pitch_mean,
+      pitch_std: pitch_std,
+      intensity_classification: intensity_classification,
+      intensity_mean: intensity_mean,
+      intensity_std: intensity_std,
+      expression_classification: expression_classification,
+      smoothness_classification: smoothness_classification,
+    };
   }
 
   async findAll(): Promise<any> {
@@ -290,7 +304,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.session_id': sessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
       },
       {
@@ -356,16 +370,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -440,8 +451,8 @@ export class ScoresService {
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          'user_id':userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
@@ -449,7 +460,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
       },
       {
@@ -515,16 +526,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -592,7 +600,10 @@ export class ScoresService {
 
     // Map token to its isCommon and indexNo properties
     tokenHexcodeDataArr.forEach((tokenObj: any) => {
-      tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
+      tokenMap.set(tokenObj.token, {
+        isCommon: tokenObj.isCommon,
+        indexNo: tokenObj.indexNo,
+      });
     });
 
     const commonTargets: any[] = [];
@@ -620,16 +631,16 @@ export class ScoresService {
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          user_id: userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
       },
       {
         $match: {
-          'sessions.language': language
-        }
+          'sessions.language': language,
+        },
       },
       {
         $facet: {
@@ -691,16 +702,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -720,11 +728,11 @@ export class ScoresService {
       {
         $project: {
           _id: 0,
-          character: "$_id.token",
+          character: '$_id.token',
           latestScores: {
-            $slice: ['$scores', -5]
-          }
-        }
+            $slice: ['$scores', -5],
+          },
+        },
       },
       {
         $addFields: {
@@ -734,10 +742,10 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $lt: ['$$score', threshold]
-                }
-              }
-            }
+                  $lt: ['$$score', threshold],
+                },
+              },
+            },
           },
           countAboveThreshold: {
             $size: {
@@ -745,62 +753,60 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $gte: ['$$score', threshold]
-                }
-              }
-            }
+                  $gte: ['$$score', threshold],
+                },
+              },
+            },
           },
-          avgScore: { $avg: "$latestScores" }
-        }
+          avgScore: { $avg: '$latestScores' },
+        },
       },
       {
         $match: {
           $expr: {
             $gt: ['$countBelowThreshold', '$countAboveThreshold'],
-
-          }
-        }
+          },
+        },
       },
       {
         $project: {
           character: 1,
-          score: "$avgScore"
-        }
+          score: '$avgScore',
+        },
       },
       {
         $addFields: {
           score: {
-            $divide: [
-              { $trunc: { $multiply: ['$score', 100] } },
-              100
-            ]
-          }
-        }
-      }
-    ]
-    );
+            $divide: [{ $trunc: { $multiply: ['$score', 100] } }, 100],
+          },
+        },
+      },
+    ]);
 
     return RecordData;
   }
 
-  async getTargetsBysubSessionUserProfile(subSessionId: string, language: string) {
-    let threshold = 0.70;
+  async getTargetsBysubSessionUserProfile(
+    subSessionId: string,
+    language: string,
+  ) {
+    let threshold = 0.7;
 
     const RecordData = await this.scoreModel.aggregate([
       {
-        $unwind: '$sessions'
+        $unwind: '$sessions',
       },
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
-        }
+          'sessions.language': language,
+        },
       },
       {
         $facet: {
           confidenceScores: [
             {
-              $unwind: '$sessions.confidence_scores'
+              $unwind: '$sessions.confidence_scores',
             },
             {
               $project: {
@@ -810,17 +816,17 @@ export class ScoresService {
                 response_text: '$sessions.response_text',
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
-              }
+              },
             },
             {
               $sort: {
-                date: -1
-              }
-            }
+                date: -1,
+              },
+            },
           ],
           missingTokenScores: [
             {
-              $unwind: '$sessions.missing_token_scores'
+              $unwind: '$sessions.missing_token_scores',
             },
             {
               $project: {
@@ -829,31 +835,31 @@ export class ScoresService {
                 original_text: '$sessions.original_text',
                 response_text: '$sessions.response_text',
                 character: '$sessions.missing_token_scores.token',
-                score: '$sessions.missing_token_scores.confidence_score'
-              }
+                score: '$sessions.missing_token_scores.confidence_score',
+              },
             },
             {
               $sort: {
-                date: -1
-              }
-            }
-          ]
-        }
+                date: -1,
+              },
+            },
+          ],
+        },
       },
       {
         $project: {
           combinedResults: {
-            $concatArrays: ['$confidenceScores', '$missingTokenScores']
-          }
-        }
+            $concatArrays: ['$confidenceScores', '$missingTokenScores'],
+          },
+        },
       },
       {
-        $unwind: '$combinedResults'
+        $unwind: '$combinedResults',
       },
       {
         $replaceRoot: {
-          newRoot: '$combinedResults'
-        }
+          newRoot: '$combinedResults',
+        },
       },
       {
         $project: {
@@ -862,44 +868,41 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
-          date: -1
-        }
+          date: -1,
+        },
       },
       {
         $group: {
           _id: {
-            token: "$token"
+            token: '$token',
           },
           scores: {
             $push: {
               score: '$score',
               original_text: '$original_text',
-              response_text: '$response_text'
-            }
-          }
-        }
+              response_text: '$response_text',
+            },
+          },
+        },
       },
       {
         $project: {
           _id: 0,
-          character: "$_id.token",
+          character: '$_id.token',
           latestScores: {
-            $slice: ['$scores', -5]
-          }
-        }
+            $slice: ['$scores', -5],
+          },
+        },
       },
       {
         $addFields: {
@@ -909,10 +912,10 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $lt: ['$$score.score', threshold]
-                }
-              }
-            }
+                  $lt: ['$$score.score', threshold],
+                },
+              },
+            },
           },
           countAboveThreshold: {
             $size: {
@@ -920,13 +923,13 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $gte: ['$$score.score', threshold]
-                }
-              }
-            }
+                  $gte: ['$$score.score', threshold],
+                },
+              },
+            },
           },
-          avgScore: { $avg: '$latestScores.score' }
-        }
+          avgScore: { $avg: '$latestScores.score' },
+        },
       },
       {
         $project: {
@@ -934,16 +937,16 @@ export class ScoresService {
           countBelowThreshold: 1,
           countAboveThreshold: 1,
           avgScore: 1,
-          latestScores: 1
-        }
+          latestScores: 1,
+        },
       },
       {
         $match: {
           $expr: {
-            $lt: ['$countBelowThreshold', '$countAboveThreshold']
-          }
-        }
-      }
+            $lt: ['$countBelowThreshold', '$countAboveThreshold'],
+          },
+        },
+      },
     ]);
 
     return RecordData;
@@ -954,7 +957,10 @@ export class ScoresService {
 
     // Map token to its isCommon and indexNo properties
     tokenHexcodeDataArr.forEach((tokenObj: any) => {
-      tokenMap.set(tokenObj.token, { isCommon: tokenObj.isCommon, indexNo: tokenObj.indexNo });
+      tokenMap.set(tokenObj.token, {
+        isCommon: tokenObj.isCommon,
+        indexNo: tokenObj.indexNo,
+      });
     });
 
     const commonTargets: any[] = [];
@@ -973,7 +979,6 @@ export class ScoresService {
     // Sort common targets by indexNo
     commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
     return [...commonTargets, ...nonCommonTargets];
-
   }
 
   // Familiarity Query
@@ -988,7 +993,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.session_id': sessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
       },
       {
@@ -1051,16 +1056,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -1125,7 +1127,7 @@ export class ScoresService {
   }
 
   async getFamiliarityBysubSession(
-    userId:string,
+    userId: string,
     subSessionId: string,
     language: string,
   ) {
@@ -1135,8 +1137,8 @@ export class ScoresService {
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          user_id: userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
@@ -1144,7 +1146,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
       },
       {
@@ -1207,16 +1209,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -1280,10 +1279,7 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getCorrectnessBysubSession(
-    subSessionId: string,
-    language: string,
-  ) {
+  async getCorrectnessBysubSession(subSessionId: string, language: string) {
     const threshold = 50;
     let RecordData = [];
 
@@ -1294,22 +1290,27 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
-      },{
-        $group:{
-          _id:null,
+      },
+      {
+        $group: {
+          _id: null,
           count_scores_gte_50: {
             $sum: {
-              $cond: [{ $gte: ['$sessions.correctness_score', threshold] }, 1, 0] // Conditional count
-            }
+              $cond: [
+                { $gte: ['$sessions.correctness_score', threshold] },
+                1,
+                0,
+              ], // Conditional count
+            },
+          },
+          total_correctness_score: {
+            $sum: '$sessions.correctness_score',
+          },
         },
-        total_correctness_score: {
-          $sum: '$sessions.correctness_score'
-        }
-      }
-     }
-    ])
+      },
+    ]);
     return RecordData;
   }
   async getFamiliarityByUser(userId: string, language: string) {
@@ -1319,16 +1320,16 @@ export class ScoresService {
     RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          user_id: userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
       },
       {
         $match: {
-          'sessions.language': language
-        }
+          'sessions.language': language,
+        },
       },
       {
         $facet: {
@@ -1390,16 +1391,13 @@ export class ScoresService {
           date: '$date',
           token: '$character',
           score: '$score',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
@@ -1422,7 +1420,7 @@ export class ScoresService {
           character: '$_id.token',
           latestScores: {
             $slice: ['$scores', -5],
-          }
+          },
         },
       },
       {
@@ -1449,7 +1447,7 @@ export class ScoresService {
               },
             },
           },
-          score: { $avg: "$latestScores" }
+          score: { $avg: '$latestScores' },
         },
       },
       {
@@ -1464,25 +1462,28 @@ export class ScoresService {
     return RecordData;
   }
 
-  async getFamiliarityBysubSessionUserProfile(subSessionId: string, language: string) {
-    let threshold = 0.70;
+  async getFamiliarityBysubSessionUserProfile(
+    subSessionId: string,
+    language: string,
+  ) {
+    let threshold = 0.7;
     let RecordData = [];
 
     RecordData = await this.scoreModel.aggregate([
       {
-        $unwind: '$sessions'
+        $unwind: '$sessions',
       },
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
-        }
+          'sessions.language': language,
+        },
       },
       {
         $facet: {
           confidenceScores: [
             {
-              $unwind: '$sessions.confidence_scores'
+              $unwind: '$sessions.confidence_scores',
             },
             {
               $project: {
@@ -1491,18 +1492,18 @@ export class ScoresService {
                 character: '$sessions.confidence_scores.token',
                 score: '$sessions.confidence_scores.confidence_score',
                 original_text: '$sessions.original_text',
-                response_text: '$sessions.response_text'
-              }
+                response_text: '$sessions.response_text',
+              },
             },
             {
               $sort: {
-                date: -1
-              }
-            }
+                date: -1,
+              },
+            },
           ],
           missingTokenScores: [
             {
-              $unwind: '$sessions.missing_token_scores'
+              $unwind: '$sessions.missing_token_scores',
             },
             {
               $project: {
@@ -1511,31 +1512,31 @@ export class ScoresService {
                 character: '$sessions.missing_token_scores.token',
                 score: '$sessions.missing_token_scores.confidence_score',
                 original_text: '$sessions.original_text',
-                response_text: '$sessions.response_text'
-              }
+                response_text: '$sessions.response_text',
+              },
             },
             {
               $sort: {
-                date: -1
-              }
-            }
-          ]
-        }
+                date: -1,
+              },
+            },
+          ],
+        },
       },
       {
         $project: {
           combinedResults: {
-            $concatArrays: ['$confidenceScores', '$missingTokenScores']
-          }
-        }
+            $concatArrays: ['$confidenceScores', '$missingTokenScores'],
+          },
+        },
       },
       {
-        $unwind: '$combinedResults'
+        $unwind: '$combinedResults',
       },
       {
         $replaceRoot: {
-          newRoot: '$combinedResults'
-        }
+          newRoot: '$combinedResults',
+        },
       },
       {
         $project: {
@@ -1544,44 +1545,41 @@ export class ScoresService {
           score: '$score',
           original_text: '$original_text',
           response_text: '$response_text',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
       {
         $sort: {
-          date: -1
-        }
+          date: -1,
+        },
       },
       {
         $group: {
           _id: {
-            token: "$token"
+            token: '$token',
           },
           scores: {
             $push: {
               score: '$score',
               original_text: '$original_text',
-              response_text: '$response_text'
-            }
-          }
-        }
+              response_text: '$response_text',
+            },
+          },
+        },
       },
       {
         $project: {
           _id: 0,
-          character: "$_id.token",
+          character: '$_id.token',
           latestScores: {
-            $slice: ['$scores', -5]
-          }
-        }
+            $slice: ['$scores', -5],
+          },
+        },
       },
       {
         $addFields: {
@@ -1591,10 +1589,10 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $lt: ['$$score.score', threshold]
-                }
-              }
-            }
+                  $lt: ['$$score.score', threshold],
+                },
+              },
+            },
           },
           countAboveThreshold: {
             $size: {
@@ -1602,34 +1600,38 @@ export class ScoresService {
                 input: '$latestScores',
                 as: 'score',
                 cond: {
-                  $gte: ['$$score.score', threshold]
-                }
-              }
-            }
+                  $gte: ['$$score.score', threshold],
+                },
+              },
+            },
           },
           avg: {
-            $avg: '$latestScores.score'
-          }
-        }
+            $avg: '$latestScores.score',
+          },
+        },
       },
       {
         $match: {
           $expr: {
-            $gte: ['$countAboveThreshold', '$countBelowThreshold']
-          }
-        }
-      }
+            $gte: ['$countAboveThreshold', '$countBelowThreshold'],
+          },
+        },
+      },
     ]);
 
     return RecordData;
   }
 
-  async getFluencyBysubSession(userId: string, subSessionId: string, language: string) {
+  async getFluencyBysubSession(
+    userId: string,
+    subSessionId: string,
+    language: string,
+  ) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          'user_id':userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
@@ -1637,7 +1639,7 @@ export class ScoresService {
       {
         $match: {
           'sessions.sub_session_id': subSessionId,
-          'sessions.language': language
+          'sessions.language': language,
         },
       },
       {
@@ -1652,16 +1654,13 @@ export class ScoresService {
         $project: {
           _id: 0,
           fluencyScore: '$fluencyScore',
-          isRetryExists: { $ifNull: ['$sessions.isRetry', false] }
-        }
+          isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+        },
       },
       {
         $match: {
-          $or: [
-            { isRetryExists: false },
-            { 'sessions.isRetry': false }
-          ]
-        }
+          $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+        },
       },
     ]);
 
@@ -1669,7 +1668,6 @@ export class ScoresService {
   }
 
   async gethexcodeMapping(language: string): Promise<any> {
-
     const cacheKey = 'hexcode_data_' + language;
     let recordData = await this.cacheService.get(cacheKey);
 
@@ -1680,7 +1678,7 @@ export class ScoresService {
 
       await this.cacheService.set(cacheKey, recordData, 360000);
     } else {
-      console.log("data from cache");
+      console.log('data from cache');
     }
 
     return recordData;
@@ -2203,7 +2201,9 @@ export class ScoresService {
 
   async addDenoisedOutputLog(DenoisedOutputLog: any): Promise<any> {
     try {
-      const createDenoisedOutputLog = new this.denoiserOutputLogsModel(DenoisedOutputLog);
+      const createDenoisedOutputLog = new this.denoiserOutputLogsModel(
+        DenoisedOutputLog,
+      );
       const result = await createDenoisedOutputLog.save();
       return result;
     } catch (err) {
@@ -2216,9 +2216,19 @@ export class ScoresService {
       const createllmOutputLog = new this.llmOutputLogsModel(llmOutputLog);
       const result = await createllmOutputLog.save();
       return result;
-
     } catch (err) {
       return err;
+    }
+  }
+
+  async addGetSetResultLog(getSetResultLog: any): Promise<any> {
+    try {
+      const createGetSetResultLog = new this.getSetResultModel(getSetResultLog);
+      const result = await createGetSetResultLog.save();
+      return result;
+    } catch (err) {
+      console.error('Error saving getSetResultLog:', err);
+      throw err;
     }
   }
 
@@ -2226,33 +2236,33 @@ export class ScoresService {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          "user_id": user_id
-        }
+          user_id: user_id,
+        },
       },
       {
-        $unwind: '$sessions'
+        $unwind: '$sessions',
       },
       {
         $project: {
           _id: 0,
           sub_session_ids: '$sessions.sub_session_id',
-          createdAt: '$sessions.createdAt'
-        }
+          createdAt: '$sessions.createdAt',
+        },
       },
       {
         $group: {
           _id: {
-            sub_session_id: "$sub_session_ids",
+            sub_session_id: '$sub_session_ids',
           },
-          createdAt: { $max: "$createdAt" }
-        }
+          createdAt: { $max: '$createdAt' },
+        },
       },
       {
         $project: {
           _id: 0,
           sub_session_id: '$_id.sub_session_id',
-          createdAt: '$createdAt'
-        }
+          createdAt: '$createdAt',
+        },
       },
     ]);
     return RecordData;
@@ -2282,8 +2292,7 @@ export class ScoresService {
           if (j > 0) {
             let newValue = costs[j - 1];
             if (s1.charAt(i - 1) != s2.charAt(j - 1))
-              newValue =
-                Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+              newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
             costs[j - 1] = lastValue;
             lastValue = newValue;
           }
@@ -2291,16 +2300,17 @@ export class ScoresService {
       }
       if (i > 0) costs[s2.length] = lastValue;
     }
-    return (
-      (longerLength - costs[s2.length]) /
-      parseFloat(longerLength)
-    );
+    return (longerLength - costs[s2.length]) / parseFloat(longerLength);
   }
 
-  async getSyllablesFromString(text: string, vowelSignArr: string[], language: string): Promise<string[]> {
+  async getSyllablesFromString(
+    text: string,
+    vowelSignArr: string[],
+    language: string,
+  ): Promise<string[]> {
     let prevEle = '';
     let isPrevVowel = false;
-    let syllableArr = []
+    let syllableArr = [];
 
     // This code block used to create syllable list from text strings
     //if (language === "ta") {
@@ -2321,7 +2331,6 @@ export class ScoresService {
       }
     }
 
-
     return syllableArr;
   }
 
@@ -2331,10 +2340,13 @@ export class ScoresService {
     const constructTextSet = new Set();
     let reptitionCount = 0;
 
-    for (const originalEle of original_text.split(' ',)) {
+    for (const originalEle of original_text.split(' ')) {
       let originalRepCount = 0;
       for (const sourceEle of response_text.split(' ')) {
-        const similarityScore = await this.getTextSimilarity(originalEle, sourceEle);
+        const similarityScore = await this.getTextSimilarity(
+          originalEle,
+          sourceEle,
+        );
         if (similarityScore >= 0.4) {
           compareCharArr.push({
             original_text: originalEle,
@@ -2356,8 +2368,7 @@ export class ScoresService {
       let word = '';
       for (const compareCharArrCmpEle of compareCharArr) {
         if (
-          compareCharArrEle.original_text ===
-          compareCharArrCmpEle.original_text
+          compareCharArrEle.original_text === compareCharArrCmpEle.original_text
         ) {
           if (compareCharArrCmpEle.score > score) {
             score = compareCharArrCmpEle.score;
@@ -2374,19 +2385,24 @@ export class ScoresService {
 
     constructText = constructText.trim();
 
-    return { constructText, reptitionCount }
+    return { constructText, reptitionCount };
   }
 
-  async getTextMetrics(original_text: string, response_text: string, language: string, base64_audio: string) {
-    const url = process.env.ALL_TEXT_EVAL_API + "/getTextMatrices";
+  async getTextMetrics(
+    original_text: string,
+    response_text: string,
+    language: string,
+    base64_audio: string,
+  ) {
+    const url = process.env.ALL_TEXT_EVAL_API + '/getTextMatrices';
 
     const textData = {
       reference: original_text,
       hypothesis: response_text,
       language: language,
-      base64_string: base64_audio
+      base64_string: base64_audio,
     };
-   
+
     const textEvalMatrices = await lastValueFrom(
       this.httpService
         .post(url, JSON.stringify(textData), {
@@ -2405,32 +2421,54 @@ export class ScoresService {
     return textEvalMatrices;
   }
 
-  async getCalculatedFluency(textEvalMetrics, repetitionCount, original_text, response_text, pause_count) {
+  async getCalculatedFluency(
+    textEvalMetrics,
+    repetitionCount,
+    original_text,
+    response_text,
+    pause_count,
+  ) {
     let fluencyCalPerc = lang_common_config.fluencyCalPerc;
 
     let wer = textEvalMetrics.wer;
     let cercal = textEvalMetrics.cer * 2;
     let charCount = Math.abs(original_text.length - response_text.length);
-    let wordCount = Math.abs(original_text.split(' ').length - response_text.split(' ').length);
+    let wordCount = Math.abs(
+      original_text.split(' ').length - response_text.split(' ').length,
+    );
     let repetitions = repetitionCount;
     let pauseCount = pause_count;
     let ins = textEvalMetrics.insertion.length;
     let del = textEvalMetrics.deletion.length;
     let sub = textEvalMetrics.substitution.length;
 
-    let fluencyScore = ((wer * fluencyCalPerc.wer) + (cercal * fluencyCalPerc.cercal) + (charCount * fluencyCalPerc.charCount) + (wordCount * 10) + (repetitions * fluencyCalPerc.repetitions) + (pauseCount * fluencyCalPerc.pauseCount) + (ins * fluencyCalPerc.ins) + (del * fluencyCalPerc.del) + (sub * fluencyCalPerc.sub)) / 100;
+    let fluencyScore =
+      (wer * fluencyCalPerc.wer +
+        cercal * fluencyCalPerc.cercal +
+        charCount * fluencyCalPerc.charCount +
+        wordCount * 10 +
+        repetitions * fluencyCalPerc.repetitions +
+        pauseCount * fluencyCalPerc.pauseCount +
+        ins * fluencyCalPerc.ins +
+        del * fluencyCalPerc.del +
+        sub * fluencyCalPerc.sub) /
+      100;
 
     return fluencyScore;
   }
 
   async getTokenHexcode(hexcodeTokenArr, token) {
-    const result = hexcodeTokenArr.find(
-      (item) => item.token === token,
-    );
+    const result = hexcodeTokenArr.find((item) => item.token === token);
     return result?.hexcode || '';
   }
-  
-  async identifyTokens(bestTokens, correctTokens, missingTokens, tokenHexcodeDataArr, vowelSignArr) {
+
+  async identifyTokens(
+    bestTokens,
+    correctTokens,
+    missingTokens,
+    tokenHexcodeDataArr,
+    vowelSignArr,
+  ) {
     let confidence_scoresArr = [];
     let missing_token_scoresArr = [];
     let anomaly_scoreArr = [];
@@ -2544,7 +2582,10 @@ export class ScoresService {
 
       if (value.charkey !== '' && value.charkey !== '▁') {
         if (correctTokens.includes(value.charkey)) {
-          const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, value.charkey);
+          const hexcode = await this.getTokenHexcode(
+            tokenHexcodeDataArr,
+            value.charkey,
+          );
           if (hexcode !== '') {
             confidence_scoresArr.push({
               token: value.charkey,
@@ -2553,9 +2594,7 @@ export class ScoresService {
               identification_status: identification_status,
             });
           } else {
-            if (
-              !missingTokens.includes(value.charkey)
-            ) {
+            if (!missingTokens.includes(value.charkey)) {
               anomaly_scoreArr.push({
                 token: value.charkey.replaceAll('_', ''),
                 hexcode: hexcode,
@@ -2569,7 +2608,10 @@ export class ScoresService {
     }
 
     for (const missingTokensEle of missingTokens) {
-      const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, missingTokensEle);
+      const hexcode = await this.getTokenHexcode(
+        tokenHexcodeDataArr,
+        missingTokensEle,
+      );
 
       if (hexcode !== '') {
         if (vowelSignArr.includes(missingTokensEle)) {
@@ -2584,9 +2626,7 @@ export class ScoresService {
           }
         }
       } else {
-        if (
-          !correctTokens.includes(missingTokensEle)
-        ) {
+        if (!correctTokens.includes(missingTokensEle)) {
           anomaly_scoreArr.push({
             token: missingTokensEle.replaceAll('_', ''),
             hexcode: hexcode,
@@ -2602,7 +2642,10 @@ export class ScoresService {
       const tokenValue = Object.values(anamolyTokenArrEle)[0];
 
       if (tokenString != '') {
-        const hexcode = await this.getTokenHexcode(tokenHexcodeDataArr, tokenString);
+        const hexcode = await this.getTokenHexcode(
+          tokenHexcodeDataArr,
+          tokenString,
+        );
         if (hexcode !== '') {
           if (vowelSignArr.includes(tokenString)) {
           } else {
@@ -2616,7 +2659,7 @@ export class ScoresService {
         }
       }
     }
-    return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr }
+    return { confidence_scoresArr, missing_token_scoresArr, anomaly_scoreArr };
   }
 
   async processText(text: string) {
@@ -2674,30 +2717,33 @@ export class ScoresService {
       complexityLevel = ['C3', 'C4'];
     }
 
-    return { contentLevel: contentLevel, complexityLevel }
+    return { contentLevel: contentLevel, complexityLevel };
   }
 
-  async getSubsessionOriginalTextSyllables(userId:string, sub_session_id: string) {
+  async getSubsessionOriginalTextSyllables(
+    userId: string,
+    sub_session_id: string,
+  ) {
     const RecordData = await this.scoreModel.aggregate([
       {
         $match: {
-          'user_id':userId
-        }
+          user_id: userId,
+        },
       },
       {
         $unwind: '$sessions',
       },
       {
         $match: {
-          'sessions.sub_session_id': sub_session_id
+          'sessions.sub_session_id': sub_session_id,
         },
       },
       {
         $project: {
           _id: 0,
-          original_text: '$sessions.original_text'
-        }
-      }
+          original_text: '$sessions.original_text',
+        },
+      },
     ]);
 
     let syllables = [];
@@ -2708,7 +2754,7 @@ export class ScoresService {
           /[\u200B\u200C\u200D\uFEFF\s!@#$%^&*()_+{}\[\]:;<>,.?\/\\|~'"-=]/g,
           '',
         ),
-      )
+      );
       syllables = syllables.concat(splitGraphemesData);
     }
 
@@ -2752,7 +2798,12 @@ export class ScoresService {
   /*  Function for generating the constructed text without  missing the sequence and for every constructed text
    we are storing used chars and that are not used we are storing it in unused char array  */
   async generateWords(dataArr) {
-    const generateRecursive = (currentWord, usedKeyValueArr, unusedKeyValueArr, index) => {
+    const generateRecursive = (
+      currentWord,
+      usedKeyValueArr,
+      unusedKeyValueArr,
+      index,
+    ) => {
       if (index === dataArr.length) {
         return [[currentWord, usedKeyValueArr, unusedKeyValueArr]];
       }
@@ -2761,19 +2812,31 @@ export class ScoresService {
       for (const key in currentObject) {
         if (currentObject.hasOwnProperty(key)) {
           const newWord = currentWord + key;
-          const newUsedKeyValueArr = [...usedKeyValueArr, { [key]: currentObject[key] }];
-          const newUnusedKeyValueArr = unusedKeyValueArr.filter(pair => !pair.hasOwnProperty(key));
+          const newUsedKeyValueArr = [
+            ...usedKeyValueArr,
+            { [key]: currentObject[key] },
+          ];
+          const newUnusedKeyValueArr = unusedKeyValueArr.filter(
+            (pair) => !pair.hasOwnProperty(key),
+          );
           possibleWords.push(
-            ...generateRecursive(newWord, newUsedKeyValueArr, newUnusedKeyValueArr, index + 1)
+            ...generateRecursive(
+              newWord,
+              newUsedKeyValueArr,
+              newUnusedKeyValueArr,
+              index + 1,
+            ),
           );
         }
       }
       return possibleWords;
     };
-    const initialUnusedKeyValueArr = dataArr.flatMap(data => Object.entries(data).map(([key, value]) => ({ [key]: value })));
-    return generateRecursive("", [], initialUnusedKeyValueArr, 0);
+    const initialUnusedKeyValueArr = dataArr.flatMap((data) =>
+      Object.entries(data).map(([key, value]) => ({ [key]: value })),
+    );
+    return generateRecursive('', [], initialUnusedKeyValueArr, 0);
   }
-  
+
   /* Function for generating the simnilarities for each and every word with the
   original word and sort it in descending order */
   async findAllSimilarities(words_with_values, wordArray) {
@@ -2796,8 +2859,8 @@ export class ScoresService {
     return highestScoreArr;
   }
 
-
-  async replaceCharacters(word) {  // Agreeable Substitutes word generation
+  async replaceCharacters(word) {
+    // Agreeable Substitutes word generation
     let outcomes = new Set();
 
     // Function to perform the replacements
@@ -2835,9 +2898,8 @@ export class ScoresService {
         }
       }
 
-
       // Apply new transformations
-      transformations.forEach(newWord => {
+      transformations.forEach((newWord) => {
         if (!outcomes.has(newWord)) {
           outcomes.add(newWord);
           performReplacements(newWord); // Recursively handle new transformations
@@ -2852,24 +2914,41 @@ export class ScoresService {
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
   }
   getAccuracyClassification(contentType: string, score: number): string {
+    const config: Record<string, [number, number, string][]> = {
+      word: [
+        [0, 1, 'Fluent'],
+        [1, 2, 'Moderately Fluent'],
+        [2, 3, 'Disfluent'],
+        [3, Infinity, 'Very Disfluent'],
+      ],
+      sentence: [
+        [0, 3, 'Fluent'],
+        [3, 6, 'Moderately Fluent'],
+        [6, 8, 'Disfluent'],
+        [8, Infinity, 'Very Disfluent'],
+      ],
+      paragraph: [
+        [0, 5, 'Fluent'],
+        [5, 10, 'Moderately Fluent'],
+        [10, 12, 'Disfluent'],
+        [12, Infinity, 'Very Disfluent'],
+      ],
+    };
+    // Normalize the content type and get its thresholds.
     const ct = contentType.toLowerCase();
-    if (ct === 'word') {
-      if (score >= 0 && score < 0.6) return "Fluent";
-      else if (score >= 0.6 && score < 2) return "Moderately Fluent";
-      else if (score >= 2 && score <= 3) return "Disfluent";
-      else return "Very Disfluent";
-    } else if (ct === 'sentence') {
-      if (score >= 0 && score < 1.5) return "Fluent";
-      else if (score >= 1.5 && score < 4.0) return "Moderately Fluent";
-      else if (score >= 4.0 && score <= 6) return "Disfluent";
-      else return "Very Disfluent";
-    } else if (ct === 'paragraph') {
-      if (score >= 0 && score < 3) return "Fluent";
-      else if (score >= 3 && score < 6) return "Moderately Fluent";
-      else if (score >= 6 && score <= 8) return "Disfluent";
-      else return "Very Disfluent";
+    const thresholds = config[ct];
+    // If the content type is not recognized, return "N/A"
+    if (!thresholds) {
+      return 'N/A';
     }
-    return "N/A";
+    // Loop through the thresholds and return the classification that matches.
+    for (const [min, max, label] of thresholds) {
+      if (score >= min && score <= max) {
+        return label;
+      }
+    }
+    // Fallback in case no classification is matched.
+    return 'N/A';
   }
   public classificationToScore(classification: string): number {
     switch (classification) {
@@ -2882,28 +2961,35 @@ export class ScoresService {
       case 'Very Disfluent':
         return 1;
       default:
-        return 1;  
+        return 1;
     }
   }
 
-  public async getSubSessionScores(subSessionId: string, language: string): Promise<any[]> {
+  public async getSubSessionScores(
+    subSessionId: string,
+    language: string,
+  ): Promise<any[]> {
     // Find documents where at least one session in the sessions array has the matching sub_session_id and language.
-    const docs = await this.scoreModel.find({
-      'sessions.sub_session_id': subSessionId,
-      'sessions.language': language
-    }).lean();
-    
+    const docs = await this.scoreModel
+      .find({
+        'sessions.sub_session_id': subSessionId,
+        'sessions.language': language,
+      })
+      .lean();
+
     // Flatten the sessions array and then filter to only those matching exactly the sub_session_id and language.
     const sessions = docs.reduce((acc: any[], doc: any) => {
       if (doc.sessions && Array.isArray(doc.sessions)) {
-        const matching = doc.sessions.filter((s: any) => s.sub_session_id === subSessionId && s.language === language);
+        const matching = doc.sessions.filter(
+          (s: any) =>
+            s.sub_session_id === subSessionId && s.language === language,
+        );
         return acc.concat(matching);
       }
       return acc;
     }, []);
     return sessions;
   }
-
 
   public async getComprehensionScore(subSessionId: string, language: string) {
     const sessions = await this.getSubSessionScores(subSessionId, language);
@@ -2915,21 +3001,23 @@ export class ScoresService {
     });
     let overallScore = 0;
     let isComprehension = false;
-    if(comprehensionScores.length>0){
-      comprehensionScores.forEach((score) => {overallScore+= score.overall});
+    if (comprehensionScores.length > 0) {
+      comprehensionScores.forEach((score) => {
+        overallScore += score.overall;
+      });
       isComprehension = true;
     }
-    return {overallScore,isComprehension};
+    return { overallScore, isComprehension };
   }
 
-  async getComprehensionFromLLM(questionText,studentText,teacherText) {
+  async getComprehensionFromLLM(questionText, studentText, teacherText) {
     const url = process.env.ALL_LLM_URL;
-    
+
     const data = {
       questionText: questionText,
       studentText: studentText,
       teacherText: teacherText,
-      markPrompt: ""
+      markPrompt: '',
     };
     const comprehension = await lastValueFrom(
       this.httpService
@@ -2947,7 +3035,7 @@ export class ScoresService {
               context: item.context,
               grammar: item.grammar,
               accuracy: item.accuracy,
-              overall: item.overall
+              overall: item.overall,
             };
           }),
           catchError((error: AxiosError) => {
@@ -2955,8 +3043,128 @@ export class ScoresService {
           }),
         ),
     );
-    
+
     return comprehension;
   }
 
+  public readonly ones: string[] = [
+    'zero',
+    'one',
+    'two',
+    'three',
+    'four',
+    'five',
+    'six',
+    'seven',
+    'eight',
+    'nine',
+  ];
+
+  public readonly teens: string[] = [
+    'ten',
+    'eleven',
+    'twelve',
+    'thirteen',
+    'fourteen',
+    'fifteen',
+    'sixteen',
+    'seventeen',
+    'eighteen',
+    'nineteen',
+  ];
+
+  public readonly tens: string[] = [
+    '',
+    '',
+    'twenty',
+    'thirty',
+    'forty',
+    'fifty',
+    'sixty',
+    'seventy',
+    'eighty',
+    'ninety',
+  ];
+
+  // Map word => digit
+  async wordToNumber(word: string): Promise<number | null> {
+    word = word.toLowerCase().replace(/-/g, ' ');
+    const parts = word.split(' ');
+
+    if (this.ones.includes(parts[0])) return this.ones.indexOf(parts[0]);
+    if (this.teens.includes(parts[0])) return this.teens.indexOf(parts[0]) + 10;
+
+    const tensIndex = this.tens.indexOf(parts[0]);
+    if (tensIndex > 0 && parts.length === 1) return tensIndex * 10;
+    if (tensIndex > 0 && parts.length === 2 && this.ones.includes(parts[1])) {
+      return tensIndex * 10 + this.ones.indexOf(parts[1]);
+    }
+
+    return null;
+  }
+
+  // Map digit => word
+  async numberToWords(num: number): Promise<string> {
+    if (num < 10) return this.ones[num];
+    if (num < 20) return this.teens[num - 10];
+    if (num < 100) {
+      const ten = Math.floor(num / 10);
+      const one = num % 10;
+      return one === 0 ? this.tens[ten] : `${this.tens[ten]}-${this.ones[one]}`;
+    }
+    if (num === 100) return 'one hundred';
+    return num.toString();
+  }
+
+  async normalizeResponseText(
+    original_text: string,
+    response_text: string,
+  ): Promise<string> {
+    const originalWords = original_text.split(/\s+/);
+    const responseWords = response_text.split(/\s+/);
+
+    const resultPromises = responseWords.map(async (word, i) => {
+      const originalWord = originalWords[i];
+
+      const originalNum = parseInt(originalWord);
+      const responseNum = parseInt(word);
+
+      // Case: original is digit, response is word => convert word to number
+      if (!isNaN(originalNum)) {
+        const fromWord = await this.wordToNumber(word);
+        if (fromWord !== null) return fromWord.toString();
+      }
+
+      // Case: original is word, response is digit => convert number to word
+      if (isNaN(originalNum) && !isNaN(responseNum)) {
+        return await this.numberToWords(responseNum);
+      }
+
+      return word;
+    });
+
+    const resultWords = await Promise.all(resultPromises);
+    return resultWords.join(' ');
+  }
+
+  async mergeResponseWordsUsingOriginal(original: string, response: string) {
+    const originalWordsSet = new Set(original.split(' '));
+    const responseWords = response.split(' ');
+    const mergedResponse: string[] = [];
+    let i = 0;
+    while (i < responseWords.length) {
+      if (i + 1 < responseWords.length) {
+        const merged = responseWords[i] + responseWords[i + 1];
+        if (originalWordsSet.has(merged)) {
+          mergedResponse.push(merged);
+          i += 2;
+          continue;
+        }
+      }
+      // No merge, keep original response word
+      mergedResponse.push(responseWords[i]);
+      i += 1;
+    }
+    return mergedResponse.join(' ');
+  }
 }
