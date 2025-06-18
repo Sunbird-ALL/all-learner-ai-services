@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScoreSchema } from './schemas/scores.schema';
 import { hexcodeMappingSchema } from './schemas/hexcodeMapping.schema';
 import { assessmentInputSchema } from './schemas/assessmentInput.schema';
-import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema'
+import { denoiserOutputLogsSchema } from './schemas/denoiserOutputLogs.schema';
 import { ScoresController } from './scores.controller';
 import { ScoresService } from './scores.service';
 import { CacheService } from './cache/cache.service';
@@ -13,8 +13,6 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { RedisModule } from 'src/redis/redis.module';
-
-
 
 @Module({
   imports: [
@@ -36,19 +34,18 @@ import { RedisModule } from 'src/redis/redis.module';
         },
       }),
     }),
-    
+
     MongooseModule.forFeature([
       { name: 'Score', schema: ScoreSchema },
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
-      { name: 'llmOutputLogs', schema: llmOutputLogsSchema }
+      { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
     ]),
     CacheModule.register(),
-    RedisModule
+    RedisModule,
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService, JwtService],
-  
 })
-export class MongodbModule { }
+export class MongodbModule {}

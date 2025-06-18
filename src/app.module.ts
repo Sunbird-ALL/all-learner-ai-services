@@ -31,7 +31,7 @@ export class AppModule {
           isGlobal: true,
         }),
         databaseModule, // Dynamically load the selected database module
-        TowreModule
+        TowreModule,
       ],
       controllers: [AppController],
       providers: [AppService],
