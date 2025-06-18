@@ -39,11 +39,10 @@ export class llmOutputLogs extends Document {
   @Prop({ required: true })
   overall: number;
 
-  @Prop()
+  @Prop({ default: Date.now })
   createdAt: Date;
 }
 
 export type llmOutputLogsDocument = llmOutputLogs & Document;
 
-export const llmOutputLogsSchema =
-  SchemaFactory.createForClass(llmOutputLogs);
+export const llmOutputLogsSchema = SchemaFactory.createForClass(llmOutputLogs);
