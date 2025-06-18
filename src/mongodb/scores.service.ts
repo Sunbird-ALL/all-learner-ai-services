@@ -14,6 +14,7 @@ import lang_common_config from './config/language/common/commonConfig';
 import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
+import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
 
 @Injectable()
 export class ScoresService {
@@ -3217,6 +3218,11 @@ export class ScoresService {
   
     await backtrack(0, []);
     return bestResponse.join(" ");
+  }
+
+  async checkProfanity(text: string, language: string): Promise<boolean> {
+    const filteredText = filterBadWords(text, language);
+    return filteredText != text;
   }
   
 }
