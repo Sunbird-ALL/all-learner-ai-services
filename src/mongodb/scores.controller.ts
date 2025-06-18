@@ -5819,14 +5819,25 @@ export class ScoresController {
   ) {
     try {
       const id = (request as any).user.virtual_id.toString();
+      const vocabulary_count = 0;
       const recordData: any = await this.scoresService.getlatestmilestone(
+        id,
+        language,
+      );
+      const latest_towre_data = await this.scoresService.getTowreData(
         id,
         language,
       );
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
-        data: { milestone_level: milestone_level },
+        data: { 
+          milestone_level: milestone_level,
+          extra: {
+            latest_towre_data,
+            vocabulary_count 
+          }
+         },
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -6172,7 +6183,7 @@ export class ScoresController {
           language,
         );
         let milestone_level = milestoneData[0]?.milestone_level || 'm0';
-
+         
         recordData.push({
           user_id: userId,
           data: { milestone_level: milestone_level },

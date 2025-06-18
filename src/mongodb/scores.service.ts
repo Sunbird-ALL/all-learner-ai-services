@@ -15,6 +15,7 @@ import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
+import { TowreDocument } from 'src/schemas/towre.schema';
 
 @Injectable()
 export class ScoresService {
@@ -30,6 +31,7 @@ export class ScoresService {
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     @InjectModel('getSetResult')
     private readonly getSetResultModel: Model<getSetResultDocument>,
+    @InjectModel('towre') private towreModel: Model<TowreDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -3261,4 +3263,31 @@ export class ScoresService {
     }
   }
 
+  async getTowreData(userId: string, language: string) {
+    const { towre_result } = await this.towreModel
+      .findOne({ user_id: userId, language: language })
+      .sort({ createdAt: -1 })
+      .select({ towre_result: 1, _id: 0 })
+      .lean();
+
+    // standrd for towre
+    const wordCount = 108;
+    const totalSec = 45;
+
+    const wordsPerMinute = Math.round((wordCount / totalSec) * 60);
+    const correctWordsCount = towre_result.filter(word => word.isCorrect).length;
+    const unattemptedWordsCount = Math.max(0, wordCount - towre_result.length);
+    const newWordsLearnt = correctWordsCount;
+    const incorrectWordCount = towre_result.filter(word => !word.isCorrect).length;
+
+    const towreData = {
+      wordsPerMinute: wordsPerMinute,
+      correctWordsCount: correctWordsCount,
+      unattemptedWordsCount: unattemptedWordsCount,
+      newWordsLearnt: newWordsLearnt,
+      incorrectWordCount : incorrectWordCount
+    }
+
+    return towreData;
+  }
 }

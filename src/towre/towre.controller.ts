@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
@@ -13,7 +14,7 @@ import { TowreService } from './towre.service';
 import { CreateTowreDto } from './dto/towre.dto';
 import { Towre } from '../schemas/towre.schema';
 import { JwtAuthGuard } from 'src/auth/auth.guard';
-import { FastifyReply } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
 @UseGuards(JwtAuthGuard)
 @Controller('/api/towre')
@@ -22,11 +23,13 @@ export class TowreController {
 
   @Post('/addRecord')
   async addTowreRecord(
+    @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
     @Body() dto: CreateTowreDto,
   ) {
     try {
-      const savedRecord = await this.towreService.createTowre(dto);
+      const user_id = (request as any).user.virtual_id.toString();
+      const savedRecord = await this.towreService.createTowre(user_id, dto);
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         message: 'Towre record created successfully',

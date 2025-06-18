@@ -8,6 +8,9 @@ export class Towre {
   @Prop({ required: true })
   user_id: string;
 
+  @Prop({ required: true, type: [Object] })
+  towre_result: ResultItem[];
+
   @Prop({ required: true })
   audio_file_path: string;
 
@@ -17,14 +20,22 @@ export class Towre {
   @Prop({ required: false })
   milestone_level?: string;
 
-  @Prop({ required: true, type: Object })
-  towre_result: Record<string, any>;
-
   @Prop({ default: false })
   isDeleted: boolean;
 
+  @Prop({ required: true })
+  language: string;
+
   @Prop({ default: Date.now })
   createdAt: Date;
+}
+
+class ResultItem {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  isCorrect: boolean;
 }
 
 export const TowreSchema = SchemaFactory.createForClass(Towre);

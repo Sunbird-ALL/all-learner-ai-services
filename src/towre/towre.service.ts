@@ -10,8 +10,11 @@ export class TowreService {
     @InjectModel(Towre.name) private towreModel: Model<TowreDocument>,
   ) {}
 
-  async createTowre(data: CreateTowreDto): Promise<Towre> {
-    const created = new this.towreModel(data);
+  async createTowre(user_id:string, data: CreateTowreDto): Promise<Towre> {
+    const created = new this.towreModel({
+      ...data,
+      user_id
+    });
     return created.save();
   }
 
