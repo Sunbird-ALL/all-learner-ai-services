@@ -32,7 +32,7 @@ export class ScoresService {
     private readonly getSetResultModel: Model<getSetResultDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   async create(createScoreDto: any): Promise<any> {
     try {
@@ -2915,7 +2915,7 @@ export class ScoresService {
     // If no transformations were added, return the original word
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
   }
-  
+
   getAccuracyClassification(contentType: string, score: number): string {
     const config: Record<string, [number, number, string][]> = {
       word: [
@@ -2953,7 +2953,7 @@ export class ScoresService {
     // Fallback in case no classification is matched.
     return "N/A";
   }
-  
+
   public classificationToScore(classification: string): number {
     switch (classification) {
       case 'Fluent':
@@ -3180,10 +3180,10 @@ export class ScoresService {
   ): Promise<string> {
     const originalClean = original.trim().toLowerCase();
     const responseWords = response.trim().toLowerCase().split(" ");
-  
+
     let bestResponse = responseWords.slice();
     let maxSimilarity = await this.getTextSimilarity(originalClean, responseWords.join(" "));
-  
+
     const backtrack = async (index: number, current: string[]) => {
       if (index === responseWords.length) {
         const currentStr = current.join(" ");
@@ -3194,10 +3194,10 @@ export class ScoresService {
         }
         return;
       }
-  
+
       const word = responseWords[index];
       let substituted = false;
-  
+
       for (const key in substitutions) {
         const subs = substitutions[key];
         for (let i = 0; i < subs.length; i++) {
@@ -3209,13 +3209,13 @@ export class ScoresService {
           }
         }
       }
-  
+
       // Try original word as-is
       current.push(word);
       await backtrack(index + 1, current);
       current.pop();
     };
-  
+
     await backtrack(0, []);
     return bestResponse.join(" ");
   }
@@ -3224,5 +3224,41 @@ export class ScoresService {
     const filteredText = filterBadWords(text, language);
     return filteredText != text;
   }
-  
+
+
+  async getRecommendation(
+    originalText: string,
+    responseText: string,
+    userId: string,
+    contentType: string,
+    count: number
+  ): Promise<any> {
+    const data = JSON.stringify({
+      original_text: originalText,
+      response_text: responseText,
+      user_id: userId,
+      content_type: contentType,
+      count: count,
+    });
+
+    const config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: process.env.RECOMENDATION_API_URL,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      const response = await axios.request(config);
+      return response.data;
+    } catch (error) {
+      console.error('Error in getRecommendation:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
 }
