@@ -3264,12 +3264,16 @@ export class ScoresService {
   }
 
   async getTowreData(userId: string, language: string) {
-    const { towre_result } = await this.towreModel
+    const result = await this.towreModel
       .findOne({ user_id: userId, language: language })
       .sort({ createdAt: -1 })
       .select({ towre_result: 1, _id: 0 })
       .lean();
 
+    if (!result || !result.towre_result || result.towre_result.length === 0) {
+      return null;
+    }
+    const towre_result = result.towre_result;
     // standrd for towre
     const wordCount = 108;
     const totalSec = 45;
@@ -3285,7 +3289,7 @@ export class ScoresService {
       correctWordsCount: correctWordsCount,
       unattemptedWordsCount: unattemptedWordsCount,
       newWordsLearnt: newWordsLearnt,
-      incorrectWordCount : incorrectWordCount
+      incorrectWordCount: incorrectWordCount
     }
 
     return towreData;
