@@ -3039,6 +3039,7 @@ export class ScoresService {
               grammar: item.grammar,
               accuracy: item.accuracy,
               overall: item.overall,
+              feedback: item.feedback
             };
           }),
           catchError((error: AxiosError) => {
