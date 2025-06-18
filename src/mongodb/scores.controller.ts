@@ -2572,6 +2572,7 @@ export class ScoresController {
             grammar: comprehension.grammar,
             accuracy: comprehension.accuracy,
             overall: comprehension.overall,
+            feedback: comprehension.feedback
           };
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
@@ -5691,9 +5692,11 @@ export class ScoresController {
           previousLevel: previous_level,
           totalSyllables: totalSyllables,
           fluency: fluency,
+          percentage: passingPercentage || 0,
           fluencyResult: fluencyResult,
           prosodyResult: prosodyResult,
           targetsPercentage: targetsPercentage,
+          langauge: getSetResult.language,
           totalCorrectnessScore:
             (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
           comprehensionScore: overallScore,
@@ -5732,7 +5735,7 @@ export class ScoresController {
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
-  }
+  })
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
