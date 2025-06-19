@@ -218,6 +218,16 @@ export class ScoresController {
           pause_count = CreateLearnerProfileDto.pause_count;
         }
 
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -587,6 +597,16 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -954,6 +974,16 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+
+         // add the vocabulary logic
+         const vocabulary = await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
 
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
@@ -1324,6 +1354,15 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1750,6 +1789,15 @@ export class ScoresController {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
         }
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
 
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
@@ -2570,6 +2618,16 @@ export class ScoresController {
           pause_count = CreateLearnerProfileDto.pause_count;
         }
 
+        // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
         // Profanity Detection logic
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
@@ -2944,16 +3002,20 @@ export class ScoresController {
         CreateLearnerProfileDto.language,
       );
 
-      // Recomendation api 
-      if (process.env.IS_RECOMENDATION === "true") {
-        const recomendation_cout = 5;
-        const recomendation = await this.scoresService.getRecommendation(
-          originalText,
-          responseText,
-          user_id,
-          CreateLearnerProfileDto.contentType,
-          recomendation_cout,
-        )
+      // Recomendation api call
+      try {
+        if (process.env.IS_RECOMENDATION === "true") {
+          const recomendation_cout = 5;
+          const recomendation = await this.scoresService.getRecommendation(
+            originalText,
+            responseText,
+            user_id,
+            CreateLearnerProfileDto.contentType,
+            recomendation_cout,
+          )
+        }
+      } catch (error) {
+        console.log('errro from the recomendation-Module');
       }
 
 
@@ -5819,25 +5881,32 @@ export class ScoresController {
   ) {
     try {
       const id = (request as any).user.virtual_id.toString();
-      const vocabulary_count = 0;
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
+      // towre data
       const latest_towre_data = await this.scoresService.getTowreData(
         id,
         language,
       );
+
+      // voc count
+      const vocabulary_count = await this.scoresService.getVocabularyCount(
+        id,
+        language,
+      )
+      // milestone data
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
-        data: { 
+        data: {
           milestone_level: milestone_level,
           extra: {
             latest_towre_data,
-            vocabulary_count 
+            vocabulary_count: vocabulary_count
           }
-         },
+        },
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -6183,7 +6252,7 @@ export class ScoresController {
           language,
         );
         let milestone_level = milestoneData[0]?.milestone_level || 'm0';
-         
+
         recordData.push({
           user_id: userId,
           data: { milestone_level: milestone_level },
