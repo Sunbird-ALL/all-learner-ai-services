@@ -5,6 +5,7 @@ export type TowreDocument = Towre & Document;
 
 @Schema({ timestamps: true })
 export class Towre {
+  [x: string]: any;
   @Prop({ required: true })
   user_id: string;
 

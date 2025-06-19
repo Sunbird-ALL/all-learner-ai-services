@@ -16,6 +16,7 @@ import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
 import { TowreDocument } from 'src/schemas/towre.schema';
+import { VocabularyDocument } from './schemas/vocabularySchema';
 
 @Injectable()
 export class ScoresService {
@@ -31,7 +32,10 @@ export class ScoresService {
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     @InjectModel('getSetResult')
     private readonly getSetResultModel: Model<getSetResultDocument>,
-    @InjectModel('towre') private towreModel: Model<TowreDocument>,
+    @InjectModel('towre') 
+    private towreModel: Model<TowreDocument>,
+    @InjectModel('vocabulary') 
+    private vocabularyModel: Model<VocabularyDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -167,7 +171,7 @@ export class ScoresService {
         smoothness_classification = response.data.smoothness_classification;
       })
       .catch((error) => {
-        console.log(error);
+        console.log("audioFileToAsrOutput.1");
       });
 
     if (process.env.denoiserEnabled === 'true') {
@@ -218,7 +222,7 @@ export class ScoresService {
           output = response.data;
         })
         .catch((error) => {
-          console.log(error);
+          console.log("audioFileToAsrOutput.2");
         });
 
       return output;
@@ -3227,7 +3231,6 @@ export class ScoresService {
     return filteredText != text;
   }
 
-
   async getRecommendation(
     originalText: string,
     responseText: string,
@@ -3294,4 +3297,77 @@ export class ScoresService {
 
     return towreData;
   }
+
+  async vocabularyCount(
+    user_id:string,
+    original_text:string, 
+    response_text:string, 
+    language:string, 
+    session:string, 
+    subSession:string): Promise<void>
+    {
+
+    const originalWords = this.normalize(original_text);
+    const responseWordsSet = new Set(this.normalize(response_text));
+
+    for (const word of originalWords) {
+      const isCorrect = responseWordsSet.has(word);
+      const existing = await this.vocabularyModel.findOne({
+        user_id,
+        contentId: word,
+        language
+      });
+      const update: any = {
+        $inc: { presentCount: 1 },
+        $set: { updatedAt: new Date() }
+      };
+
+      if (isCorrect) {
+        update.$inc.spokenCorrectly = 1;
+        update.$push = {
+          attempts: {
+            session,
+            subSession,
+            createdAt: new Date()
+          }
+        };
+      }
+
+      // Create new record only if spoken correctly or already exists
+      const options = isCorrect ? { upsert: true } : existing ? {} : null;
+
+      if (options !== null) {
+        await this.vocabularyModel.updateOne(
+          { user_id, contentId: word, language },
+          update,
+          options
+        );
+      }
+    }
+  }
+
+  // Simple word normalization
+  private normalize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[।?!.,;'"’“”\-–—()<>[\]{}]/g, '')
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  async getVocabularyCount(userId: string, language: string): Promise<number> {
+    return this.vocabularyModel.countDocuments({
+      user_id: userId,
+      language,
+      $expr: {
+        $gte: [
+          '$spokenCorrectly',
+          { $multiply: ['$presentCount', 0.7] }
+        ]
+      }
+    });
+  }
 }
+
+  
+

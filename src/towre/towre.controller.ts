@@ -30,10 +30,11 @@ export class TowreController {
     try {
       const user_id = (request as any).user.virtual_id.toString();
       const savedRecord = await this.towreService.createTowre(user_id, dto);
+      const { user_id: _, ...responsedata } = savedRecord.toObject();
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         message: 'Towre record created successfully',
-        data: savedRecord,
+        data: responsedata,
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
