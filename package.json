@@ -36,7 +36,6 @@
     "@nestjs/platform-fastify": "^10.1.3",
     "@nestjs/swagger": "^7.1.12",
     "@nestjs/typeorm": "^10.0.0",
-    "@tekdi/multilingual-profanity-filter": "^1.2.0",
     "axios": "^1.6.2",
     "cache-manager": "^5.5.2",
     "class-transformer": "^0.5.1",
