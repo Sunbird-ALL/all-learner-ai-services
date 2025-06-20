@@ -3007,7 +3007,7 @@ export class ScoresController {
       try {
         if (process.env.IS_RECOMENDATION === "true") {
           const recomendation_cout = 5;
-          const recomendation = await this.scoresService.getRecommendation(
+          await this.scoresService.getRecommendation(
             originalText,
             responseText,
             user_id,
