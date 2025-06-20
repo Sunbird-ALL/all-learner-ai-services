@@ -5,7 +5,6 @@ import { MysqlModule } from './mysql/mysql.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HttpModule } from '@nestjs/axios';
-import { TowreModule } from './towre/towre.module';
 
 export class AppModule {
   static forRoot(databaseType: string): DynamicModule {
@@ -31,7 +30,6 @@ export class AppModule {
           isGlobal: true,
         }),
         databaseModule, // Dynamically load the selected database module
-        TowreModule,
       ],
       controllers: [AppController],
       providers: [AppService],

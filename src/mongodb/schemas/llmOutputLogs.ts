@@ -18,11 +18,8 @@ export class llmOutputLogs extends Document {
   @Prop({ required: false })
   questionText: string[];
 
-  @Prop({ required: true }) 
-  studentText: string;
-
   @Prop({ required: true })
-  feedback: string;
+  studentText: string;
 
   @Prop({ type: [String], required: true })
   ansKey: string[];
