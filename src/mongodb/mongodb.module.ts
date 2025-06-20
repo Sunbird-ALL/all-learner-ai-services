@@ -15,6 +15,7 @@ import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { getSetResultSchema } from './schemas/getSetResult';
 import { RedisModule } from 'src/redis/redis.module';
 
+
 @Module({
   imports: [
     HttpModule.register({
@@ -42,13 +43,12 @@ import { RedisModule } from 'src/redis/redis.module';
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
       { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
-      { name: 'getSetResult', schema: getSetResultSchema },
+      { name: 'getSetResult', schema: getSetResultSchema }
     ]),
     CacheModule.register(),
+    RedisModule
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService, JwtService],
-    RedisModule
-  ],
 })
 export class MongodbModule {}

@@ -3899,7 +3899,7 @@ export class ScoresController {
     try {
       const user_id = ((request as any).user.virtual_id).toString();
       const familiarityResult = await this.scoresService.getFamiliarityByUser(
-        id,
+        user_id,
         language,
       );
       return response.status(HttpStatus.OK).send(familiarityResult);
@@ -5645,7 +5645,7 @@ export class ScoresController {
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
-  }
+  })
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -6204,4 +6204,4 @@ export class ScoresController {
     }
 
 }
-
+}
