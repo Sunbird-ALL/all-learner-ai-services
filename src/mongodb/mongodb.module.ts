@@ -14,6 +14,8 @@ import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { getSetResultSchema } from './schemas/getSetResult';
 import { RedisModule } from 'src/redis/redis.module';
+import { TowreSchema } from 'src/schemas/towre.schema';
+import { VocabularySchema } from './schemas/vocabularySchema';
 
 
 @Module({
@@ -43,7 +45,9 @@ import { RedisModule } from 'src/redis/redis.module';
       { name: 'assessmentInput', schema: assessmentInputSchema },
       { name: 'denoiserOutputLogs', schema: denoiserOutputLogsSchema },
       { name: 'llmOutputLogs', schema: llmOutputLogsSchema },
-      { name: 'getSetResult', schema: getSetResultSchema }
+      { name: 'getSetResult', schema: getSetResultSchema },
+      { name: 'towre', schema: TowreSchema},
+      { name: 'vocabulary', schema: VocabularySchema}
     ]),
     CacheModule.register(),
     RedisModule
