@@ -14,6 +14,9 @@ import lang_common_config from './config/language/common/commonConfig';
 import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
+import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
+import { TowreDocument } from 'src/schemas/towre.schema';
+import { VocabularyDocument } from './schemas/vocabularySchema';
 
 @Injectable()
 export class ScoresService {
@@ -29,9 +32,13 @@ export class ScoresService {
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     @InjectModel('getSetResult')
     private readonly getSetResultModel: Model<getSetResultDocument>,
+    @InjectModel('towre') 
+    private towreModel: Model<TowreDocument>,
+    @InjectModel('vocabulary') 
+    private vocabularyModel: Model<VocabularyDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   async create(createScoreDto: any): Promise<any> {
     try {
@@ -164,7 +171,7 @@ export class ScoresService {
         smoothness_classification = response.data.smoothness_classification;
       })
       .catch((error) => {
-        console.log(error);
+        console.log("audioFileToAsrOutput.1");
       });
 
     if (process.env.denoiserEnabled === 'true') {
@@ -215,7 +222,7 @@ export class ScoresService {
           output = response.data;
         })
         .catch((error) => {
-          console.log(error);
+          console.log("audioFileToAsrOutput.2");
         });
 
       return output;
@@ -2691,6 +2698,7 @@ export class ScoresService {
       contentLevel = 'L1';
     } else if (milestone_level === 'm1') {
       contentLevel = 'L1';
+      complexityLevel = ['C0'];
     } else if (milestone_level === 'm2') {
       contentLevel = 'L2';
       complexityLevel = ['C1'];
@@ -2913,33 +2921,34 @@ export class ScoresService {
     // If no transformations were added, return the original word
     return outcomes.size > 0 ? Array.from(outcomes) : [word];
   }
+
   getAccuracyClassification(contentType: string, score: number): string {
     const config: Record<string, [number, number, string][]> = {
       word: [
-        [0, 1, 'Fluent'],
-        [1, 2, 'Moderately Fluent'],
-        [2, 3, 'Disfluent'],
-        [3, Infinity, 'Very Disfluent'],
+        [0, 1, "Fluent"],
+        [1, 2, "Moderately Fluent"],
+        [2, 3, "Disfluent"],
+        [3, Infinity, "Very Disfluent"]
       ],
       sentence: [
-        [0, 3, 'Fluent'],
-        [3, 6, 'Moderately Fluent'],
-        [6, 8, 'Disfluent'],
-        [8, Infinity, 'Very Disfluent'],
+        [0, 3, "Fluent"],
+        [3, 6, "Moderately Fluent"],
+        [6, 8, "Disfluent"],
+        [8, Infinity, "Very Disfluent"]
       ],
       paragraph: [
-        [0, 5, 'Fluent'],
-        [5, 10, 'Moderately Fluent'],
-        [10, 12, 'Disfluent'],
-        [12, Infinity, 'Very Disfluent'],
-      ],
+        [0, 5, "Fluent"],
+        [5, 10, "Moderately Fluent"],
+        [10, 12, "Disfluent"],
+        [12, Infinity, "Very Disfluent"]
+      ]
     };
     // Normalize the content type and get its thresholds.
     const ct = contentType.toLowerCase();
     const thresholds = config[ct];
     // If the content type is not recognized, return "N/A"
     if (!thresholds) {
-      return 'N/A';
+      return "N/A";
     }
     // Loop through the thresholds and return the classification that matches.
     for (const [min, max, label] of thresholds) {
@@ -2948,8 +2957,9 @@ export class ScoresService {
       }
     }
     // Fallback in case no classification is matched.
-    return 'N/A';
+    return "N/A";
   }
+
   public classificationToScore(classification: string): number {
     switch (classification) {
       case 'Fluent':
@@ -3036,6 +3046,7 @@ export class ScoresService {
               grammar: item.grammar,
               accuracy: item.accuracy,
               overall: item.overall,
+              feedback: item.feedback
             };
           }),
           catchError((error: AxiosError) => {
@@ -3167,4 +3178,196 @@ export class ScoresService {
     }
     return mergedResponse.join(' ');
   }
+
+  async getBestCorrectedResponse(
+    original: string,
+    response: string,
+    substitutions: { [key: string]: string[] }
+  ): Promise<string> {
+    const originalClean = original.trim().toLowerCase();
+    const responseWords = response.trim().toLowerCase().split(" ");
+
+    let bestResponse = responseWords.slice();
+    let maxSimilarity = await this.getTextSimilarity(originalClean, responseWords.join(" "));
+
+    const backtrack = async (index: number, current: string[]) => {
+      if (index === responseWords.length) {
+        const currentStr = current.join(" ");
+        const sim = await this.getTextSimilarity(originalClean, currentStr);
+        if (sim > maxSimilarity) {
+          maxSimilarity = sim;
+          bestResponse = current.slice();
+        }
+        return;
+      }
+
+      const word = responseWords[index];
+      let substituted = false;
+
+      for (const key in substitutions) {
+        const subs = substitutions[key];
+        for (let i = 0; i < subs.length; i++) {
+          if (subs[i] === word) {
+            current.push(key); // substitute
+            await backtrack(index + 1, current);
+            current.pop();
+            substituted = true;
+          }
+        }
+      }
+
+      // Try original word as-is
+      current.push(word);
+      await backtrack(index + 1, current);
+      current.pop();
+    };
+
+    await backtrack(0, []);
+    return bestResponse.join(" ");
+  }
+
+  async checkProfanity(text: string, language: string): Promise<boolean> {
+    const filteredText = filterBadWords(text, language);
+    return filteredText != text;
+  }
+
+  async getRecommendation(
+    originalText: string,
+    responseText: string,
+    userId: string,
+    contentType: string,
+    count: number
+  ): Promise<any> {
+    const data = JSON.stringify({
+      original_text: originalText,
+      response_text: responseText,
+      user_id: userId,
+      content_type: contentType,
+      count: count,
+    });
+
+    const config = {
+      method: 'post',
+      maxBodyLength: Infinity,
+      url: process.env.RECOMENDATION_API_URL,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      const response = await axios.request(config);
+      return response.data;
+    } catch (error) {
+      console.error('Error in getRecommendation:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async getTowreData(userId: string, language: string) {
+    const result = await this.towreModel
+      .findOne({ user_id: userId, language: language })
+      .sort({ createdAt: -1 })
+      .select({ towre_result: 1, _id: 0 })
+      .lean();
+
+    if (!result || !result.towre_result || result.towre_result.length === 0) {
+      return null;
+    }
+    const towre_result = result.towre_result;
+    // standrd for towre
+    const wordCount = 108;
+    const totalSec = 45;
+
+    const wordsPerMinute = Math.round((wordCount / totalSec) * 60);
+    const correctWordsCount = towre_result.filter(word => word.isCorrect).length;
+    const unattemptedWordsCount = Math.max(0, wordCount - towre_result.length);
+    const newWordsLearnt = correctWordsCount;
+    const incorrectWordCount = towre_result.filter(word => !word.isCorrect).length;
+
+    const towreData = {
+      wordsPerMinute: wordsPerMinute,
+      correctWordsCount: correctWordsCount,
+      unattemptedWordsCount: unattemptedWordsCount,
+      newWordsLearnt: newWordsLearnt,
+      incorrectWordCount: incorrectWordCount
+    }
+
+    return towreData;
+  }
+
+  async vocabularyCount(
+    user_id:string,
+    original_text:string, 
+    response_text:string, 
+    language:string, 
+    session:string, 
+    subSession:string): Promise<void>
+    {
+
+    const originalWords = this.normalize(original_text);
+    const responseWordsSet = new Set(this.normalize(response_text));
+
+    for (const word of originalWords) {
+      const isCorrect = responseWordsSet.has(word);
+      const existing = await this.vocabularyModel.findOne({
+        user_id,
+        contentId: word,
+        language
+      });
+      const update: any = {
+        $inc: { presentCount: 1 },
+        $set: { updatedAt: new Date() }
+      };
+
+      if (isCorrect) {
+        update.$inc.spokenCorrectly = 1;
+        update.$push = {
+          attempts: {
+            session,
+            subSession,
+            createdAt: new Date()
+          }
+        };
+      }
+
+      // Create new record only if spoken correctly or already exists
+      const options = isCorrect ? { upsert: true } : existing ? {} : null;
+
+      if (options !== null) {
+        await this.vocabularyModel.updateOne(
+          { user_id, contentId: word, language },
+          update,
+          options
+        );
+      }
+    }
+  }
+
+  // Simple word normalization
+  private normalize(text: string): string[] {
+    return text
+      .toLowerCase()
+      .replace(/[।?!.,;'"’“”\-–—()<>[\]{}]/g, '')
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  async getVocabularyCount(userId: string, language: string): Promise<number> {
+    return this.vocabularyModel.countDocuments({
+      user_id: userId,
+      language,
+      $expr: {
+        $gte: [
+          '$spokenCorrectly',
+          { $multiply: ['$presentCount', 0.7] }
+        ]
+      }
+    });
+  }
 }
+
+  
+

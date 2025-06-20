@@ -10,6 +10,15 @@ export class getSetResult extends Document {
   sessionId: string;
 
   @Prop({ required: true })
+  sessionResult: string;
+
+  @Prop({ required: true })
+  langauge: string;
+
+  @Prop({ required: false })
+  percentage: number;
+
+  @Prop({ required: true })
   subSessionId: string;
 
   @Prop({ required: true })
