@@ -15,8 +15,7 @@ import * as splitGraphemes from 'split-graphemes';
 import { llmOutputLogsDocument } from './schemas/llmOutputLogs';
 import { getSetResult, getSetResultDocument } from './schemas/getSetResult';
 import { filterBadWords } from '@tekdi/multilingual-profanity-filter';
-import { TowreDocument } from 'src/schemas/towre.schema';
-import { VocabularyDocument } from './schemas/vocabularySchema';
+
 
 @Injectable()
 export class ScoresService {
@@ -32,10 +31,6 @@ export class ScoresService {
     private readonly llmOutputLogsModel: Model<llmOutputLogsDocument>,
     @InjectModel('getSetResult')
     private readonly getSetResultModel: Model<getSetResultDocument>,
-    @InjectModel('towre') 
-    private towreModel: Model<TowreDocument>,
-    @InjectModel('vocabulary') 
-    private vocabularyModel: Model<VocabularyDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -3265,108 +3260,7 @@ export class ScoresService {
       throw error;
     }
   }
-
-  async getTowreData(userId: string, language: string) {
-    const result = await this.towreModel
-      .findOne({ user_id: userId, language: language })
-      .sort({ createdAt: -1 })
-      .select({ towre_result: 1, _id: 0 })
-      .lean();
-
-    if (!result || !result.towre_result || result.towre_result.length === 0) {
-      return null;
-    }
-    const towre_result = result.towre_result;
-    // standrd for towre
-    const wordCount = 108;
-    const totalSec = 45;
-
-    const wordsPerMinute = Math.round((wordCount / totalSec) * 60);
-    const correctWordsCount = towre_result.filter(word => word.isCorrect).length;
-    const unattemptedWordsCount = Math.max(0, wordCount - towre_result.length);
-    const newWordsLearnt = correctWordsCount;
-    const incorrectWordCount = towre_result.filter(word => !word.isCorrect).length;
-
-    const towreData = {
-      wordsPerMinute: wordsPerMinute,
-      correctWordsCount: correctWordsCount,
-      unattemptedWordsCount: unattemptedWordsCount,
-      newWordsLearnt: newWordsLearnt,
-      incorrectWordCount: incorrectWordCount
-    }
-
-    return towreData;
-  }
-
-  async vocabularyCount(
-    user_id:string,
-    original_text:string, 
-    response_text:string, 
-    language:string, 
-    session:string, 
-    subSession:string): Promise<void>
-    {
-
-    const originalWords = this.normalize(original_text);
-    const responseWordsSet = new Set(this.normalize(response_text));
-
-    for (const word of originalWords) {
-      const isCorrect = responseWordsSet.has(word);
-      const existing = await this.vocabularyModel.findOne({
-        user_id,
-        contentId: word,
-        language
-      });
-      const update: any = {
-        $inc: { presentCount: 1 },
-        $set: { updatedAt: new Date() }
-      };
-
-      if (isCorrect) {
-        update.$inc.spokenCorrectly = 1;
-        update.$push = {
-          attempts: {
-            session,
-            subSession,
-            createdAt: new Date()
-          }
-        };
-      }
-
-      // Create new record only if spoken correctly or already exists
-      const options = isCorrect ? { upsert: true } : existing ? {} : null;
-
-      if (options !== null) {
-        await this.vocabularyModel.updateOne(
-          { user_id, contentId: word, language },
-          update,
-          options
-        );
-      }
-    }
-  }
-
-  // Simple word normalization
-  private normalize(text: string): string[] {
-    return text
-      .toLowerCase()
-      .replace(/[।?!.,;'"’“”\-–—()<>[\]{}]/g, '')
-      .split(/\s+/)
-      .filter(Boolean);
-  }
-
-  async getVocabularyCount(userId: string, language: string): Promise<number> {
-    return this.vocabularyModel.countDocuments({
-      user_id: userId,
-      language,
-      $expr: {
-        $gte: [
-          '$spokenCorrectly',
-          { $multiply: ['$presentCount', 0.7] }
-        ]
-      }
-    });
-  }
+  
 }
 
   

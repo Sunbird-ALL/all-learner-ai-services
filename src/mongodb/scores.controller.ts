@@ -218,16 +218,6 @@ export class ScoresController {
           pause_count = CreateLearnerProfileDto.pause_count;
         }
 
-         // add the vocabulary logic
-        await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
-
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -597,15 +587,6 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
-         // add the vocabulary logic
-        await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
 
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
@@ -974,16 +955,6 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
-
-         // add the vocabulary logic
-         const vocabulary = await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
 
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
@@ -1355,15 +1326,6 @@ export class ScoresController {
         responseText = CreateLearnerProfileDto.output[0].source;
         responseText = await this.scoresService.mergeResponseWordsUsingOriginal(originalText,responseText);
 
-         // add the vocabulary logic
-        await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -1790,16 +1752,7 @@ export class ScoresController {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
         }
-         // add the vocabulary logic
-        await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
-
+        
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
         if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
@@ -2618,16 +2571,6 @@ export class ScoresController {
           );
           pause_count = CreateLearnerProfileDto.pause_count;
         }
-
-        // add the vocabulary logic
-        await this.scoresService.vocabularyCount(
-          user_id,
-          originalText,
-          responseText,
-          language,
-          CreateLearnerProfileDto.session_id,
-          CreateLearnerProfileDto.sub_session_id
-        )
 
         // Profanity Detection logic
         const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
@@ -5886,27 +5829,11 @@ export class ScoresController {
         id,
         language,
       );
-      // towre data
-      const latest_towre_data = await this.scoresService.getTowreData(
-        id,
-        language,
-      );
-
-      // voc count
-      const vocabulary_count = await this.scoresService.getVocabularyCount(
-        id,
-        language,
-      )
-      // milestone data
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
-          milestone_level: milestone_level,
-          extra: {
-            latest_towre_data,
-            vocabulary_count: vocabulary_count
-          }
+          milestone_level: milestone_level
         },
       });
     } catch (err) {
@@ -6441,4 +6368,4 @@ export class ScoresController {
     }
   }
 }
-}
+
