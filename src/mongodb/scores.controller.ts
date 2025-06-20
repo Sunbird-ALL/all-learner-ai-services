@@ -1353,6 +1353,7 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+        responseText = await this.scoresService.mergeResponseWordsUsingOriginal(originalText,responseText);
 
          // add the vocabulary logic
         await this.scoresService.vocabularyCount(
