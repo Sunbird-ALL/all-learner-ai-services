@@ -6441,4 +6441,4 @@ export class ScoresController {
     }
   }
 }
-
+}

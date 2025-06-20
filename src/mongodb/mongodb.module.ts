@@ -17,6 +17,7 @@ import { RedisModule } from 'src/redis/redis.module';
 import { TowreSchema } from 'src/schemas/towre.schema';
 import { VocabularySchema } from './schemas/vocabularySchema';
 
+
 @Module({
   imports: [
     HttpModule.register({
