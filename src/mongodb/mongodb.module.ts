@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import mongodbConfig from '../config/mongodb.config';
 import { ScoreSchema } from './schemas/scores.schema';
 import { hexcodeMappingSchema } from './schemas/hexcodeMapping.schema';
 import { assessmentInputSchema } from './schemas/assessmentInput.schema';
@@ -10,10 +11,8 @@ import { ScoresService } from './scores.service';
 import { CacheService } from './cache/cache.service';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
-import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { getSetResultSchema } from './schemas/getSetResult';
-import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
   imports: [
@@ -47,8 +46,6 @@ import { RedisModule } from 'src/redis/redis.module';
     CacheModule.register(),
   ],
   controllers: [ScoresController],
-  providers: [ScoresService, CacheService, JwtService],
-    RedisModule
-  ],
+  providers: [ScoresService, CacheService],
 })
 export class MongodbModule {}
