@@ -13,7 +13,6 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { JwtService } from '@nestjs/jwt';
 import { llmOutputLogsSchema } from './schemas/llmOutputLogs';
 import { getSetResultSchema } from './schemas/getSetResult';
-import { RedisModule } from 'src/redis/redis.module';
 import { TowreSchema } from 'src/schemas/towre.schema';
 import { VocabularySchema } from './schemas/vocabularySchema';
 
@@ -49,8 +48,7 @@ import { VocabularySchema } from './schemas/vocabularySchema';
       { name: 'towre', schema: TowreSchema},
       { name: 'vocabulary', schema: VocabularySchema}
     ]),
-    CacheModule.register(),
-    RedisModule
+    CacheModule.register()
   ],
   controllers: [ScoresController],
   providers: [ScoresService, CacheService, JwtService],
