@@ -48,7 +48,7 @@ export class JwtAuthGuard implements CanActivate {
 
       // get the token status
       const tokenStatus = await this.checkTokenStatus(verifiedToken.payload.virtual_id);
-      if (!tokenStatus.isLoggedIn) {
+      if (tokenStatus.token == null || tokenStatus.token !== token) {
         throw new UnauthorizedException('User is logged out');
       }
 
@@ -62,7 +62,7 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   // check user status
-  async checkTokenStatus(user_id: any): Promise<{ isLoggedIn: boolean }> {
+  async checkTokenStatus(user_id: any): Promise<{ token: string }> {
     try {
       const url = process.env.ALL_ORC_SERVICE_URL;
       const response = await axios.post(url, {
@@ -70,12 +70,12 @@ export class JwtAuthGuard implements CanActivate {
       });
 
       return {
-        isLoggedIn: response.data?.result?.isLoggedIn ?? false
+        token: response.data?.result?.token || null,
       };
     } catch (error: any) {
       console.error('Error calling token-status API:', error?.response?.data || error.message);
       return {
-        isLoggedIn: false,
+        token: null,
       };
     }
   }
