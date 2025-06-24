@@ -3007,7 +3007,7 @@ export class ScoresController {
       try {
         if (process.env.IS_RECOMENDATION === "true") {
           const recomendation_cout = 5;
-          await this.scoresService.getRecommendation(
+          this.scoresService.getRecommendation(
             originalText,
             responseText,
             user_id,
@@ -3022,7 +3022,7 @@ export class ScoresController {
       // Recomendation api call
       try {
         if (process.env.VOICE_AUTH_ENABLE === "true") {
-         await this.scoresService.voiceAuth(
+          this.scoresService.voiceAuth(
             CreateLearnerProfileDto.audio.toString('base64'),
             user_id
           )
