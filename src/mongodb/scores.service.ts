@@ -3231,6 +3231,7 @@ export class ScoresService {
     return filteredText != text;
   }
 
+  
   async getRecommendation(
     originalText: string,
     responseText: string,
@@ -3366,6 +3367,31 @@ export class ScoresService {
         ]
       }
     });
+  }
+
+  async voiceAuth(audio: string, user_id: string): Promise<any> {
+    const data = JSON.stringify({
+      audio: audio,
+      user_id: user_id,
+    });
+
+    const config = {
+      method: 'post',
+      url: process.env.VOICE_API_URL,
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      data: data,
+    };
+
+    try {
+      const response = await axios.request(config);
+      return response.data;
+    } catch (error) {
+      console.error('Error in Voice auth api:', error.response?.data || error.message);
+      throw error;
+    }
   }
 }
 

@@ -3002,12 +3002,12 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-
+      
       // Recomendation api call
       try {
         if (process.env.IS_RECOMENDATION === "true") {
           const recomendation_cout = 5;
-          await this.scoresService.getRecommendation(
+          this.scoresService.getRecommendation(
             originalText,
             responseText,
             user_id,
@@ -3019,6 +3019,17 @@ export class ScoresController {
         console.log('errro from the recomendation-Module');
       }
 
+      // Recomendation api call
+      try {
+        if (process.env.VOICE_AUTH_ENABLE === "true") {
+          this.scoresService.voiceAuth(
+            CreateLearnerProfileDto.audio.toString('base64'),
+            user_id
+          )
+        }
+      } catch (error) {
+        console.log('errro from the voice-auth-Module');
+      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
