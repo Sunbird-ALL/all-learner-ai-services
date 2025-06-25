@@ -5001,11 +5001,11 @@ export class ScoresController {
         !getSetResult.hasOwnProperty('collectionId') ||
         !getSetResult.collectionId
       ) {
-
-        if (['en', 'kn'].includes(getSetResult.language.toLowerCase())) {
+        const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
+        if (['en', 'kn'].includes(getSetResult.language.toLowerCase()) && userLevelNum < 10) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
-          const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
+          
           const passThreshold = userLevelNum >= 4 ? 3.0 : 2.6;
 
           // Retrieve all audio records for the given sub-session and language 'en' or kn
@@ -5882,6 +5882,25 @@ export class ScoresController {
     schema: {
       properties: {
         milestone_level: { type: 'string', example: 'm0' },
+        extra: {
+          type: 'object',
+          properties: {
+            latest_towre_data: {
+              type: 'object',
+              properties: {
+                wordsPerMinute: { type: 'number', example: 144 },
+                correctWordsCount: { type: 'number', example: 8 },
+                unattemptedWordsCount: { type: 'number', example: 100 },
+                newWordsLearnt: { type: 'number', example: 8 },
+                incorrectWordCount: { type: 'number', example: 0 },
+              },
+            },
+            vocabulary_count: {
+              type: 'number',
+              example: 0,
+            },
+          },
+        },
       },
     },
   })
