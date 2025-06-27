@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, HttpStatus, Res, Search, Query, ParseArrayPipe, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  HttpStatus,
+  Res,
+  Search,
+  Query,
+  ParseArrayPipe,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
@@ -30,7 +45,7 @@ export class ScoresController {
   constructor(
     private readonly scoresService: ScoresService,
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
@@ -105,11 +120,11 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const vowelSignArr = ta_config.vowel;
       const language = ta_config.language_code;
       const mode = CreateLearnerProfileDto.mode;
-    
+
       let createScoreData;
 
       let asrOutDenoised;
@@ -201,6 +216,24 @@ export class ScoresController {
         } else {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
+        }
+
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
         }
 
         // Get All hexcode for this selected language
@@ -320,11 +353,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  responseText.length,
+                responseText.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  responseText.split(' ').length,
+                responseText.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -370,7 +403,7 @@ export class ScoresController {
 
       let originalTextSyllables = [];
 
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
@@ -469,7 +502,7 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const vowelSignArr = gu_config.vowel;
       const language = gu_config.language_code;
       let createScoreData;
@@ -563,6 +596,24 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
@@ -681,11 +732,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  CreateLearnerProfileDto.output[0].source.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  CreateLearnerProfileDto.output[0].source.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -732,7 +783,7 @@ export class ScoresController {
 
       let originalTextSyllables = [];
 
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
@@ -832,7 +883,7 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const vowelSignArr = or_config.vowel;
       const language = or_config.language_code;
 
@@ -923,6 +974,24 @@ export class ScoresController {
         }
 
         responseText = CreateLearnerProfileDto.output[0].source;
+
+         // add the vocabulary logic
+         const vocabulary = await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
 
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
@@ -1037,11 +1106,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  CreateLearnerProfileDto.output[0].source.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  CreateLearnerProfileDto.output[0].source.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -1088,8 +1157,8 @@ export class ScoresController {
 
       let originalTextSyllables = [];
 
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables( user_id,CreateLearnerProfileDto.sub_session_id);
-    
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id);
+
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       const totalTargets = targets.length;
@@ -1184,53 +1253,12 @@ export class ScoresController {
   })
   @Post('/updateLearnerProfile/hi')
   async updateLearnerProfileHi(
-  @Req() request: FastifyRequest,
-  @Res() response: FastifyReply,
-  @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
-) {
-  try {
-    const user_id = ((request as any).user.virtual_id).toString();
-
-    if (
-      CreateLearnerProfileDto['output'] === undefined &&
-      CreateLearnerProfileDto.audio !== undefined
-    ) {
-      const audioFile = CreateLearnerProfileDto.audio;
-      const decoded = Buffer.isBuffer(audioFile)
-        ? audioFile.toString('base64')
-        : audioFile; // if it's already a base64 string
-
-      const audioOutput = await this.scoresService.audioFileToAsrOutput(
-        decoded,
-        'hi',
-        CreateLearnerProfileDto['contentType'],
-      );
-      CreateLearnerProfileDto['output'] = audioOutput.output;
-    }
-
-    const vowelSignArr = hi_config.vowel;
-    const language = hi_config.language_code;
-    const originalText = CreateLearnerProfileDto.original_text;
-
-    let asrOutDenoised, asrOutBeforeDenoised;
-    let responseText = '';
-    let constructText = '';
-    let pause_count = 0;
-    let similarityNonDenoisedText = 0;
-    let similarityDenoisedText = 0;
-    let nonDenoisedresponseText = '';
-    let DenoisedresponseText = '';
-    let reptitionCount = 0;
-    let constructTokenArr = [];
-    let correctTokens = [];
-    let missingTokens = [];
-    let confidence_scoresArr = [];
-    let missing_token_scoresArr = [];
-    let anomaly_scoreArr = [];
-
-    const originalTokenArr = await this.scoresService.getSyllablesFromString(originalText, vowelSignArr, language);
-
-    if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
+    @Req() request: FastifyRequest,
+    @Res() response: FastifyReply,
+    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
+  ) {
+    try {
+      const user_id = (request as any).user.virtual_id.toString();
       if (
         CreateLearnerProfileDto['output'] === undefined &&
         CreateLearnerProfileDto.audio !== undefined
@@ -1238,180 +1266,257 @@ export class ScoresController {
         const audioFile = CreateLearnerProfileDto.audio;
         const decoded = Buffer.isBuffer(audioFile)
           ? audioFile.toString('base64')
-          : audioFile;
+          : audioFile; // if it's already a base64 string
 
         const audioOutput = await this.scoresService.audioFileToAsrOutput(
           decoded,
-          CreateLearnerProfileDto.language,
+          'hi',
           CreateLearnerProfileDto['contentType'],
         );
+        CreateLearnerProfileDto['output'] = audioOutput.output;
+      }
 
-        asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || '';
-        asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || '';
-        pause_count = audioOutput.pause_count || 0;
+      const vowelSignArr = hi_config.vowel;
+      const language = hi_config.language_code;
+      const originalText = CreateLearnerProfileDto.original_text;
 
-        similarityDenoisedText = await this.scoresService.getTextSimilarity(
-          originalText,
-          asrOutDenoised[0]?.source || '',
-        );
+      let asrOutDenoised, asrOutBeforeDenoised;
+      let responseText = '';
+      let constructText = '';
+      let pause_count = 0;
+      let similarityNonDenoisedText = 0;
+      let similarityDenoisedText = 0;
+      let nonDenoisedresponseText = '';
+      let DenoisedresponseText = '';
+      let reptitionCount = 0;
+      let constructTokenArr = [];
+      let correctTokens = [];
+      let missingTokens = [];
+      let confidence_scoresArr = [];
+      let missing_token_scoresArr = [];
+      let anomaly_scoreArr = [];
 
-        similarityNonDenoisedText = await this.scoresService.getTextSimilarity(
-          originalText,
-          asrOutBeforeDenoised[0]?.source || '',
-        );
+      const originalTokenArr = await this.scoresService.getSyllablesFromString(
+        originalText,
+        vowelSignArr,
+        language,
+      );
 
-        if (similarityDenoisedText <= similarityNonDenoisedText) {
-          CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
-          DenoisedresponseText = asrOutDenoised[0]?.source;
-          nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
-        } else {
-          CreateLearnerProfileDto['output'] = asrOutDenoised;
-          DenoisedresponseText = asrOutDenoised[0]?.source;
-          nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+      if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
+        if (
+          CreateLearnerProfileDto['output'] === undefined &&
+          CreateLearnerProfileDto.audio !== undefined
+        ) {
+          const audioFile = CreateLearnerProfileDto.audio;
+          const decoded = Buffer.isBuffer(audioFile)
+            ? audioFile.toString('base64')
+            : audioFile;
+
+          const audioOutput = await this.scoresService.audioFileToAsrOutput(
+            decoded,
+            CreateLearnerProfileDto.language,
+            CreateLearnerProfileDto['contentType'],
+          );
+
+          asrOutDenoised = audioOutput.asrOutDenoisedOutput?.output || '';
+          asrOutBeforeDenoised = audioOutput.asrOutBeforeDenoised?.output || '';
+          pause_count = audioOutput.pause_count || 0;
+
+          similarityDenoisedText = await this.scoresService.getTextSimilarity(
+            originalText,
+            asrOutDenoised[0]?.source || '',
+          );
+
+          similarityNonDenoisedText =
+            await this.scoresService.getTextSimilarity(
+              originalText,
+              asrOutBeforeDenoised[0]?.source || '',
+            );
+
+          if (similarityDenoisedText <= similarityNonDenoisedText) {
+            CreateLearnerProfileDto['output'] = asrOutBeforeDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          } else {
+            CreateLearnerProfileDto['output'] = asrOutDenoised;
+            DenoisedresponseText = asrOutDenoised[0]?.source;
+            nonDenoisedresponseText = asrOutBeforeDenoised[0]?.source;
+          }
+
+          if (CreateLearnerProfileDto.output[0].source === '') {
+            return response.status(HttpStatus.BAD_REQUEST).send({
+              status: 'error',
+              message:
+                'Audio to Text functionality responded with an empty response. Please check the audio file or speak louder.',
+            });
+          }
         }
 
-        if (CreateLearnerProfileDto.output[0].source === '') {
+        responseText = CreateLearnerProfileDto.output[0].source;
+        responseText = await this.scoresService.mergeResponseWordsUsingOriginal(originalText,responseText);
+
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
           return response.status(HttpStatus.BAD_REQUEST).send({
-            status: 'error',
-            message: 'Audio to Text functionality responded with an empty response. Please check the audio file or speak louder.',
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
           });
         }
-      }
 
-      responseText = CreateLearnerProfileDto.output[0].source;
-
-      const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(language);
-      const constructedTextRepCountData = await this.scoresService.getConstructedText(originalText, responseText);
-      constructText = constructedTextRepCountData.constructText;
-      reptitionCount = constructedTextRepCountData.reptitionCount;
-      constructTokenArr = await this.scoresService.getSyllablesFromString(constructText, vowelSignArr, language);
-
-      for (const originalToken of originalTokenArr) {
-        if (constructTokenArr.includes(originalToken)) {
-          correctTokens.push(originalToken);
-        } else {
-          missingTokens.push(originalToken);
-        }
-      }
-
-      missingTokens = Array.from(new Set(missingTokens));
-
-      const identifyTokens = await this.scoresService.identifyTokens(
-        CreateLearnerProfileDto.output[0].nBestTokens,
-        correctTokens,
-        missingTokens,
-        tokenHexcodeDataArr,
-        vowelSignArr,
-      );
-
-      confidence_scoresArr = identifyTokens.confidence_scoresArr;
-      confidence_scoresArr = confidence_scoresArr.map(item => ({
-        ...item,
-        confidence_score: item.confidence_score < 0.7 ? 0.777 : item.confidence_score,
-        identification_status: 1
-      }));
-      missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
-      anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
-
-      const textEvalMatrices = await this.scoresService.getTextMetrics(
-        originalText,
-        constructText,
-        language,
-        Buffer.isBuffer(CreateLearnerProfileDto.audio)
-          ? CreateLearnerProfileDto.audio.toString('base64')
-          : CreateLearnerProfileDto.audio,
-      );
-
-      if (process.env.denoiserEnabled === 'true') {
-        const improved = similarityDenoisedText > similarityNonDenoisedText;
-
-        const createDenoiserOutputLog = {
-          user_id: user_id,
-          session_id: CreateLearnerProfileDto.session_id,
-          sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
-          contentType: CreateLearnerProfileDto.contentType,
-          contentId: CreateLearnerProfileDto.contentId || '',
+        const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
           language,
-          original_text: originalText,
-          response_text: nonDenoisedresponseText,
-          denoised_response_text: DenoisedresponseText,
-          improved,
-          comment: '',
+        );
+        const constructedTextRepCountData =
+          await this.scoresService.getConstructedText(
+            originalText,
+            responseText,
+          );
+        constructText = constructedTextRepCountData.constructText;
+        reptitionCount = constructedTextRepCountData.reptitionCount;
+        constructTokenArr = await this.scoresService.getSyllablesFromString(
+          constructText,
+          vowelSignArr,
+          language,
+        );
+
+        for (const originalToken of originalTokenArr) {
+          if (constructTokenArr.includes(originalToken)) {
+            correctTokens.push(originalToken);
+          } else {
+            missingTokens.push(originalToken);
+          }
+        }
+
+        missingTokens = Array.from(new Set(missingTokens));
+
+        const identifyTokens = await this.scoresService.identifyTokens(
+          CreateLearnerProfileDto.output[0].nBestTokens,
+          correctTokens,
+          missingTokens,
+          tokenHexcodeDataArr,
+          vowelSignArr,
+        );
+
+        confidence_scoresArr = identifyTokens.confidence_scoresArr;
+        confidence_scoresArr = confidence_scoresArr.map((item) => ({
+          ...item,
+          confidence_score:
+            item.confidence_score < 0.7 ? 0.777 : item.confidence_score,
+          identification_status: 1,
+        }));
+        missing_token_scoresArr = identifyTokens.missing_token_scoresArr;
+        anomaly_scoreArr = identifyTokens.anomaly_scoreArr;
+
+        const textEvalMatrices = await this.scoresService.getTextMetrics(
+          originalText,
+          constructText,
+          language,
+          Buffer.isBuffer(CreateLearnerProfileDto.audio)
+            ? CreateLearnerProfileDto.audio.toString('base64')
+            : CreateLearnerProfileDto.audio,
+        );
+
+        if (process.env.denoiserEnabled === 'true') {
+          const improved = similarityDenoisedText > similarityNonDenoisedText;
+
+          const createDenoiserOutputLog = {
+            user_id: user_id,
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || '',
+            language,
+            original_text: originalText,
+            response_text: nonDenoisedresponseText,
+            denoised_response_text: DenoisedresponseText,
+            improved,
+            comment: '',
+          };
+
+          await this.scoresService.addDenoisedOutputLog(
+            createDenoiserOutputLog,
+          );
+        }
+
+        const fluencyScore = await this.scoresService.getCalculatedFluency(
+          textEvalMatrices,
+          reptitionCount,
+          originalText,
+          responseText,
+          pause_count,
+        );
+
+        const createdAt = new Date().toISOString().replace('Z', '+00:00');
+
+        const createScoreData = {
+          user_id: user_id,
+          session: {
+            session_id: CreateLearnerProfileDto.session_id,
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
+            contentType: CreateLearnerProfileDto.contentType,
+            contentId: CreateLearnerProfileDto.contentId || '',
+            createdAt,
+            language,
+            original_text: originalText,
+            response_text: responseText,
+            construct_text: constructText,
+            confidence_scores: confidence_scoresArr,
+            anamolydata_scores: anomaly_scoreArr,
+            missing_token_scores: missing_token_scoresArr,
+            read_duration: CreateLearnerProfileDto.read_duration,
+            practice_duration: CreateLearnerProfileDto.practice_duration,
+            retry_count: CreateLearnerProfileDto.retry_count,
+            error_rate: {
+              character: textEvalMatrices.cer,
+              word: textEvalMatrices.wer,
+            },
+            count_diff: {
+              character: Math.abs(originalText.length - responseText.length),
+              word: Math.abs(
+                originalText.split(' ').length - responseText.split(' ').length,
+              ),
+            },
+            eucledian_distance: {
+              insertions: {
+                chars: textEvalMatrices.insertion,
+                count: textEvalMatrices.insertion.length,
+              },
+              deletions: {
+                chars: textEvalMatrices.deletion,
+                count: textEvalMatrices.deletion.length,
+              },
+              substitutions: {
+                chars: textEvalMatrices.substitution,
+                count: textEvalMatrices.substitution.length,
+              },
+            },
+            fluencyScore: fluencyScore.toFixed(3),
+            silence_Pause: {
+              total_duration: 0,
+              count: pause_count,
+            },
+            reptitionsCount: reptitionCount,
+            asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
+            isRetry: false,
+          },
         };
 
-        await this.scoresService.addDenoisedOutputLog(createDenoiserOutputLog);
+        await this.scoresService.create(createScoreData);
       }
 
-      const fluencyScore = await this.scoresService.getCalculatedFluency(
-        textEvalMatrices,
-        reptitionCount,
-        originalText,
-        responseText,
-        pause_count,
+      const retryAttempt = await this.scoresService.getRetryStatus(
+        user_id,
+        CreateLearnerProfileDto.contentId,
       );
-
-      const createdAt = new Date().toISOString().replace('Z', '+00:00');
-
-      const createScoreData = {
-        user_id: user_id,
-        session: {
-          session_id: CreateLearnerProfileDto.session_id,
-          sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
-          contentType: CreateLearnerProfileDto.contentType,
-          contentId: CreateLearnerProfileDto.contentId || '',
-          createdAt,
-          language,
-          original_text: originalText,
-          response_text: responseText,
-          construct_text: constructText,
-          confidence_scores: confidence_scoresArr,
-          anamolydata_scores: anomaly_scoreArr,
-          missing_token_scores: missing_token_scoresArr,
-          read_duration: CreateLearnerProfileDto.read_duration,
-          practice_duration: CreateLearnerProfileDto.practice_duration,
-          retry_count: CreateLearnerProfileDto.retry_count,
-          error_rate: {
-            character: textEvalMatrices.cer,
-            word: textEvalMatrices.wer,
-          },
-          count_diff: {
-            character: Math.abs(originalText.length - responseText.length),
-            word: Math.abs(
-              originalText.split(' ').length - responseText.split(' ').length,
-            ),
-          },
-          eucledian_distance: {
-            insertions: {
-              chars: textEvalMatrices.insertion,
-              count: textEvalMatrices.insertion.length,
-            },
-            deletions: {
-              chars: textEvalMatrices.deletion,
-              count: textEvalMatrices.deletion.length,
-            },
-            substitutions: {
-              chars: textEvalMatrices.substitution,
-              count: textEvalMatrices.substitution.length,
-            },
-          },
-          fluencyScore: fluencyScore.toFixed(3),
-          silence_Pause: {
-            total_duration: 0,
-            count: pause_count,
-          },
-          reptitionsCount: reptitionCount,
-          asrOutput: JSON.stringify(CreateLearnerProfileDto.output),
-          isRetry: false,
-        },
-      };
-
-      await this.scoresService.create(createScoreData);
-    }
-
-    const retryAttempt = await this.scoresService.getRetryStatus(
-      user_id,
-      CreateLearnerProfileDto.contentId,
-    );
 
       // Cal the subsessionWise and content_id wise target.
       let targets = await this.scoresService.getTargetsBysubSession(
@@ -1421,33 +1526,37 @@ export class ScoresController {
       );
 
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+      originalTextSyllables =
+        await this.scoresService.getSubsessionOriginalTextSyllables(
+          user_id,
+          CreateLearnerProfileDto.sub_session_id,
+        );
+      targets = targets.filter((targetsEle) => {
+        return originalTextSyllables.includes(targetsEle.character);
+      });
       const totalTargets = targets.length;
 
-    const fluency = await this.scoresService.getFluencyBysubSession(
-      user_id,
-      CreateLearnerProfileDto.sub_session_id,
-      CreateLearnerProfileDto.language,
-    );
+      const fluency = await this.scoresService.getFluencyBysubSession(
+        user_id,
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
 
-    return response.status(HttpStatus.CREATED).send({
-      status: 'success',
-      msg: 'Successfully stored data to learner profile',
-      originalText,
-      responseText,
-      subsessionTargetsCount: targets.length,
-      subsessionFluency: parseFloat(fluency.toFixed(2)),
-    });
-  } catch (err) {
-    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
-      status: 'error',
-      message: 'Server error - ' + err,
-    });
+      return response.status(HttpStatus.CREATED).send({
+        status: 'success',
+        msg: 'Successfully stored data to learner profile',
+        originalText,
+        responseText,
+        subsessionTargetsCount: targets.length,
+        subsessionFluency: parseFloat(fluency.toFixed(2)),
+      });
+    } catch (err) {
+      return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        status: 'error',
+        message: 'Server error - ' + err,
+      });
+    }
   }
-}
-
- 
 
   @ApiBody({
     description: 'Request body for storing data to the learner profile',
@@ -1528,7 +1637,7 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const confidence_scoresArr = [];
       const anomaly_scoreArr = [];
       const missing_token_scoresArr = [];
@@ -1680,6 +1789,23 @@ export class ScoresController {
         } else {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
+        }
+         // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
         }
 
         const responseTextTokensArr = responseText.split('');
@@ -2086,7 +2212,8 @@ export class ScoresController {
             }
 
             let createDenoiserOutputLog = {
-              user_id: CreateLearnerProfileDto.user_id,
+
+              user_id: user_id,
               session_id: CreateLearnerProfileDto.session_id,
               sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
               contentType: CreateLearnerProfileDto.contentType,
@@ -2112,7 +2239,7 @@ export class ScoresController {
         );
         const wordCount = Math.abs(
           CreateLearnerProfileDto.original_text.split(' ').length -
-            responseText.split(' ').length,
+          responseText.split(' ').length,
         );
         const repetitions = reptitionCount;
         const pauseCount = pause_count;
@@ -2164,11 +2291,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  responseText.length,
+                responseText.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  responseText.split(' ').length,
+                responseText.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -2254,9 +2381,8 @@ export class ScoresController {
 
       let originalTextSyllables = [];
 
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
+      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id);
       targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
-
 
       const totalTargets = targets.length;
 
@@ -2357,8 +2483,11 @@ export class ScoresController {
     @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
-      const originalText = await this.scoresService.processText(CreateLearnerProfileDto.original_text);
+      const user_id = (request as any).user.virtual_id.toString();
+      const originalText = await this.scoresService.processText(
+        CreateLearnerProfileDto.original_text,
+      );
+      const substitutions = en_config.substitutions
       const mode = CreateLearnerProfileDto.mode;
 
       let createScoreData;
@@ -2489,6 +2618,28 @@ export class ScoresController {
           );
           pause_count = CreateLearnerProfileDto.pause_count;
         }
+
+        // add the vocabulary logic
+        await this.scoresService.vocabularyCount(
+          user_id,
+          originalText,
+          responseText,
+          language,
+          CreateLearnerProfileDto.session_id,
+          CreateLearnerProfileDto.sub_session_id
+        )
+
+        // Profanity Detection logic
+        const badWordResponse = await this.scoresService.checkProfanity(responseText, language)
+        if (badWordResponse) {
+          return response.status(HttpStatus.BAD_REQUEST).send({
+            statusCode: HttpStatus.BAD_REQUEST,
+            message: 'Profanity detected.',
+          });
+        }
+        // Agreeable substitution logic
+        responseText = await this.scoresService.getBestCorrectedResponse(originalText, responseText, substitutions)
+
         // Get All hexcode for this selected language
         const tokenHexcodeDataArr = await this.scoresService.gethexcodeMapping(
           language,
@@ -2505,9 +2656,6 @@ export class ScoresController {
         let words_per_minute = textEvalMatrices.words_per_minute;
         let rate_classification = textEvalMatrices.rate_classification;
 
-        responseText = await this.scoresService.processText(
-          CreateLearnerProfileDto.output[0].source,
-        );
 
         if (
           CreateLearnerProfileDto.ans_key &&
@@ -2533,14 +2681,17 @@ export class ScoresController {
             grammar: comprehension.grammar,
             accuracy: comprehension.accuracy,
             overall: comprehension.overall,
+            feedback: comprehension.feedback
           };
           await this.scoresService.addLlmOutputLog(createLlmOutputLog);
         }
 
-        if (CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' && CreateLearnerProfileDto.hallucination_alternative && 
-        Array.isArray(CreateLearnerProfileDto.hallucination_alternative) && 
-        CreateLearnerProfileDto.hallucination_alternative.length > 0){
-
+        if (
+          CreateLearnerProfileDto['contentType'].toLowerCase() === 'word' &&
+          CreateLearnerProfileDto.hallucination_alternative &&
+          Array.isArray(CreateLearnerProfileDto.hallucination_alternative) &&
+          CreateLearnerProfileDto.hallucination_alternative.length > 0
+        ) {
           function checkResponseTextAnomaly(responseText: string): boolean {
             const phrasesToCheck = ['thank you', 'and', 'yes'];
             return phrasesToCheck.some((phrase) =>
@@ -2635,29 +2786,31 @@ export class ScoresController {
           }
         }
 
-        if (process.env.denoiserEnabled === "true") {
+        if (process.env.denoiserEnabled === 'true') {
           let improved = false;
 
           let similarityScoreNonDenoisedResText = similarityNonDenoisedText;
           let similarityScoreDenoisedResText = similarityDenoisedText;
 
-          if (similarityScoreDenoisedResText > similarityScoreNonDenoisedResText) {
+          if (
+            similarityScoreDenoisedResText > similarityScoreNonDenoisedResText
+          ) {
             improved = true;
           }
 
           let createDenoiserOutputLog = {
             user_id: user_id,
             session_id: CreateLearnerProfileDto.session_id,
-            sub_session_id: CreateLearnerProfileDto.sub_session_id || "",
+            sub_session_id: CreateLearnerProfileDto.sub_session_id || '',
             contentType: CreateLearnerProfileDto.contentType,
-            contentId: CreateLearnerProfileDto.contentId || "",
+            contentId: CreateLearnerProfileDto.contentId || '',
             language: language,
             original_text: originalText,
             response_text: nonDenoisedresponseText,
             denoised_response_text: DenoisedresponseText,
             improved: improved,
-            comment: ""
-          }
+            comment: '',
+          };
         }
 
         if (mode !== 'offline') {
@@ -2849,6 +3002,34 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
+      
+      // Recomendation api call
+      try {
+        if (process.env.IS_RECOMENDATION === "true") {
+          const recomendation_cout = 5;
+          this.scoresService.getRecommendation(
+            originalText,
+            responseText,
+            user_id,
+            CreateLearnerProfileDto.contentType,
+            recomendation_cout,
+          )
+        }
+      } catch (error) {
+        console.log('errro from the recomendation-Module');
+      }
+
+      // Recomendation api call
+      try {
+        if (process.env.VOICE_AUTH_ENABLE === "true") {
+          this.scoresService.voiceAuth(
+            CreateLearnerProfileDto.audio.toString('base64'),
+            user_id
+          )
+        }
+      } catch (error) {
+        console.log('errro from the voice-auth-Module');
+      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
@@ -2935,10 +3116,11 @@ export class ScoresController {
   @Post('/updateLearnerProfile/te')
   async updateLearnerProfileTe(
     @Req() request: FastifyRequest,
-    @Res() response: FastifyReply, 
-    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto) {
+    @Res() response: FastifyReply,
+    @Body() CreateLearnerProfileDto: CreateLearnerProfileDto,
+  ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       let originalText = CreateLearnerProfileDto.original_text;
       let createScoreData;
 
@@ -3458,11 +3640,11 @@ export class ScoresController {
         let cercal = textEvalMatrices.cer * 2;
         let charCount = Math.abs(
           CreateLearnerProfileDto.original_text.length -
-            CreateLearnerProfileDto.output[0].source.length,
+          CreateLearnerProfileDto.output[0].source.length,
         );
         let wordCount = Math.abs(
           CreateLearnerProfileDto.original_text.split(' ').length -
-            CreateLearnerProfileDto.output[0].source.split(' ').length,
+          CreateLearnerProfileDto.output[0].source.split(' ').length,
         );
         let repetitions = reptitionCount;
         let pauseCount = pause_count;
@@ -3509,11 +3691,11 @@ export class ScoresController {
             count_diff: {
               character: Math.abs(
                 CreateLearnerProfileDto.original_text.length -
-                  CreateLearnerProfileDto.output[0].source.length,
+                CreateLearnerProfileDto.output[0].source.length,
               ),
               word: Math.abs(
                 CreateLearnerProfileDto.original_text.split(' ').length -
-                  CreateLearnerProfileDto.output[0].source.split(' ').length,
+                CreateLearnerProfileDto.output[0].source.split(' ').length,
               ),
             },
             eucledian_distance: {
@@ -3562,8 +3744,14 @@ export class ScoresController {
         CreateLearnerProfileDto.language,
       );
       let originalTextSyllables = [];
-      originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,CreateLearnerProfileDto.sub_session_id);
-      targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
+      originalTextSyllables =
+        await this.scoresService.getSubsessionOriginalTextSyllables(
+          user_id,
+          CreateLearnerProfileDto.sub_session_id,
+        );
+      targets = targets.filter((targetsEle) => {
+        return originalTextSyllables.includes(targetsEle.character);
+      });
 
 
       const totalTargets = targets.length;
@@ -3644,7 +3832,6 @@ export class ScoresController {
     }
   }
 
- 
   @Get('/GetTargets/user')
   @ApiOperation({ summary: 'Get Targets character by user id' })
   @ApiResponse({
@@ -3678,7 +3865,7 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const targetResult = await this.scoresService.getTargetsByUser(
         user_id,
         language,
@@ -3897,9 +4084,9 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       const familiarityResult = await this.scoresService.getFamiliarityByUser(
-        id,
+        user_id,
         language,
       );
       return response.status(HttpStatus.OK).send(familiarityResult);
@@ -3911,7 +4098,6 @@ export class ScoresController {
     }
   }
 
- 
   @Get('GetContent/char')
   @ApiOperation({
     summary:
@@ -3941,7 +4127,7 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
-      const id =((request as any).user.virtual_id).toString();
+      const id = (request as any).user.virtual_id.toString();
       let currentLevel = 'm0';
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
@@ -4021,12 +4207,12 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       // Add the check for the limit
-      if(contentlimit < 5){
+      if (contentlimit < 5) {
         contentlimit = 5;
-      }else if( contentlimit > 20){
-        contentlimit = 20
+      } else if (contentlimit > 20) {
+        contentlimit = 20;
       }
-      
+
       const textData = {
         tokenArr: getGetTargetCharArr,
         language: language || 'ta',
@@ -4043,7 +4229,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': request.headers.authorization
+              Authorization: request.headers.authorization,
             },
           })
           .pipe(
@@ -4094,7 +4280,6 @@ export class ScoresController {
     }
   }
 
-  
   @Get('GetContent/word')
   @ApiOperation({
     summary:
@@ -4112,15 +4297,20 @@ export class ScoresController {
     },
   })
 
-  async GetContentWordbyUser( 
+  async GetContentWordbyUser(
     @Req() request: FastifyRequest,
-    @Query('language') language: string, 
-    @Query() { contentlimit = 5 }, 
-    @Query() { gettargetlimit = 5 }, 
-    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
-    @Res() response: FastifyReply) {
+    @Query('language') language: string,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query(
+      'tags',
+      new ParseArrayPipe({ items: String, separator: ',', optional: true }),
+    )
+    tags: string[],
+    @Res() response: FastifyReply,
+  ) {
     try {
-      const id =((request as any).user.virtual_id).toString();
+      const id = (request as any).user.virtual_id.toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -4181,10 +4371,10 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       // Add the check for the limit
-      if(contentlimit < 5){
+      if (contentlimit < 5) {
         contentlimit = 5;
-      }else if( contentlimit > 20){
-        contentlimit = 20
+      } else if (contentlimit > 20) {
+        contentlimit = 20;
       }
 
       const textData = {
@@ -4203,7 +4393,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': request.headers.authorization
+              Authorization: request.headers.authorization,
             },
           })
           .pipe(
@@ -4258,7 +4448,6 @@ export class ScoresController {
     }
   }
 
-  
   @Get('GetContent/sentence')
   @ApiOperation({
     summary:
@@ -4276,22 +4465,34 @@ export class ScoresController {
     },
   })
 
-
   async GetContentSentencebyUser(
     @Req() request: FastifyRequest,
-    @Query('language') language, 
-    @Query() { contentlimit = 5 }, 
-    @Query() { gettargetlimit = 5 }, 
-    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
-    @Query('mechanics_id') mechanics_id, 
-    @Query('level_competency', new ParseArrayPipe({ items: String, separator: ',', optional: true })) level_competency: string[], 
-    @Query('story_mode') story_mode, 
-    @Query('category') category:string,
-    @Query('type_of_learner') type_of_learner:string,
-    @Res() response: FastifyReply) {
- 
+    @Query('language') language,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query(
+      'tags',
+      new ParseArrayPipe({ items: String, separator: ',', optional: true }),
+    )
+    tags: string[],
+    @Query('mechanics_id') mechanics_id,
+    @Query(
+      'level_competency',
+      new ParseArrayPipe({ items: String, separator: ',', optional: true }),
+    )
+    level_competency: string[],
+    @Query('story_mode') story_mode,
+    @Query('category') category: string,
+    @Query('type_of_learner') type_of_learner: string,
+    @Query(
+      'CEFR_level',
+      new ParseArrayPipe({ items: String, separator: ',', optional: true }),
+    )
+    CEFR_level: string[],
+    @Res() response: FastifyReply,
+  ) {
     try {
-      const id =((request as any).user.virtual_id).toString();
+      const id = (request as any).user.virtual_id.toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -4353,10 +4554,10 @@ export class ScoresController {
 
       // Add the check for the limit
       // Add the check for the limit
-      if(contentlimit < 5){
+      if (contentlimit < 5) {
         contentlimit = 5;
-      }else if( contentlimit > 20){
-        contentlimit = 20
+      } else if (contentlimit > 20) {
+        contentlimit = 20;
       }
 
       const textData = {
@@ -4370,6 +4571,7 @@ export class ScoresController {
         graphemesMappedObj: graphemesMappedObj,
         mechanics_id: mechanics_id,
         level_competency: level_competency || [],
+        CEFR_level: CEFR_level || [],
         story_mode: story_mode || false,
       };
 
@@ -4378,7 +4580,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': request.headers.authorization
+              Authorization: request.headers.authorization,
             },
           })
           .pipe(
@@ -4433,7 +4635,6 @@ export class ScoresController {
     }
   }
 
- 
   @Get('GetContent/paragraph')
   @ApiOperation({
     summary:
@@ -4451,16 +4652,21 @@ export class ScoresController {
     },
   })
 
-  async GetContentParagraphbyUser( 
+  async GetContentParagraphbyUser(
     @Req() request: FastifyRequest,
-    @Query('language') language, 
-    @Query() { contentlimit = 5 }, 
-    @Query() { gettargetlimit = 5 }, 
-    @Query('tags', new ParseArrayPipe({ items: String, separator: ',', optional: true })) tags: string[], 
-    @Res() response: FastifyReply) {
+    @Query('language') language,
+    @Query() { contentlimit = 5 },
+    @Query() { gettargetlimit = 5 },
+    @Query(
+      'tags',
+      new ParseArrayPipe({ items: String, separator: ',', optional: true }),
+    )
+    tags: string[],
+    @Res() response: FastifyReply,
+  ) {
 
     try {
-      const id =((request as any).user.virtual_id).toString();
+      const id = (request as any).user.virtual_id.toString();
       const graphemesMappedObj = {};
       const graphemesMappedArr = [];
 
@@ -4521,10 +4727,10 @@ export class ScoresController {
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
       // Add the check for the limit
-      if(contentlimit < 5){
+      if (contentlimit < 5) {
         contentlimit = 5;
-      }else if( contentlimit > 20){
-        contentlimit = 20
+      } else if (contentlimit > 20) {
+        contentlimit = 20;
       }
 
       const textData = {
@@ -4543,7 +4749,7 @@ export class ScoresController {
           .post(url, JSON.stringify(textData), {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': request.headers.authorization
+              Authorization: request.headers.authorization,
             },
           })
           .pipe(
@@ -4657,10 +4863,11 @@ export class ScoresController {
   @Post('/getSetResult')
   async getSetResult(
     @Req() request: FastifyRequest,
-    @Res() response: FastifyReply, 
-    @Body() getSetResult: any) {
+    @Res() response: FastifyReply,
+    @Body() getSetResult: any,
+  ) {
     try {
-      const user_id = ((request as any).user.virtual_id).toString();
+      const user_id = (request as any).user.virtual_id.toString();
       let targetPerThreshold = 30;
       let contentLimit = 5;
       let milestoneEntry = true;
@@ -4672,12 +4879,30 @@ export class ScoresController {
       let sessionResult = 'No Result';
       let max_level = getSetResult.max_level;
 
-      
-      let targets = await this.scoresService.getTargetsBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
-      let fluency = await this.scoresService.getFluencyBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
-      let familiarity = await this.scoresService.getFamiliarityBysubSession(user_id,getSetResult.sub_session_id, getSetResult.language);
-      let correct_score = await this.scoresService.getCorrectnessBysubSession(getSetResult.sub_session_id, getSetResult.language);
-      ({ overallScore, isComprehension } = await this.scoresService.getComprehensionScore(getSetResult.sub_session_id, getSetResult.language));
+      let targets = await this.scoresService.getTargetsBysubSession(
+        user_id,
+        getSetResult.sub_session_id,
+        getSetResult.language,
+      );
+      let fluency = await this.scoresService.getFluencyBysubSession(
+        user_id,
+        getSetResult.sub_session_id,
+        getSetResult.language,
+      );
+      let familiarity = await this.scoresService.getFamiliarityBysubSession(
+        user_id,
+        getSetResult.sub_session_id,
+        getSetResult.language,
+      );
+      let correct_score = await this.scoresService.getCorrectnessBysubSession(
+        getSetResult.sub_session_id,
+        getSetResult.language,
+      );
+      ({ overallScore, isComprehension } =
+        await this.scoresService.getComprehensionScore(
+          getSetResult.sub_session_id,
+          getSetResult.language,
+        ));
 
 
       if (is_mechanics && isComprehension) {
@@ -4689,7 +4914,8 @@ export class ScoresController {
       }
 
       if (getSetResult.language != 'en') {
-        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id,getSetResult.sub_session_id);
+
+        originalTextSyllables = await this.scoresService.getSubsessionOriginalTextSyllables(user_id, getSetResult.sub_session_id);
         targets = targets.filter((targetsEle) => { return originalTextSyllables.includes(targetsEle.character) });
 
       }
@@ -4776,12 +5002,10 @@ export class ScoresController {
         !getSetResult.collectionId
       ) {
         const userLevelNum = parseInt(previous_level?.replace('m', ''), 10);
-        if (
-          ['en', 'kn'].includes(getSetResult.language.toLowerCase()) &&
-          userLevelNum < 10
-        ) {
+        if (['en', 'kn'].includes(getSetResult.language.toLowerCase()) && userLevelNum < 10) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
+          
           const passThreshold = userLevelNum >= 4 ? 3.0 : 2.6;
 
           // Retrieve all audio records for the given sub-session and language 'en' or kn
@@ -4943,8 +5167,8 @@ export class ScoresController {
                     ? 'pass'
                     : 'fail'
                   : passCountProsody > totalAudiosProsody / 2
-                  ? 'pass'
-                  : 'fail';
+                    ? 'pass'
+                    : 'fail';
             } else {
               prosodyResult = 'fail';
             }
@@ -5008,11 +5232,11 @@ export class ScoresController {
         // This collection_id is for the Ta
         if (
           getSetResult.collectionId ===
-            '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
+          '5221f84c-8abb-4601-a9d0-f8d8dd496566' ||
           getSetResult.collectionId ===
-            'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
+          'e9c7d535-3e98-4de1-b638-fae9413d7c09' ||
           getSetResult.collectionId ===
-            '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
+          '575fbb16-5b6c-43d8-96ca-f2288251b45e' ||
           (getSetResult.collectionId ===
             '7c736010-6c8f-42b7-b61a-e6f801b3e163' &&
             getSetResult.language === 'ta')
@@ -5026,11 +5250,11 @@ export class ScoresController {
           // This collection_id is for the Kn
         } else if (
           getSetResult.collectionId ===
-            '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
+          '1cc3b4d4-79ad-4412-9325-b7fb6ca875bf' ||
           getSetResult.collectionId ===
-            '976a7631-3887-4d18-9576-7ca8205b82e8' ||
+          '976a7631-3887-4d18-9576-7ca8205b82e8' ||
           getSetResult.collectionId ===
-            '9374ae97-80e4-419b-8e96-784734317e82' ||
+          '9374ae97-80e4-419b-8e96-784734317e82' ||
           (getSetResult.collectionId ===
             'e6f3537d-7a34-4b08-9824-0ddbc4c49be3' &&
             getSetResult.language === 'kn')
@@ -5043,11 +5267,11 @@ export class ScoresController {
           // This collection_id is for the En
         } else if (
           getSetResult.collectionId ===
-            '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
+          '36e4cff0-0552-4107-b8f4-9f9c5a3ff3c1' ||
           getSetResult.collectionId ===
-            'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
+          'fba7282d-aba3-4e95-8916-40b79f9e3f50' ||
           getSetResult.collectionId ===
-            '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
+          '3c62cb34-9565-4b81-8e96-da86d90b6072' ||
           (getSetResult.collectionId ===
             'c637ac92-2ecf-4015-82e9-c4002479ae32' &&
             getSetResult.language === 'en')
@@ -5060,11 +5284,11 @@ export class ScoresController {
           // This collection_id is for the Te
         } else if (
           getSetResult.collectionId ===
-            '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
+          '8b5023d6-bafe-4cbe-8967-1f3f19481e4f' ||
           getSetResult.collectionId ===
-            '1df7cb53-4609-4ba0-a0dc-2e4dc188619a' ||
+          '1df7cb53-4609-4ba0-a0dc-2e4dc188619a' ||
           getSetResult.collectionId ===
-            'cfbd93f9-10f6-4064-ab0f-f2f8d6e45e6a' ||
+          'cfbd93f9-10f6-4064-ab0f-f2f8d6e45e6a' ||
           (getSetResult.collectionId ===
             'd6f84966-53fa-44bb-93d9-598c84974f04' &&
             getSetResult.language === 'te')
@@ -5077,11 +5301,11 @@ export class ScoresController {
           // This collection_id is for the Gu
         } else if (
           getSetResult.collectionId ===
-            '1394ade3-cc95-48cd-98ca-f3288860b0e1' ||
+          '1394ade3-cc95-48cd-98ca-f3288860b0e1' ||
           getSetResult.collectionId ===
-            'eea19621-ae97-4a5d-9933-882a493c84d8' ||
+          'eea19621-ae97-4a5d-9933-882a493c84d8' ||
           getSetResult.collectionId ===
-            '61ef8260-98c5-4bc0-9ccd-43cd34c6ecab' ||
+          '61ef8260-98c5-4bc0-9ccd-43cd34c6ecab' ||
           (getSetResult.collectionId ===
             '3ac7bf14-4455-4e20-9dd4-2af2a04a8227' &&
             getSetResult.language === 'gu')
@@ -5094,11 +5318,11 @@ export class ScoresController {
           // This collection_id is for the Hi
         } else if (
           getSetResult.collectionId ===
-            '0d00c89d-5c73-4de1-9153-c300c972ad64' ||
+          '0d00c89d-5c73-4de1-9153-c300c972ad64' ||
           getSetResult.collectionId ===
-            'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
+          'f10b7f82-8a1a-4448-b319-6eea17acff26' ||
           getSetResult.collectionId ===
-            '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
+          '9e77a188-6785-4e56-b2d0-bfac97bcc6a2' ||
           (getSetResult.collectionId ===
             '7765ff21-e07a-4a68-9b42-18751f504ef0' &&
             getSetResult.language === 'hi')
@@ -5110,11 +5334,11 @@ export class ScoresController {
           // This collection_id is for the or
         } else if (
           getSetResult.collectionId ===
-            '010ba3e3-f6b4-4a4a-856e-e323a288b98e' ||
+          '010ba3e3-f6b4-4a4a-856e-e323a288b98e' ||
           getSetResult.collectionId ===
-            '971cdd0b-989f-429b-999a-620c10c670b5' ||
+          '971cdd0b-989f-429b-999a-620c10c670b5' ||
           getSetResult.collectionId ===
-            '104fff5c-9f00-4268-92bb-9697f943035a' ||
+          '104fff5c-9f00-4268-92bb-9697f943035a' ||
           (getSetResult.collectionId ===
             'a4947dd3-e9af-4e0c-b8e9-52ed77a1e8cf' &&
             getSetResult.language === 'or')
@@ -5132,13 +5356,13 @@ export class ScoresController {
             // this collection id is for M2
             if (
               getSetResult.collectionId ===
-                'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
+              'bd20fee5-31c3-48d9-ab6f-842eeebf17ff' ||
               getSetResult.collectionId ===
-                '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
+              '61bc9579-0f9b-47ae-b446-7cdd525ce413' ||
               getSetResult.collectionId ===
-                '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
+              '76ef507c-5d56-457c-aa3a-647cf5dba545' ||
               getSetResult.collectionId ===
-                '55767bfa-0e12-4d8f-999b-e84daf6c7587'
+              '55767bfa-0e12-4d8f-999b-e84daf6c7587'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5148,13 +5372,13 @@ export class ScoresController {
               // this collection id is for M3
             } else if (
               getSetResult.collectionId ===
-                '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
+              '986ff23e-8b56-4366-8510-8a7e7e0f36da' ||
               getSetResult.collectionId ===
-                '85d58650-0771-4b28-b185-d074b5a5982d' ||
+              '85d58650-0771-4b28-b185-d074b5a5982d' ||
               getSetResult.collectionId ===
-                '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
+              '461d9b9e-0db6-48ce-9088-d377d0cd33a6' ||
               getSetResult.collectionId ===
-                '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
+              '2b196c2a-5f8e-4507-ac60-98d9fe6ae12b'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5164,26 +5388,26 @@ export class ScoresController {
               // This collection id is for m4
             } else if (
               getSetResult.collectionId ===
-                '67b820f5-096d-42c2-acce-b781d59efe7e' ||
+              '67b820f5-096d-42c2-acce-b781d59efe7e' ||
               getSetResult.collectionId ===
-                '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
+              '895518d8-64ec-406d-a3d9-44c4ba8d2e57' ||
               getSetResult.collectionId ===
-                'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
+              'b83971a5-22a8-46ea-90ab-485182c7cd9d' ||
               getSetResult.collectionId ===
-                '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
+              '68dfd9cb-a33d-4d15-a3ea-54755f8311c8'
             ) {
               milestone_level = 'm4';
 
               // This Collection id is for m1
             } else if (
               getSetResult.collectionId ===
-                '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
+              '94312c93-5bb8-4144-8822-9a61ad1cd5a8' ||
               getSetResult.collectionId ===
-                '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
+              '67697c4f-fdd2-446b-b765-f610bc2c355c' ||
               getSetResult.collectionId ===
-                'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
+              'f9ea2715-0d1b-465e-83f9-54c77341f388' ||
               getSetResult.collectionId ===
-                'ed47eb63-87c8-41f4-821d-1400fef37b78'
+              'ed47eb63-87c8-41f4-821d-1400fef37b78'
             ) {
               milestone_level = 'm1';
             }
@@ -5194,13 +5418,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                'b755df98-198b-440a-90e0-391579ef4bfb' ||
+              'b755df98-198b-440a-90e0-391579ef4bfb' ||
               getSetResult.collectionId ===
-                '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
+              '4a8bddeb-cddd-4b64-9845-662a0d287c34' ||
               getSetResult.collectionId ===
-                'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
+              'f9b877d2-4994-4eab-998c-aacaf0076b5a' ||
               getSetResult.collectionId ===
-                '6a89f990-8727-49da-b128-b7ea1839d025'
+              '6a89f990-8727-49da-b128-b7ea1839d025'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5209,13 +5433,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '29bb9cff-9510-4693-bec5-9436a686b836' ||
+              '29bb9cff-9510-4693-bec5-9436a686b836' ||
               getSetResult.collectionId ===
-                '5828539f-4b1f-4502-b648-b2843d61f35d' ||
+              '5828539f-4b1f-4502-b648-b2843d61f35d' ||
               getSetResult.collectionId ===
-                '37a406a5-d82e-447d-9762-17c76f5005ef' ||
+              '37a406a5-d82e-447d-9762-17c76f5005ef' ||
               getSetResult.collectionId ===
-                '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
+              '69b5512e-7b9f-43a6-9e6c-b25fb83b8661'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5224,24 +5448,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
+              'a2c5e2ef-27b8-43d0-9c17-38cdcfe50f4c' ||
               getSetResult.collectionId ===
-                '390c8719-fc52-42f3-b49d-41547a0639d7' ||
+              '390c8719-fc52-42f3-b49d-41547a0639d7' ||
               getSetResult.collectionId ===
-                'aee5f3f4-213c-4596-8074-0addab60122a' ||
+              'aee5f3f4-213c-4596-8074-0addab60122a' ||
               getSetResult.collectionId ===
-                'e28d2463-adca-46e6-8159-04c99d6158d3'
+              'e28d2463-adca-46e6-8159-04c99d6158d3'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                'ac930427-4a73-41a8-94d5-be74defd2993' ||
+              'ac930427-4a73-41a8-94d5-be74defd2993' ||
               getSetResult.collectionId ===
-                '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
+              '086482ed-9748-4c74-93b1-fe24dd6c98c7' ||
               getSetResult.collectionId ===
-                '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
+              '272a648e-f2a3-41a4-a3dd-6ebf4b5ec40d' ||
               getSetResult.collectionId ===
-                '61b65b9b-94b8-4212-94e5-33ce8e80435a'
+              '61b65b9b-94b8-4212-94e5-33ce8e80435a'
             ) {
               milestone_level = 'm1';
             }
@@ -5252,13 +5476,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
+              '91a5279d-f4a2-4c4d-bc8f-0b15ba6e5995' ||
               getSetResult.collectionId ===
-                'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
+              'd6d95b4a-9d74-48ff-8f75-a606d5672764' ||
               getSetResult.collectionId ===
-                'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
+              'f99ff325-05c0-4cff-b825-b2cbb9638300' ||
               getSetResult.collectionId ===
-                '775c974a-4bda-4cfc-bc47-2aff56e39c46'
+              '775c974a-4bda-4cfc-bc47-2aff56e39c46'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5267,13 +5491,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
+              'f9eb8c70-524f-46a1-a737-1eec64a42e6f' ||
               getSetResult.collectionId ===
-                'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
+              'f24d6660-c759-44f9-a4ae-5b46b62098b2' ||
               getSetResult.collectionId ===
-                'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
+              'f6b5638d-4398-4cf4-833c-42a4695a6425' ||
               getSetResult.collectionId ===
-                '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
+              '87c2866e-6249-4fe1-9b1b-8b22ddd05ea7'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5282,24 +5506,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
+              'e62061ea-4195-4460-b8e3-c0433bf8624e' ||
               getSetResult.collectionId ===
-                'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
+              'e276d47b-b262-4af1-b424-ead68b2b83bf' ||
               getSetResult.collectionId ===
-                'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
+              'b9ab3b2f-5c21-4c61-b9c8-90898b5278dd' ||
               getSetResult.collectionId ===
-                '809039e5-119d-42ae-925f-b2546b1e3d7b'
+              '809039e5-119d-42ae-925f-b2546b1e3d7b'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
+              '5b69052e-f609-4004-adce-cf0fcfdac98b' ||
               getSetResult.collectionId ===
-                '30c5800e-4a02-4259-8328-abf57e4255ca' ||
+              '30c5800e-4a02-4259-8328-abf57e4255ca' ||
               getSetResult.collectionId ===
-                'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
+              'b2eb8d4a-5d2b-441a-8269-0151e089c253' ||
               getSetResult.collectionId ===
-                'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
+              'b12b79ec-f7cb-44b4-99c9-5ea747d4f99a'
             ) {
               milestone_level = 'm1';
             }
@@ -5310,13 +5534,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                '9682eee7-f6dc-4277-9ff7-1d1f4f079020' ||
+              '9682eee7-f6dc-4277-9ff7-1d1f4f079020' ||
               getSetResult.collectionId ===
-                '45e148f0-c591-479f-becd-2e1f85caf11e' ||
+              '45e148f0-c591-479f-becd-2e1f85caf11e' ||
               getSetResult.collectionId ===
-                '33fb7dfa-4c51-42dd-b4cd-7a38747b96f4' ||
+              '33fb7dfa-4c51-42dd-b4cd-7a38747b96f4' ||
               getSetResult.collectionId ===
-                '5a5560e8-e22a-402c-a6da-fb93bfc2b335'
+              '5a5560e8-e22a-402c-a6da-fb93bfc2b335'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5325,13 +5549,13 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '3b339169-df4e-4490-8ff4-4616370ba9af' ||
+              '3b339169-df4e-4490-8ff4-4616370ba9af' ||
               getSetResult.collectionId ===
-                '7d1d2108-c742-470b-9af9-988411bc05d6' ||
+              '7d1d2108-c742-470b-9af9-988411bc05d6' ||
               getSetResult.collectionId ===
-                'edc2b898-ba23-4cc6-83c4-54a567a83f09' ||
+              'edc2b898-ba23-4cc6-83c4-54a567a83f09' ||
               getSetResult.collectionId ===
-                '835f0357-f0fe-45ba-8ec1-d55f19d80b3c'
+              '835f0357-f0fe-45ba-8ec1-d55f19d80b3c'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5340,24 +5564,24 @@ export class ScoresController {
               }
             } else if (
               getSetResult.collectionId ===
-                '56b06985-fe48-4a89-9b1f-a9f3c6cf1e28' ||
+              '56b06985-fe48-4a89-9b1f-a9f3c6cf1e28' ||
               getSetResult.collectionId ===
-                'c76fe38d-0881-4b36-aaa2-85dc679a5640' ||
+              'c76fe38d-0881-4b36-aaa2-85dc679a5640' ||
               getSetResult.collectionId ===
-                '81faf48a-e37c-4909-80de-4ff7d7f204f0' ||
+              '81faf48a-e37c-4909-80de-4ff7d7f204f0' ||
               getSetResult.collectionId ===
-                'd4652c35-a39c-44ca-b833-74504efc69ab'
+              'd4652c35-a39c-44ca-b833-74504efc69ab'
             ) {
               milestone_level = 'm4';
             } else if (
               getSetResult.collectionId ===
-                '21a6619e-bb15-4b49-823e-68bfc703e394' ||
+              '21a6619e-bb15-4b49-823e-68bfc703e394' ||
               getSetResult.collectionId ===
-                '74102541-9127-4c2e-aa6f-e19f9b914f42' ||
+              '74102541-9127-4c2e-aa6f-e19f9b914f42' ||
               getSetResult.collectionId ===
-                '34651976-b302-4ddf-b858-236b5e4eb093' ||
+              '34651976-b302-4ddf-b858-236b5e4eb093' ||
               getSetResult.collectionId ===
-                '55149fbb-4fb1-4e4d-9b77-16e30e537b21'
+              '55149fbb-4fb1-4e4d-9b77-16e30e537b21'
             ) {
               milestone_level = 'm1';
             }
@@ -5370,13 +5594,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                'e1e87800-f530-4868-aebe-4f2402d29eb8' ||
+              'e1e87800-f530-4868-aebe-4f2402d29eb8' ||
               getSetResult.collectionId ===
-                '9fa1173e-307f-4c47-af07-482228667f2c' ||
+              '9fa1173e-307f-4c47-af07-482228667f2c' ||
               getSetResult.collectionId ===
-                '3d0a5345-2acb-4ed1-919d-fc6511417ed2' ||
+              '3d0a5345-2acb-4ed1-919d-fc6511417ed2' ||
               getSetResult.collectionId ===
-                '42e4140b-4294-424f-b488-f0c53fc376c9'
+              '42e4140b-4294-424f-b488-f0c53fc376c9'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5386,13 +5610,13 @@ export class ScoresController {
               // this collection id is for M3
             } else if (
               getSetResult.collectionId ===
-                '6e856dc6-073d-43fe-9086-2bc5869eca86' ||
+              '6e856dc6-073d-43fe-9086-2bc5869eca86' ||
               getSetResult.collectionId ===
-                '4c7e2f94-25e1-4bd7-a04c-7bfa7a54d187' ||
+              '4c7e2f94-25e1-4bd7-a04c-7bfa7a54d187' ||
               getSetResult.collectionId ===
-                '8da5ddf4-8e22-4c69-97bc-2edf1f5d5e18' ||
+              '8da5ddf4-8e22-4c69-97bc-2edf1f5d5e18' ||
               getSetResult.collectionId ===
-                'f70b2c60-f321-4ddf-90c9-5038a23b6595'
+              'f70b2c60-f321-4ddf-90c9-5038a23b6595'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5402,25 +5626,25 @@ export class ScoresController {
               // This collection id is for m4
             } else if (
               getSetResult.collectionId ===
-                '0601c390-01a8-4887-8029-1cd9852abac6' ||
+              '0601c390-01a8-4887-8029-1cd9852abac6' ||
               getSetResult.collectionId ===
-                '85e45847-bdc1-4421-b9d0-b3592b9a068a' ||
+              '85e45847-bdc1-4421-b9d0-b3592b9a068a' ||
               getSetResult.collectionId ===
-                '4299a52a-0932-4ebd-b33f-5dab9ecb7e76' ||
+              '4299a52a-0932-4ebd-b33f-5dab9ecb7e76' ||
               getSetResult.collectionId ===
-                'c78fdc09-11d9-4209-acd1-3e4d550857bf'
+              'c78fdc09-11d9-4209-acd1-3e4d550857bf'
             ) {
               milestone_level = 'm4';
               // This Collection id is for m1
             } else if (
               getSetResult.collectionId ===
-                '24d4b913-1f5a-45cd-8b72-7e7125f56920' ||
+              '24d4b913-1f5a-45cd-8b72-7e7125f56920' ||
               getSetResult.collectionId ===
-                '5eb9babf-2ec1-4760-9e6e-d515ddb8f405' ||
+              '5eb9babf-2ec1-4760-9e6e-d515ddb8f405' ||
               getSetResult.collectionId ===
-                'b8830bb6-dee3-46f9-b7e3-09aca044ceef' ||
+              'b8830bb6-dee3-46f9-b7e3-09aca044ceef' ||
               getSetResult.collectionId ===
-                '14209021-7373-42ac-b02d-a32f0ee89ef9'
+              '14209021-7373-42ac-b02d-a32f0ee89ef9'
             ) {
               milestone_level = 'm1';
             }
@@ -5433,13 +5657,13 @@ export class ScoresController {
           ) {
             if (
               getSetResult.collectionId ===
-                '6f64d4a2-b6e5-4a2b-91e5-f6be9f2d4d8b' ||
+              '6f64d4a2-b6e5-4a2b-91e5-f6be9f2d4d8b' ||
               getSetResult.collectionId ===
-                '00644696-a8b6-48fc-b73f-25a0da567a14' ||
+              '00644696-a8b6-48fc-b73f-25a0da567a14' ||
               getSetResult.collectionId ===
-                '2a1a6894-d953-4a26-a294-a7f66469b209' ||
+              '2a1a6894-d953-4a26-a294-a7f66469b209' ||
               getSetResult.collectionId ===
-                'e0bdd73c-dd8b-4c2b-92cf-be753fd32c46'
+              'e0bdd73c-dd8b-4c2b-92cf-be753fd32c46'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5449,13 +5673,13 @@ export class ScoresController {
               // this collection id is for M3
             } else if (
               getSetResult.collectionId ===
-                'ab289254-45b1-40ed-9b84-3e414577120f' ||
+              'ab289254-45b1-40ed-9b84-3e414577120f' ||
               getSetResult.collectionId ===
-                '98a53df5-c4e3-4045-870d-1154f1e5023a' ||
+              '98a53df5-c4e3-4045-870d-1154f1e5023a' ||
               getSetResult.collectionId ===
-                '8c438757-e35b-4beb-ae5f-015a9ed3f7f6' ||
+              '8c438757-e35b-4beb-ae5f-015a9ed3f7f6' ||
               getSetResult.collectionId ===
-                'a8492aad-b904-406a-bae1-e3f6ebda48ca'
+              'a8492aad-b904-406a-bae1-e3f6ebda48ca'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5465,25 +5689,25 @@ export class ScoresController {
               // This collection id is for m4
             } else if (
               getSetResult.collectionId ===
-                'ee548dec-f599-47a4-8767-bddadb20ed70' ||
+              'ee548dec-f599-47a4-8767-bddadb20ed70' ||
               getSetResult.collectionId ===
-                'a1cd9d37-2fe1-429f-8830-dde473b9e87f' ||
+              'a1cd9d37-2fe1-429f-8830-dde473b9e87f' ||
               getSetResult.collectionId ===
-                '1da05e37-8ddc-4a5e-b059-abaa3ef45198' ||
+              '1da05e37-8ddc-4a5e-b059-abaa3ef45198' ||
               getSetResult.collectionId ===
-                '62fca34f-12da-4017-83f5-ae88bf99c48d'
+              '62fca34f-12da-4017-83f5-ae88bf99c48d'
             ) {
               milestone_level = 'm4';
               // This Collection id is for m1
             } else if (
               getSetResult.collectionId ===
-                '919aba0b-7443-4d6c-a1dc-e7b42a803496' ||
+              '919aba0b-7443-4d6c-a1dc-e7b42a803496' ||
               getSetResult.collectionId ===
-                'd95a1672-70d3-437f-92da-9013a4e5e593' ||
+              'd95a1672-70d3-437f-92da-9013a4e5e593' ||
               getSetResult.collectionId ===
-                'dfe36bd6-91d5-436e-b283-0dc3704f19f5' ||
+              'dfe36bd6-91d5-436e-b283-0dc3704f19f5' ||
               getSetResult.collectionId ===
-                'e0021945-8948-4467-a256-13b5bfbbe6af'
+              'e0021945-8948-4467-a256-13b5bfbbe6af'
             ) {
               milestone_level = 'm1';
             }
@@ -5496,13 +5720,13 @@ export class ScoresController {
             // this collection id is for M2
             if (
               getSetResult.collectionId ===
-                'f1c48b67-9876-4058-a2d0-d38c8bb4e3fd' ||
+              'f1c48b67-9876-4058-a2d0-d38c8bb4e3fd' ||
               getSetResult.collectionId ===
-                '7dcb258c-8cb8-41cd-971f-15e46fa2136d' ||
+              '7dcb258c-8cb8-41cd-971f-15e46fa2136d' ||
               getSetResult.collectionId ===
-                '647d40b3-35d6-415f-9a41-2388d8ca147f' ||
+              '647d40b3-35d6-415f-9a41-2388d8ca147f' ||
               getSetResult.collectionId ===
-                '52e6cdfc-3f1e-4ca6-84ff-4a2ab04c2cfc'
+              '52e6cdfc-3f1e-4ca6-84ff-4a2ab04c2cfc'
             ) {
               if (sessionResult === 'pass') {
                 milestone_level = 'm2';
@@ -5512,13 +5736,13 @@ export class ScoresController {
               // this collection id is for M3
             } else if (
               getSetResult.collectionId ===
-                'baf0e828-caad-4597-80c3-e76503b62bbe' ||
+              'baf0e828-caad-4597-80c3-e76503b62bbe' ||
               getSetResult.collectionId ===
-                'ea3c6696-498b-4827-bc6c-3740fad6adfd' ||
+              'ea3c6696-498b-4827-bc6c-3740fad6adfd' ||
               getSetResult.collectionId ===
-                '543a324d-9ade-4621-aa04-2ef16540ac87' ||
+              '543a324d-9ade-4621-aa04-2ef16540ac87' ||
               getSetResult.collectionId ===
-                '19b1e674-e633-4339-9365-e1ade2fc5f59'
+              '19b1e674-e633-4339-9365-e1ade2fc5f59'
             ) {
               if (sessionResult === 'fail') {
                 milestone_level = 'm3';
@@ -5528,26 +5752,26 @@ export class ScoresController {
               // This collection id is for m4
             } else if (
               getSetResult.collectionId ===
-                '3ffd72bc-d45d-4148-a3d5-b786b0a00924' ||
+              '3ffd72bc-d45d-4148-a3d5-b786b0a00924' ||
               getSetResult.collectionId ===
-                'c647f7e8-29f8-4b92-98f4-7995d6dd05e4' ||
+              'c647f7e8-29f8-4b92-98f4-7995d6dd05e4' ||
               getSetResult.collectionId ===
-                '1501b007-1136-4360-838f-84c4a2a50a8c' ||
+              '1501b007-1136-4360-838f-84c4a2a50a8c' ||
               getSetResult.collectionId ===
-                '4a261a24-187e-4616-954c-c2e9d38189ac'
+              '4a261a24-187e-4616-954c-c2e9d38189ac'
             ) {
               milestone_level = 'm4';
 
               // This Collection id is for m1
             } else if (
               getSetResult.collectionId ===
-                '59f80fb8-5ff4-4739-b7ad-3811af25b575' ||
+              '59f80fb8-5ff4-4739-b7ad-3811af25b575' ||
               getSetResult.collectionId ===
-                'e5f7a86f-3b9f-4dc4-b64f-ff8ade0b88c3' ||
+              'e5f7a86f-3b9f-4dc4-b64f-ff8ade0b88c3' ||
               getSetResult.collectionId ===
-                'c9564b7a-7854-4989-a43c-1a20a253d6b2' ||
+              'c9564b7a-7854-4989-a43c-1a20a253d6b2' ||
               getSetResult.collectionId ===
-                'bf48828e-2b54-462d-a12b-59025e2c1fd7'
+              'bf48828e-2b54-462d-a12b-59025e2c1fd7'
             ) {
               milestone_level = 'm1';
             }
@@ -5605,9 +5829,11 @@ export class ScoresController {
           previousLevel: previous_level,
           totalSyllables: totalSyllables,
           fluency: fluency,
+          percentage: passingPercentage || 0,
           fluencyResult: fluencyResult,
           prosodyResult: prosodyResult,
           targetsPercentage: targetsPercentage,
+          langauge: getSetResult.language,
           totalCorrectnessScore:
             (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
           comprehensionScore: overallScore,
@@ -5629,8 +5855,9 @@ export class ScoresController {
           prosodyResult: prosodyResult,
           percentage: passingPercentage || 0,
           targetsPercentage: targetsPercentage || 0,
-          total_correctness_score:correct_score[0]?.total_correctness_score / contentLimit || 0,
-          comprehensionScore: overallScore
+          total_correctness_score:
+            correct_score[0]?.total_correctness_score / contentLimit || 0,
+          comprehensionScore: overallScore,
         },
       });
     } catch (err) {
@@ -5645,7 +5872,7 @@ export class ScoresController {
   @ApiParam({
     name: 'userId',
     example: '27519278861697549531193',
-  }
+  })
   @ApiOperation({
     summary: 'This API will give you current milestone level of user.',
   })
@@ -5655,6 +5882,25 @@ export class ScoresController {
     schema: {
       properties: {
         milestone_level: { type: 'string', example: 'm0' },
+        extra: {
+          type: 'object',
+          properties: {
+            latest_towre_data: {
+              type: 'object',
+              properties: {
+                wordsPerMinute: { type: 'number', example: 144 },
+                correctWordsCount: { type: 'number', example: 8 },
+                unattemptedWordsCount: { type: 'number', example: 100 },
+                newWordsLearnt: { type: 'number', example: 8 },
+                incorrectWordCount: { type: 'number', example: 0 },
+              },
+            },
+            vocabulary_count: {
+              type: 'number',
+              example: 0,
+            },
+          },
+        },
       },
     },
   })
@@ -5665,15 +5911,33 @@ export class ScoresController {
     @Res() response: FastifyReply,
   ) {
     try {
-      const id =((request as any).user.virtual_id).toString();
+      const id = (request as any).user.virtual_id.toString();
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
+      // towre data
+      const latest_towre_data = await this.scoresService.getTowreData(
+        id,
+        language,
+      );
+
+      // voc count
+      const vocabulary_count = await this.scoresService.getVocabularyCount(
+        id,
+        language,
+      )
+      // milestone data
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
-        data: { milestone_level: milestone_level },
+        data: {
+          milestone_level: milestone_level,
+          extra: {
+            latest_towre_data,
+            vocabulary_count: vocabulary_count
+          }
+        },
       });
     } catch (err) {
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
@@ -5780,11 +6044,14 @@ export class ScoresController {
   @ApiExcludeEndpoint(true)
 
   @Get('/GetSessionIds')
-  async GetSessionIdsByUser(@Req() request: FastifyRequest, @Query() { limit = 5 }) {
-    const user_id =((request as any).user.virtual_id).toString();
+  async GetSessionIdsByUser(
+    @Req() request: FastifyRequest,
+    @Query() { limit = 5 },
+  ) {
+    const user_id = (request as any).user.virtual_id.toString();
     return this.scoresService.getAllSessions(user_id, limit);
-
   }
+
 
   @ApiBody({
     description: `Api request body include these schema properties.
@@ -6202,6 +6469,6 @@ export class ScoresController {
         message: 'Server error - ' + err,
       });
     }
-
+  }
 }
 
