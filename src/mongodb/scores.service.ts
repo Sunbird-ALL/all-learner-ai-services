@@ -3281,13 +3281,13 @@ export class ScoresService {
     // standrd for towre
     const wordCount = 108;
     const totalSec = 45;
-
-    const wordsPerMinute = Math.round((wordCount / totalSec) * 60);
+        
     const correctWordsCount = towre_result.filter(word => word.isCorrect).length;
+    const wordsPerMinute = Math.round((correctWordsCount / totalSec) * 60);
     const unattemptedWordsCount = Math.max(0, wordCount - towre_result.length);
     const newWordsLearnt = correctWordsCount;
     const incorrectWordCount = towre_result.filter(word => !word.isCorrect).length;
-
+    
     const towreData = {
       wordsPerMinute: wordsPerMinute,
       correctWordsCount: correctWordsCount,
@@ -3295,7 +3295,6 @@ export class ScoresService {
       newWordsLearnt: newWordsLearnt,
       incorrectWordCount: incorrectWordCount
     }
-
     return towreData;
   }
 
