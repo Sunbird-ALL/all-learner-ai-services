@@ -4468,7 +4468,7 @@ export class ScoresController {
   async GetContentSentencebyUser(
     @Req() request: FastifyRequest,
     @Query('language') language,
-    @Query() { contentlimit = 5 },
+    @Query() { contentlimit = Number },
     @Query() { gettargetlimit = 5 },
     @Query(
       'tags',
@@ -4552,13 +4552,12 @@ export class ScoresController {
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
 
-      // Add the check for the limit
-      // Add the check for the limit
-      if (contentlimit < 5) {
-        contentlimit = 5;
-      } else if (contentlimit > 20) {
-        contentlimit = 20;
-      }
+      // Add the check for the limit for VAPT only.
+      // if (contentlimit < 5) {
+      //   contentlimit = 5;
+      // } else if (contentlimit > 20) {
+      //   contentlimit = 20;
+      // }
 
       const textData = {
         tokenArr: getGetTargetCharArr,
