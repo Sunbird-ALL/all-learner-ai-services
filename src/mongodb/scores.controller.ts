@@ -4468,7 +4468,7 @@ export class ScoresController {
   async GetContentSentencebyUser(
     @Req() request: FastifyRequest,
     @Query('language') language,
-    @Query() { contentlimit = Number },
+    @Query('contentlimit') contentlimit : Number ,
     @Query() { gettargetlimit = 5 },
     @Query(
       'tags',
