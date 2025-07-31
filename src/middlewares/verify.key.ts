@@ -9,10 +9,13 @@ export class ValidateApiKeyInterceptor implements NestInterceptor {
         try {
             const apiKeyEnabled = process.env.API_KEY_ENABLE === 'true';
             const clientApiKey = request.headers['api-key'];
-            const validateUrl = process.env.AUTH_SERVICE_API || '';
+            const validateUrl = process.env.AUTH_SERVICE_API;
 
             if (!apiKeyEnabled) {
                 return next.handle();
+            }
+            if (!validateUrl) {
+                throw new HttpException('AUTH_SERVICE_API not configured', HttpStatus.INTERNAL_SERVER_ERROR);
             }
             if (!clientApiKey || typeof clientApiKey !== 'string') {
                 throw new HttpException('API key missing or invalid', HttpStatus.UNAUTHORIZED);
