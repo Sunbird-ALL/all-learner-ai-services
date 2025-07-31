@@ -11,6 +11,7 @@ import {
   Search,
   Query,
   ParseArrayPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ScoresService } from './scores.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
@@ -34,6 +35,7 @@ import gu_config from './config/language/gu';
 import or_config from './config/language/or';
 import hi_config from './config/language/hi';
 import kn_config from './config/language/kn';
+import ValidateApiKeyInterceptor from 'src/middlewares/verify.key';
 
 @ApiTags('scores')
 @Controller('scores')
@@ -109,6 +111,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Tamil',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/ta')
   async updateLearnerProfileTa(
     @Res() response: FastifyReply,
@@ -474,6 +477,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Gujarati',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/gu')
   async updateLearnerProfileGu(
     @Res() response: FastifyReply,
@@ -839,6 +843,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for odiya',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/or')
   async updateLearnerProfileOr(
     @Res() response: FastifyReply,
@@ -1198,6 +1203,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Hindi',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/hi')
   async updateLearnerProfileHi(
     @Res() response: FastifyReply,
@@ -1570,6 +1576,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for Kannada',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/kn')
   async updateLearnerProfileKn(
     @Res() response: FastifyReply,
@@ -2402,6 +2409,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for English',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/en')
   async updateLearnerProfileEn(
     @Res() response: FastifyReply,
@@ -2962,6 +2970,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for telgu',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/updateLearnerProfile/te')
   async updateLearnerProfileTe(
     @Res() response: FastifyReply,
@@ -3950,6 +3959,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Get('GetContent/char/:userId')
   @ApiOperation({
     summary:
@@ -4127,6 +4137,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Get('GetContent/word/:userId')
   @ApiOperation({
     summary:
@@ -4289,6 +4300,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Get('GetContent/sentence/:userId')
   @ApiOperation({
     summary:
@@ -4461,6 +4473,7 @@ export class ScoresController {
     name: 'userId',
     example: '2020076506',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Get('GetContent/paragraph/:userId')
   @ApiOperation({
     summary:
@@ -4675,6 +4688,7 @@ export class ScoresController {
     summary:
       'This API will give pass or fail result with gettarget count for records performed in the subsession. Also this API perform milestone update for discovery and showcase.',
   })
+  @UseInterceptors(ValidateApiKeyInterceptor)
   @Post('/getSetResult')
   async getSetResult(@Res() response: FastifyReply, @Body() getSetResult: any) {
     try {
