@@ -5525,35 +5525,42 @@ export class ScoresController {
         getSetResult.collectionId === '' ||
         getSetResult?.collectionId === undefined
       ) {
-        let previous_level_id =
-          previous_level === undefined
-            ? 0
-            : parseInt(previous_level.replace('m', ''));
+        // Handle B milestone progression: B → M1
+        if (previous_level === 'B' && sessionResult === 'pass') {
+          milestone_level = 'm1';
+        } else {
+          let previous_level_id =
+            previous_level === undefined
+              ? 0
+              : previous_level === 'B'
+              ? 0 // Treat B as equivalent to m0 for progression
+              : parseInt(previous_level.replace('m', ''));
 
-        if (sessionResult === 'pass') {
-          if (
-            getSetResult.language === en_config.language_code &&
-            previous_level_id >= en_config.max_milestone_level &&
-            max_level == undefined
-          ) {
-            milestone_level = 'm' + en_config.max_milestone_level;
-          } else if (
-            getSetResult.language === en_config.language_code &&
-            previous_level_id >= max_level
-          ) {
-            milestone_level = 'm' + max_level;
-          } else if (
-            getSetResult.language === ta_config.language_code &&
-            previous_level_id >= ta_config.max_milestone_level
-          ) {
-            milestone_level = 'm' + ta_config.max_milestone_level;
-          } else if (
-            getSetResult.language != en_config.language_code &&
-            previous_level_id >= ta_config.max_milestone_level
-          ) {
-            milestone_level = 'm' + ta_config.max_milestone_level;
-          } else {
-            milestone_level = 'm' + (previous_level_id + 1);
+          if (sessionResult === 'pass') {
+            if (
+              getSetResult.language === en_config.language_code &&
+              previous_level_id >= en_config.max_milestone_level &&
+              max_level == undefined
+            ) {
+              milestone_level = 'm' + en_config.max_milestone_level;
+            } else if (
+              getSetResult.language === en_config.language_code &&
+              previous_level_id >= max_level
+            ) {
+              milestone_level = 'm' + max_level;
+            } else if (
+              getSetResult.language === ta_config.language_code &&
+              previous_level_id >= ta_config.max_milestone_level
+            ) {
+              milestone_level = 'm' + ta_config.max_milestone_level;
+            } else if (
+              getSetResult.language != en_config.language_code &&
+              previous_level_id >= ta_config.max_milestone_level
+            ) {
+              milestone_level = 'm' + ta_config.max_milestone_level;
+            } else {
+              milestone_level = 'm' + (previous_level_id + 1);
+            }
           }
         }
       } else {
@@ -6108,6 +6115,20 @@ export class ScoresController {
         }
       }
 
+      // Check if is_B_enable is true, then route to milestone B instead of M1
+      // Only apply when transitioning from M0 (or undefined) to M1
+      // Exclude the case where previous_level is 'B' (B → M1 progression should not be changed back to B)
+      if (
+        getSetResult.is_B_enable === true &&
+        milestone_level === 'm1' &&
+        (previous_level === 'm0' ||
+          previous_level === undefined ||
+          previous_level === null) &&
+        previous_level !== 'B'
+      ) {
+        milestone_level = 'B';
+      }
+
       let currentLevel = milestone_level;
 
       if (milestoneEntry) {
@@ -6148,7 +6169,7 @@ export class ScoresController {
       // log the responce data into the collection
       try {
         await this.scoresService.addGetSetResultLog({
-          userId: getSetResult.user_id,
+          userId: user_id,
           sessionId: getSetResult.session_id,
           subSessionId: getSetResult.sub_session_id,
           sessionResult: sessionResult,
