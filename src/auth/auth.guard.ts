@@ -28,6 +28,8 @@ export class JwtAuthGuard implements CanActivate {
     
       //Step 1: Correctly Generate Encryption Key
       const secret_key = process.env.JOSE_SECRET || '';
+      console.log("secret_key-----", secret_key);
+      console.log("process.env.JWT_SIGNIN_PRIVATE_KEY----", process.env.JWT_SIGNIN_PRIVATE_KEY);
       const hash = createHash('sha256').update(secret_key).digest();
 
       //Step 2: Decrypt the Token
