@@ -47,8 +47,11 @@ export class JwtAuthGuard implements CanActivate {
       const verifiedToken = await jose.jwtVerify(jwtSignedToken, jwtSigninKey);
 
       // get the token status
+      console.log(`[Auth Guard] Checking token status for virtual_id: ${verifiedToken.payload.virtual_id}`);
       const tokenStatus = await this.checkTokenStatus(verifiedToken.payload.virtual_id);
+      console.log(`[Auth Guard] Token status result:`, { hasToken: tokenStatus.token !== null, tokenMatch: tokenStatus.token === token });
       if (tokenStatus.token == null || tokenStatus.token !== token) {
+        console.warn(`[Auth Guard] Token validation failed for virtual_id: ${verifiedToken.payload.virtual_id}`);
         throw new UnauthorizedException('User is logged out');
       }
 
@@ -63,17 +66,30 @@ export class JwtAuthGuard implements CanActivate {
 
   // check user status
   async checkTokenStatus(user_id: any): Promise<{ token: string }> {
+    const url = process.env.ALL_ORC_SERVICE_URL;
+    console.log(`[Token Status] Starting request`, { user_id, url, timestamp: new Date().toISOString() });
+    const startTime = Date.now();
+    
     try {
-      const url = process.env.ALL_ORC_SERVICE_URL;
       const response = await axios.post(url, {
         user_id: user_id,
       });
 
+      const duration = Date.now() - startTime;
+      console.log(`[Token Status] Request successful`, { user_id, duration: `${duration}ms`, statusCode: response.status });
+      
       return {
         token: response.data?.result?.token || null,
       };
     } catch (error: any) {
-      console.error('Error calling token-status API:', error?.response?.data || error.message);
+      const duration = Date.now() - startTime;
+      console.error(`[Token Status] Error after ${duration}ms:`, {
+        user_id,
+        errorCode: error.code,
+        errorMessage: error.message,
+        statusCode: error.response?.status,
+        responseData: error.response?.data
+      });
       return {
         token: null,
       };

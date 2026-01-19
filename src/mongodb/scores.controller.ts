@@ -5951,25 +5951,39 @@ export class ScoresController {
     @Query('language') language: string,
     @Res() response: FastifyReply,
   ) {
+    const apiStartTime = Date.now();
     try {
       const id = (request as any).user.virtual_id.toString();
+      console.log(`[getMilestone] API called`, { user_id: id, language, timestamp: new Date().toISOString() });
+      
+      const milestoneStartTime = Date.now();
       const recordData: any = await this.scoresService.getlatestmilestone(
         id,
         language,
       );
+      console.log(`[getMilestone] Latest milestone fetched in ${Date.now() - milestoneStartTime}ms`, { user_id: id, language, milestone_level: recordData[0]?.milestone_level || 'm0' });
+      
       // towre data
+      const towreStartTime = Date.now();
       const latest_towre_data = await this.scoresService.getTowreData(
         id,
         language,
       );
+      console.log(`[getMilestone] TOWRE data fetched in ${Date.now() - towreStartTime}ms`, { user_id: id, language });
 
       // voc count
+      const vocabStartTime = Date.now();
       const vocabulary_count = await this.scoresService.getVocabularyCount(
         id,
         language,
-      )
+      );
+      console.log(`[getMilestone] Vocabulary count fetched in ${Date.now() - vocabStartTime}ms`, { user_id: id, language, vocabulary_count });
+      
       // milestone data
       const milestone_level = recordData[0]?.milestone_level || 'm0';
+      const totalDuration = Date.now() - apiStartTime;
+      console.log(`[getMilestone] API completed successfully in ${totalDuration}ms`, { user_id: id, language, milestone_level });
+      
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
@@ -5981,6 +5995,8 @@ export class ScoresController {
         },
       });
     } catch (err) {
+      const totalDuration = Date.now() - apiStartTime;
+      console.error(`[getMilestone] API error after ${totalDuration}ms:`, { language, error: err instanceof Error ? err.message : String(err) });
       return response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
         status: 'error',
         message: 'Server error - ' + err,
