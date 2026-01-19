@@ -49,8 +49,14 @@ export class JwtAuthGuard implements CanActivate {
       // get the token status
       console.log(`[Auth Guard] Checking token status for virtual_id: ${verifiedToken.payload.virtual_id}`);
       const tokenStatus = await this.checkTokenStatus(verifiedToken.payload.virtual_id);
-      console.log(`[Auth Guard] Token status result:`, { hasToken: tokenStatus.token !== null, tokenMatch: tokenStatus.token === token });
-      if (tokenStatus.token == null || tokenStatus.token !== token) {
+      console.log(`[Auth Guard] Token status result:`, { hasToken: tokenStatus.token !== null, tokenMatch: tokenStatus.token === token, serviceAvailable: tokenStatus.serviceAvailable });
+      
+      // If service is unavailable (timeout/connection error), allow request since JWT is already verified
+      if (!tokenStatus.serviceAvailable) {
+        console.warn(`[Auth Guard] ORC service unavailable, allowing request based on JWT verification for virtual_id: ${verifiedToken.payload.virtual_id}`);
+        // Continue - allow request since JWT token is valid
+      } else if (tokenStatus.token == null || tokenStatus.token !== token) {
+        // Service is available but token doesn't match - user is logged out
         console.warn(`[Auth Guard] Token validation failed for virtual_id: ${verifiedToken.payload.virtual_id}`);
         throw new UnauthorizedException('User is logged out');
       }
@@ -65,7 +71,7 @@ export class JwtAuthGuard implements CanActivate {
   }
 
   // check user status
-  async checkTokenStatus(user_id: any): Promise<{ token: string }> {
+  async checkTokenStatus(user_id: any): Promise<{ token: string | null; serviceAvailable: boolean }> {
     const url = process.env.ALL_ORC_SERVICE_URL;
     console.log(`[Token Status] Starting request`, { user_id, url, timestamp: new Date().toISOString() });
     const startTime = Date.now();
@@ -75,27 +81,41 @@ export class JwtAuthGuard implements CanActivate {
         url,
         { user_id: user_id },
         {
-          timeout: 5000, // 5 second timeout to prevent hanging requests
+          timeout: 10000, // 5 second timeout to prevent hanging requests
         }
       );
 
       const duration = Date.now() - startTime;
       console.log(`[Token Status] Request successful`, { user_id, duration: `${duration}ms`, statusCode: response.status });
       
+      // Service is available and responded
       return {
         token: response.data?.result?.token || null,
+        serviceAvailable: true,
       };
     } catch (error: any) {
       const duration = Date.now() - startTime;
+      const isServiceUnavailable = 
+        error.code === 'ECONNABORTED' || 
+        error.code === 'ETIMEDOUT' || 
+        error.code === 'ECONNREFUSED' || 
+        error.code === 'ENOTFOUND' || 
+        error.code === 'EAI_AGAIN';
+      
       console.error(`[Token Status] Error after ${duration}ms:`, {
         user_id,
         errorCode: error.code,
         errorMessage: error.message,
         statusCode: error.response?.status,
-        responseData: error.response?.data
+        responseData: error.response?.data,
+        isServiceUnavailable
       });
+      
+      // If service is unavailable (timeout/connection error), return serviceAvailable: false
+      // If service responded with HTTP error (like 404), service is available but user might be logged out
       return {
         token: null,
+        serviceAvailable: !isServiceUnavailable, // false if timeout/connection error, true if HTTP error
       };
     }
   }

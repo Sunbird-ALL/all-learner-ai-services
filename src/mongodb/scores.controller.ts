@@ -157,7 +157,7 @@ export class ScoresController {
       let constructText = '';
 
       let pause_count = 0;
-
+      
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
@@ -218,7 +218,7 @@ export class ScoresController {
           pause_count = CreateLearnerProfileDto.pause_count;
         }
 
-         // add the vocabulary logic
+        // add the vocabulary logic
         await this.scoresService.vocabularyCount(
           user_id,
           originalText,
@@ -597,7 +597,7 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
-         // add the vocabulary logic
+        // add the vocabulary logic
         await this.scoresService.vocabularyCount(
           user_id,
           originalText,
@@ -975,8 +975,8 @@ export class ScoresController {
 
         responseText = CreateLearnerProfileDto.output[0].source;
 
-         // add the vocabulary logic
-         const vocabulary = await this.scoresService.vocabularyCount(
+        // add the vocabulary logic
+        const vocabulary = await this.scoresService.vocabularyCount(
           user_id,
           originalText,
           responseText,
@@ -1355,7 +1355,7 @@ export class ScoresController {
         responseText = CreateLearnerProfileDto.output[0].source;
         responseText = await this.scoresService.mergeResponseWordsUsingOriginal(originalText,responseText);
 
-         // add the vocabulary logic
+        // add the vocabulary logic
         await this.scoresService.vocabularyCount(
           user_id,
           originalText,
@@ -1790,7 +1790,7 @@ export class ScoresController {
           responseText = CreateLearnerProfileDto.response_text;
           pause_count = CreateLearnerProfileDto.pause_count;
         }
-         // add the vocabulary logic
+        // add the vocabulary logic
         await this.scoresService.vocabularyCount(
           user_id,
           originalText,
@@ -2527,7 +2527,7 @@ export class ScoresController {
       /* Condition to check whether content type is char or not. If content type is char
       dont process it from ASR and other processing related with text evalution matrices and scoring mechanism
       */
-
+      
       if (CreateLearnerProfileDto['contentType'].toLowerCase() !== 'char') {
         let audioFile;
 
@@ -3002,7 +3002,7 @@ export class ScoresController {
         CreateLearnerProfileDto.sub_session_id,
         CreateLearnerProfileDto.language,
       );
-      
+
       // Recomendation api call
       try {
         if (process.env.IS_RECOMENDATION === "true") {
@@ -3030,7 +3030,7 @@ export class ScoresController {
       } catch (error) {
         console.log('errro from the voice-auth-Module');
       }
-
+     
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
         msg: 'Successfully stored data to learner profile',
@@ -3113,7 +3113,7 @@ export class ScoresController {
     summary:
       'Store students learner ai profile, from the ASR output for a given wav file. This API will work for telgu',
   })
- @Post('/updateLearnerProfile/te')
+  @Post('/updateLearnerProfile/te')
   async updateLearnerProfileTe(
     @Req() request: FastifyRequest,
     @Res() response: FastifyReply,
@@ -4410,7 +4410,7 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
-
+     
       // Add the check for the limit
       if (contentlimit < 5) {
         contentlimit = 5;
@@ -4592,7 +4592,7 @@ export class ScoresController {
       }
 
       const url = process.env.ALL_CONTENT_SERVICE_API;
-
+     
       // Add the check for the limit
       // Add the check for the limit
       if (contentlimit < 5) {
@@ -4974,7 +4974,7 @@ export class ScoresController {
       } else {
         totalSyllables = totalTargets + familiarity.length;
       }
-
+        
       let targetsPercentage = Math.min(
         Math.floor((totalTargets / totalSyllables) * 100),
       );
@@ -5046,7 +5046,7 @@ export class ScoresController {
         if (['en', 'kn'].includes(getSetResult.language.toLowerCase()) && userLevelNum < 10) {
           // Determine pass threshold based on milestone level.
           // For M4+ (e.g. level >= 4) threshold is 3.0; otherwise, 2.6.
-          
+
           const passThreshold = userLevelNum >= 4 ? 3.0 : 2.6;
 
           // Retrieve all audio records for the given sub-session and language 'en' or kn
@@ -5229,7 +5229,7 @@ export class ScoresController {
       }
 
       let milestone_level = previous_level;
-
+      
       // For Showcase, We are not sending collectionId based on this are calculating milestone
 
       if (
@@ -5237,10 +5237,10 @@ export class ScoresController {
         getSetResult.collectionId === '' ||
         getSetResult?.collectionId === undefined
       ) {
-        let previous_level_id =
-          previous_level === undefined
-            ? 0
-            : parseInt(previous_level.replace('m', ''));
+          let previous_level_id =
+            previous_level === undefined
+              ? 0
+              : parseInt(previous_level.replace('m', ''));
 
         if (sessionResult === 'pass') {
           if (
@@ -5923,19 +5923,19 @@ export class ScoresController {
     schema: {
       properties: {
         milestone_level: { type: 'string', example: 'm0' },
-        extra: {
-          type: 'object',
-          properties: {
-            latest_towre_data: {
+            extra: {
               type: 'object',
               properties: {
-                wordsPerMinute: { type: 'number', example: 144 },
-                correctWordsCount: { type: 'number', example: 8 },
-                unattemptedWordsCount: { type: 'number', example: 100 },
-                newWordsLearnt: { type: 'number', example: 8 },
-                incorrectWordCount: { type: 'number', example: 0 },
-              },
-            },
+                latest_towre_data: {
+                  type: 'object',
+                  properties: {
+                    wordsPerMinute: { type: 'number', example: 144 },
+                    correctWordsCount: { type: 'number', example: 8 },
+                    unattemptedWordsCount: { type: 'number', example: 100 },
+                    newWordsLearnt: { type: 'number', example: 8 },
+                    incorrectWordCount: { type: 'number', example: 0 },
+                  },
+                },
             vocabulary_count: {
               type: 'number',
               example: 0,
@@ -6302,11 +6302,11 @@ export class ScoresController {
     status: 201,
     description: `This will provide you familiarity of users`,
     schema: {
-      type: 'object',
-      properties: {
+        type: 'object',
+        properties: {
         user_id: { type: 'string', example: '8591582684' },
-        data: {
-          type: 'object',
+          data: {
+            type: 'object',
           example: {
             milestone_level: { type: 'string', example: 'm0' },
           },
