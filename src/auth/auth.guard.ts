@@ -24,6 +24,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Authorization header missing');
     }
     const token = authHeader.split(' ')[1];
+    console.log("token-----", token);
     try {
     
       //Step 1: Correctly Generate Encryption Key
@@ -41,6 +42,7 @@ export class JwtAuthGuard implements CanActivate {
 
       //Step 3: Verify the Signed JWT
       const jwtSignedToken = String(jwtDecryptedToken.payload.jwtSignedToken);
+      console.log("jwtSignedToken-----", jwtSignedToken);
 
       //Fix Signing Key
       const jwtSigninKey = new TextEncoder().encode(
@@ -88,11 +90,12 @@ export class JwtAuthGuard implements CanActivate {
       );
 
       const duration = Date.now() - startTime;
-      console.log(`[Token Status] Request successful`, { user_id, duration: `${duration}ms`, statusCode: response.status });
+      const orcToken = response.data?.result?.token || null;
+      console.log(`[Token Status] Request successful`, { user_id, duration: `${duration}ms`, statusCode: response.status, orcToken });
       
       // Service is available and responded
       return {
-        token: response.data?.result?.token || null,
+        token: orcToken,
         serviceAvailable: true,
       };
     } catch (error: any) {
