@@ -71,9 +71,13 @@ export class JwtAuthGuard implements CanActivate {
     const startTime = Date.now();
     
     try {
-      const response = await axios.post(url, {
-        user_id: user_id,
-      });
+      const response = await axios.post(
+        url,
+        { user_id: user_id },
+        {
+          timeout: 5000, // 5 second timeout to prevent hanging requests
+        }
+      );
 
       const duration = Date.now() - startTime;
       console.log(`[Token Status] Request successful`, { user_id, duration: `${duration}ms`, statusCode: response.status });
