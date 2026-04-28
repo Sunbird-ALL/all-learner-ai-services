@@ -18,6 +18,9 @@ import { TowreDocument } from 'src/schemas/towre.schema';
 import { VocabularyDocument } from './schemas/vocabularySchema';
 import { correct_practice_word, correct_practice_wordDocument } from '../schemas/correctPractice';
 import { AssessmentTrackingDocument, AssessmentTrackingScoreDetailDocument, EvaluationType } from './schemas/assessment-tracking.schema';
+import { SessionSummaryDocument } from './schemas/session-summary.schema';
+import { MilestoneDocument } from './schemas/milestone.schema';
+import { ProsodyFluencyDocument } from './schemas/prosody-fluency.schema';
 import { CreateAssessmentTrackingDto } from './dto/create-assessment-tracking.dto';
 import { randomUUID } from 'crypto';
 import {
@@ -55,6 +58,12 @@ export class ScoresService {
     private readonly assessmentTrackingModel: Model<AssessmentTrackingDocument>,
     @InjectModel('AssessmentTrackingScoreDetail')
     private readonly assessmentTrackingScoreDetailModel: Model<AssessmentTrackingScoreDetailDocument>,
+    @InjectModel('SessionSummary')
+    private readonly sessionSummaryModel: Model<SessionSummaryDocument>,
+    @InjectModel('Milestone')
+    private readonly milestoneModel: Model<MilestoneDocument>,
+    @InjectModel('ProsodyFluency')
+    private readonly prosodyFluencyModel: Model<ProsodyFluencyDocument>,
     private readonly cacheService: CacheService,
     private readonly httpService: HttpService,
   ) { }
@@ -2865,6 +2874,406 @@ export class ScoresService {
     return syllables;
   }
 
+  // ─── New flat-collection methods (Hindi pilot) ─────────────────────────────
+
+  async createSessionSummary(userId: string, sessionData: any): Promise<void> {
+    await this.sessionSummaryModel.create({ user_id: userId, ...sessionData });
+  }
+
+  async createProsodyFluency(
+    userId: string,
+    sessionId: string,
+    subSessionId: string,
+    language: string,
+    prosodyData: any,
+  ): Promise<void> {
+    await this.prosodyFluencyModel.create({
+      user_id: userId,
+      session_id: sessionId,
+      sub_session_id: subSessionId,
+      language,
+      ...prosodyData,
+    });
+  }
+
+  async createMilestoneEntry(data: {
+    user_id: string;
+    session_id: string;
+    sub_session_id?: string;
+    milestone_level: string;
+    sub_milestone_level?: string;
+    language: string;
+  }): Promise<void> {
+    await this.milestoneModel.create(data);
+  }
+
+  async getTargetsBysubSessionNew(
+    userId: string,
+    subSessionId: string,
+    language: string,
+  ) {
+    const threshold = 0.7;
+
+    const RecordData = await this.sessionSummaryModel.aggregate([
+      {
+        $match: { user_id: userId, sub_session_id: subSessionId, language },
+      },
+      {
+        $facet: {
+          confidenceScores: [
+            { $unwind: '$confidence_scores' },
+            {
+              $project: {
+                _id: 0,
+                date: '$createdAt',
+                session_id: '$session_id',
+                character: '$confidence_scores.token',
+                score: '$confidence_scores.confidence_score',
+              },
+            },
+            { $sort: { date: -1 } },
+          ],
+          missingTokenScores: [
+            { $unwind: '$missing_token_scores' },
+            {
+              $project: {
+                _id: 0,
+                session_id: '$session_id',
+                date: '$createdAt',
+                character: '$missing_token_scores.token',
+                score: '$missing_token_scores.confidence_score',
+              },
+            },
+            { $sort: { date: -1 } },
+          ],
+        },
+      },
+      {
+        $project: {
+          combinedResults: {
+            $concatArrays: ['$confidenceScores', '$missingTokenScores'],
+          },
+        },
+      },
+      { $unwind: '$combinedResults' },
+      { $replaceRoot: { newRoot: '$combinedResults' } },
+      {
+        $project: {
+          sessionId: '$session_id',
+          date: '$date',
+          token: '$character',
+          score: '$score',
+        },
+      },
+      { $sort: { date: -1 } },
+      {
+        $group: {
+          _id: { token: '$token' },
+          scores: { $push: '$score' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          character: '$_id.token',
+          latestScores: { $slice: ['$scores', -5] },
+        },
+      },
+      {
+        $addFields: {
+          countBelowThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: { $lt: ['$$score', threshold] },
+              },
+            },
+          },
+          countAboveThreshold: {
+            $size: {
+              $filter: {
+                input: '$latestScores',
+                as: 'score',
+                cond: { $gte: ['$$score', threshold] },
+              },
+            },
+          },
+        },
+      },
+      {
+        $match: { $expr: { $gt: ['$countBelowThreshold', '$countAboveThreshold'] } },
+      },
+    ]);
+
+    const tokenHexcodeDataArr = await this.gethexcodeMapping(language);
+    const tokenMap = new Map();
+    tokenHexcodeDataArr.forEach((tokenObj: any) => {
+      tokenMap.set(tokenObj.token, {
+        isCommon: tokenObj.isCommon,
+        indexNo: tokenObj.indexNo,
+      });
+    });
+
+    const commonTargets: any[] = [];
+    const nonCommonTargets: any[] = [];
+    RecordData.forEach((target: any) => {
+      const tokenInfo = tokenMap.get(target.character);
+      if (tokenInfo && tokenInfo.isCommon) {
+        commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
+      } else {
+        nonCommonTargets.push(target);
+      }
+    });
+    commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
+    return [...commonTargets, ...nonCommonTargets];
+  }
+
+  async getFluencyBysubSessionNew(
+    userId: string,
+    subSessionId: string,
+    language: string,
+  ): Promise<number> {
+    const RecordData = await this.sessionSummaryModel.aggregate([
+      {
+        $match: { user_id: userId, sub_session_id: subSessionId, language },
+      },
+      {
+        $group: {
+          _id: null,
+          fluencyScore: { $avg: '$fluencyScore' },
+        },
+      },
+    ]);
+    return RecordData[0]?.fluencyScore || 0;
+  }
+
+  async getSubsessionOriginalTextSyllablesNew(
+    userId: string,
+    subSessionId: string,
+  ): Promise<string[]> {
+    const RecordData = await this.sessionSummaryModel
+      .find({ user_id: userId, sub_session_id: subSessionId }, { original_text: 1 })
+      .lean();
+
+    let syllables: string[] = [];
+    for (const record of RecordData) {
+      const splitGraphemesData = splitGraphemes.splitGraphemes(
+        record.original_text.replace(
+          /[​‌‍﻿\s!@#$%^&*()_+{}\[\]:;<>,.?\/\\|~'"-=]/g,
+          '',
+        ),
+      );
+      syllables = syllables.concat(splitGraphemesData);
+    }
+    return [...new Set(syllables)];
+  }
+
+  async getlatestmilestoneNew(userId: string, language: string): Promise<any> {
+    return this.milestoneModel
+      .findOne({ user_id: userId, language })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
+
+  async getProsodyBysubSession(
+    userId: string,
+    subSessionId: string,
+    language: string,
+  ): Promise<any[]> {
+    return this.prosodyFluencyModel
+      .find({ user_id: userId, sub_session_id: subSessionId, language })
+      .lean();
+  }
+
+  async getFamiliarityBysubSessionNew(userId: string, subSessionId: string, language: string) {
+    const threshold = 0.7;
+    return this.sessionSummaryModel.aggregate([
+      {
+        $match: { user_id: userId, sub_session_id: subSessionId, language, isRetry: { $ne: true } },
+      },
+      {
+        $facet: {
+          confidenceScores: [
+            { $unwind: '$confidence_scores' },
+            {
+              $project: {
+                _id: 0,
+                date: '$createdAt',
+                character: '$confidence_scores.token',
+                score: '$confidence_scores.confidence_score',
+              },
+            },
+            { $sort: { date: -1 } },
+          ],
+          missingTokenScores: [
+            { $unwind: '$missing_token_scores' },
+            {
+              $project: {
+                _id: 0,
+                date: '$createdAt',
+                character: '$missing_token_scores.token',
+                score: '$missing_token_scores.confidence_score',
+              },
+            },
+            { $sort: { date: -1 } },
+          ],
+        },
+      },
+      {
+        $project: {
+          combinedResults: { $concatArrays: ['$confidenceScores', '$missingTokenScores'] },
+        },
+      },
+      { $unwind: '$combinedResults' },
+      { $replaceRoot: { newRoot: '$combinedResults' } },
+      { $sort: { date: -1 } },
+      {
+        $group: {
+          _id: { token: '$character' },
+          scores: { $push: '$score' },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          character: '$_id.token',
+          latestScores: { $slice: ['$scores', -5] },
+        },
+      },
+      {
+        $addFields: {
+          countBelowThreshold: {
+            $size: { $filter: { input: '$latestScores', as: 's', cond: { $lt: ['$$s', threshold] } } },
+          },
+          countAboveThreshold: {
+            $size: { $filter: { input: '$latestScores', as: 's', cond: { $gte: ['$$s', threshold] } } },
+          },
+        },
+      },
+      { $match: { $expr: { $gte: ['$countAboveThreshold', '$countBelowThreshold'] } } },
+    ]);
+  }
+
+  async getCorrectnessBysubSessionNew(userId: string, subSessionId: string, language: string) {
+    const threshold = 50;
+    return this.sessionSummaryModel.aggregate([
+      { $match: { user_id: userId, sub_session_id: subSessionId, language } },
+      {
+        $group: {
+          _id: null,
+          count_scores_gte_50: {
+            $sum: { $cond: [{ $gte: ['$correctness_score', threshold] }, 1, 0] },
+          },
+          total_correctness_score: { $sum: '$correctness_score' },
+        },
+      },
+    ]);
+  }
+
+  async calculateAnsSelectionResultNew(
+    userId: string,
+    sessionId: string,
+    subSessionId: string,
+    language: string,
+  ): Promise<{ result: boolean; percentage: number } | null> {
+    try {
+      const session = await this.sessionSummaryModel
+        .findOne({
+          user_id: userId,
+          session_id: sessionId,
+          sub_session_id: subSessionId,
+          language,
+          ansSelectionStatus: { $exists: true, $ne: null },
+        })
+        .lean()
+        .exec();
+
+      if (!session || !session.ansSelectionStatus) {
+        return null;
+      }
+
+      let correctCount = 0;
+      let totalCount = 0;
+
+      if (Array.isArray(session.ansSelectionStatus)) {
+        totalCount = session.ansSelectionStatus.length;
+        correctCount = session.ansSelectionStatus.filter(
+          (item) => item && typeof item === 'object' && item.status === true,
+        ).length;
+      } else if (typeof session.ansSelectionStatus === 'object') {
+        const values = Object.values(session.ansSelectionStatus);
+        totalCount = values.length;
+        correctCount = values.filter(Boolean).length;
+      } else {
+        return null;
+      }
+
+      const percentage = totalCount > 0 ? Math.floor((correctCount / totalCount) * 100) : 0;
+      const result = totalCount > 0 ? percentage >= 80 : false;
+      return { result, percentage };
+    } catch (err) {
+      console.error('Error calculating ansSelectionResult (new):', err);
+      return null;
+    }
+  }
+
+  async createMilestoneRecordNew(data: {
+    user_id: string;
+    session_id: string;
+    sub_session_id?: string;
+    milestone_level: string;
+    sub_milestone_level?: string;
+    language: string;
+  }): Promise<{ savedMilestoneLevel: string }> {
+    try {
+      let milestoneToSet = data.milestone_level;
+
+      if (data.language) {
+        const currentMilestoneData = await this.getlatestmilestoneNew(data.user_id, data.language);
+        const currentMilestone = (currentMilestoneData as any)?.milestone_level;
+
+        if (currentMilestone) {
+          const getMilestoneNum = (level: string): number => {
+            if (!level) return -1;
+            if (level === 'B') return 0;
+            if (level.startsWith('m')) {
+              const num = parseInt(level.replace('m', ''), 10);
+              return isNaN(num) ? -1 : num;
+            }
+            return -1;
+          };
+
+          const currentLevelNum = getMilestoneNum(currentMilestone);
+          const newLevelNum = getMilestoneNum(milestoneToSet);
+
+          if (newLevelNum >= 0 && currentLevelNum >= 0 && newLevelNum < currentLevelNum) {
+            console.log(
+              `Milestone downgrade prevented: User ${data.user_id} is at ${currentMilestone}, ` +
+              `attempted to set ${milestoneToSet}. Keeping ${currentMilestone}.`
+            );
+            milestoneToSet = currentMilestone;
+          }
+        }
+      }
+
+      await this.createMilestoneEntry({
+        user_id: data.user_id,
+        session_id: data.session_id,
+        sub_session_id: data.sub_session_id || '',
+        milestone_level: milestoneToSet,
+        sub_milestone_level: data.sub_milestone_level || '',
+        language: data.language,
+      });
+
+      return { savedMilestoneLevel: milestoneToSet };
+    } catch (err) {
+      throw buildHttpExceptionFromUnknown(err);
+    }
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+
   async processTokens(nBestTokens) {
     let data_arr = [];
 
@@ -3069,6 +3478,12 @@ export class ScoresService {
     subSessionId: string,
     language: string,
   ): Promise<any[]> {
+    // Hindi data lives in the new prosody_fluency collection — query it directly
+    // so computeFluencyAndProsodyResults only fetches the 7 fields it needs.
+    if (language === 'hi') {
+      return this.getProsodyBysubSession(userId, subSessionId, language);
+    }
+
     // Scope to user_id first — avoids scanning the whole scores collection in production.
     const docs = await this.scoreModel
       .find({
