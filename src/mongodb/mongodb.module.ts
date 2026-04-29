@@ -33,7 +33,7 @@ import { AssessmentTrackingSchema, AssessmentTrackingScoreDetailSchema } from '.
         maxPoolSize: parseInt(process.env.POOL_SIZE) || 10,
       }),
     }),
-
+    
     MongooseModule.forFeature([
       { name: 'Score', schema: ScoreSchema },
       { name: 'hexcodeMapping', schema: hexcodeMappingSchema },
