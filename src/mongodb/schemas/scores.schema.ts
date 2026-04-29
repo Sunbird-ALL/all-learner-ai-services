@@ -33,25 +33,25 @@ export class Score {
         },
         confidence_scores: [
           {
-            token: { type: String, required: true, index: true },
+            token: { type: String, required: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index: true },
+            confidence_score: { type: Number, required: true },
             identification_status: { type: Number },
           },
         ],
         missing_token_scores: [
           {
-            token: { type: String, required: true, index: true },
+            token: { type: String, required: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index: true },
+            confidence_score: { type: Number, required: true },
             identification_status: { type: Number },
           },
         ],
         anamolydata_scores: [
           {
-            token: { type: String, required: true, index: true },
+            token: { type: String, required: true },
             hexcode: { type: String },
-            confidence_score: { type: Number, required: true, index: true },
+            confidence_score: { type: Number, required: true },
             identification_status: { type: Number },
           },
         ],
@@ -83,7 +83,7 @@ export class Score {
             count: { type: Number },
           },
         },
-        fluencyScore: { type: Number, index: true },
+        fluencyScore: { type: Number },
         silence_Pause: {
           total_duration: { type: Number },
           count: { type: Number },
@@ -119,7 +119,7 @@ export class Score {
           },
           accuracy: {
             accuracy_classification: { type: String, required: false },
-            fluencyScore: { type: Number, index: true },
+            fluencyScore: { type: Number },
           },
         },
         isRetry: { type: Boolean, required: false },

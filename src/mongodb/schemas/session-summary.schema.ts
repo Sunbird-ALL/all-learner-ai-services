@@ -152,6 +152,4 @@ export const SessionSummarySchema = SchemaFactory.createForClass(SessionSummary)
 
 SessionSummarySchema.index({ user_id: 1, sub_session_id: 1, language: 1 });
 SessionSummarySchema.index({ user_id: 1, session_id: 1, language: 1 });
-SessionSummarySchema.index({ user_id: 1, sub_session_id: 1 });
 SessionSummarySchema.index({ session_id: 1 });
-SessionSummarySchema.index({ user_id: 1 });

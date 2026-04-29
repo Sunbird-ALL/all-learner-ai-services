@@ -6,19 +6,19 @@ export class hexcodeMapping extends Document {
   @Prop({ required: true, index: true })
   token: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   hexcode: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   language: string;
 
-  @Prop({ required: false, index: true })
+  @Prop({ required: false })
   graphemes: [string];
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   isCommon: boolean;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   indexNo: number;
 }
 

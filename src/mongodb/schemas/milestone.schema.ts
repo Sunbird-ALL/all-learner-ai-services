@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Milestone extends Document {
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   user_id: string;
 
   @Prop({ required: true })
