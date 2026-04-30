@@ -16,6 +16,9 @@ import { TowreSchema } from 'src/schemas/towre.schema';
 import { VocabularySchema } from './schemas/vocabularySchema';
 import { correct_practice_wordSchema } from '../schemas/correctPractice';
 import { AssessmentTrackingSchema, AssessmentTrackingScoreDetailSchema } from './schemas/assessment-tracking.schema';
+import { SessionSummarySchema } from './schemas/session-summary.schema';
+import { MilestoneSchema } from './schemas/milestone.schema';
+import { ProsodyFluencySchema } from './schemas/prosody-fluency.schema';
 
 
 @Module({
@@ -49,7 +52,10 @@ import { AssessmentTrackingSchema, AssessmentTrackingScoreDetailSchema } from '.
       { name: 'vocabulary', schema: VocabularySchema},
       { name: 'correct_practice_word', schema: correct_practice_wordSchema},
       { name: 'AssessmentTracking', schema: AssessmentTrackingSchema },
-      { name: 'AssessmentTrackingScoreDetail', schema: AssessmentTrackingScoreDetailSchema }
+      { name: 'AssessmentTrackingScoreDetail', schema: AssessmentTrackingScoreDetailSchema },
+      { name: 'SessionSummary', schema: SessionSummarySchema },
+      { name: 'Milestone', schema: MilestoneSchema },
+      { name: 'ProsodyFluency', schema: ProsodyFluencySchema },
     ]),
     CacheModule.register()
   ],
