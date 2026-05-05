@@ -12,7 +12,7 @@ export class Score {
         session_id: { type: String, required: true, index: true },
         sub_session_id: { type: String, required: false, index: true },
         contentType: { type: String, required: true },
-        contentId: { type: String, required: false, index: true },
+        contentId: { type: String, required: false },
         createdAt: { type: Date, required: true },
         original_text: { type: String, required: true },
         response_text: { type: String, required: true },
@@ -243,12 +243,12 @@ export class Score {
   @Prop({
     type: [
       {
-        session_id: { type: String, required: true, index: true },
-        sub_session_id: { type: String, required: false, index: true },
-        milestone_level: { type: String, required: true, index: true },
+        session_id: { type: String, required: true },
+        sub_session_id: { type: String, required: false },
+        milestone_level: { type: String, required: true },
         sub_milestone_level: { type: String, required: false },
         language : {type: String, required: false},
-        createdAt: { type: Date, required: true, index: true },
+        createdAt: { type: Date, required: true },
       },
     ],
     required: false,
