@@ -5886,10 +5886,9 @@ export class ScoresController {
   ) {
     try {
       const id = (request as any).user.virtual_id.toString();
-      const recordData: any = await this.scoresService.getlatestmilestone(
-        id,
-        language,
-      );
+      const recordData: any = language === 'hi'
+        ? await this.scoresService.getlatestmilestoneNew(id, language).then((m) => (m ? [m] : []))
+        : await this.scoresService.getlatestmilestone(id, language);
       // towre data
       const latest_towre_data = await this.scoresService.getTowreData(
         id,
