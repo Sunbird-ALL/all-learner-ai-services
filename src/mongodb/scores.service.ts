@@ -147,81 +147,72 @@ export class ScoresService {
     }
   }
 
-  async audioFileToAsrOutput(
-    data: any,
-    language: string,
-    contentType: string,
-  ): Promise<any> {
-    let asrOutBeforeDenoised: any;
-    let audio: any = data;
-    let pause_count: number = 0;
-    let avg_pause: number = 0;
-    let pitch_classification: any;
-    let pitch_mean: number = 0;
-    let pitch_std: number = 0;
-    let intensity_classification: any;
-    let intensity_mean: number = 0;
-    let intensity_std: number = 0;
-    let expression_classification: any;
-    let smoothness_classification: any;
+  private async callAsr(audio: string, language: string, serviceId: string): Promise<any> {
+    const optionsObj: any = {
+      config: {
+        serviceId,
+        language: { sourceLanguage: language },
+        audioFormat: 'wav',
+        transcriptionFormat: { value: 'transcript' },
+        bestTokenCount: 2,
+      },
+      audio: [{ audioContent: audio }],
+    };
 
-    let serviceId = '';
-    switch (language) {
-      case 'kn':
-        serviceId = 'ai4bharat/conformer-multilingual-all--gpu-t4';
-        break;
-      case 'ta':
-        serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
-        break;
-      case 'en':
-        serviceId = 'ai4bharat/whisper--gpu-t4';
-        break;
-      case 'hi':
-        serviceId = 'ai4bharat/conformer-multilingual-all--gpu-t4';
-        break;
-      case 'gu':
-        serviceId = 'ai4bharat/conformer-gujarati--gpu-t4';
-        break;
-      case 'te':
-        serviceId = 'ai4bharat/conformer-multilingual-dravidian--gpu-t4';
-        break;
-      case 'or':
-        serviceId = 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4';
-        break;
-      default:
-        serviceId = `ai4bharat/conformer-${language}-gpu--t4`;
+    if (language === 'en') {
+      delete optionsObj.config.bestTokenCount;
     }
 
-    asrOutBeforeDenoised = await asrCall();
-
-    const denoiserConfig = {
+    const config = {
       method: 'post',
-      url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
+      url: process.env.AI4BHARAT_URL,
       headers: {
         'Content-Type': 'application/json',
+        Authorization: process.env.AI4BHARAT_API_KEY,
       },
+      data: JSON.stringify(optionsObj),
+    };
+
+    const asrStart = Date.now();
+    try {
+      const asrResponse = await axios.request(config);
+      const durationSec = ((Date.now() - asrStart) / 1000).toFixed(2);
+      console.log(`[ASR] language=${language} | duration=${durationSec}s | status=success`);
+      return asrResponse.data;
+    } catch (error) {
+      const durationSec = ((Date.now() - asrStart) / 1000).toFixed(2);
+      console.log(`[ASR] language=${language} | duration=${durationSec}s | status=failed`);
+      const { status, body } = buildErrorPayload(error);
+      throw new HttpException(
+        {
+          ...body,
+          code: ErrorCodes.AI4BHARAT_UNAVAILABLE,
+          message:
+            'Speech recognition (AI4Bharat) is unavailable or failed to transcribe audio.',
+          upstream: 'ai4bharat',
+        },
+        status,
+      );
+    }
+  }
+
+  private async callAudioProcessing(audio: string, contentType: string): Promise<any> {
+    const config = {
+      method: 'post',
+      url: process.env.ALL_TEXT_EVAL_API + '/audio_processing',
+      headers: { 'Content-Type': 'application/json' },
       data: {
         base64_string: audio,
-        enableDenoiser: process.env.denoiserEnabled === 'true' ? true : false,
+        enableDenoiser: process.env.denoiserEnabled === 'true',
         enablePauseCount: true,
-        contentType: contentType,
+        contentType,
         enable_prosody_fluency: true,
       },
     };
 
     try {
-      const denoiserResponse = await axios.request(denoiserConfig);
-      audio = denoiserResponse.data.denoised_audio_base64;
-      pause_count = denoiserResponse.data.pause_count;
-      avg_pause = denoiserResponse.data.avg_pause;
-      pitch_classification = denoiserResponse.data.pitch_classification;
-      pitch_mean = denoiserResponse.data.pitch_mean;
-      pitch_std = denoiserResponse.data.pitch_std;
-      intensity_classification = denoiserResponse.data.intensity_classification;
-      intensity_mean = denoiserResponse.data.intensity_mean;
-      intensity_std = denoiserResponse.data.intensity_std;
-      expression_classification = denoiserResponse.data.expression_classification;
-      smoothness_classification = denoiserResponse.data.smoothness_classification;
+      const response = await axios.request(config);
+      return response.data;
     } catch (error) {
       const { status, body } = buildErrorPayload(error);
       throw new HttpException(
@@ -235,73 +226,41 @@ export class ScoresService {
         status,
       );
     }
+  }
 
-    async function asrCall() {
-      const optionsObj = {
-        config: {
-          serviceId: serviceId,
-          language: {
-            sourceLanguage: language,
-          },
-          audioFormat: 'wav',
-          transcriptionFormat: {
-            value: 'transcript',
-          },
-          bestTokenCount: 2,
-        },
-        audio: [
-          {
-            audioContent: audio,
-          },
-        ],
-      };
+  async audioFileToAsrOutput(
+    data: any,
+    language: string,
+    contentType: string,
+  ): Promise<any> {
+    const serviceIdMap: Record<string, string> = {
+      kn: 'ai4bharat/conformer-multilingual-all--gpu-t4',
+      ta: 'ai4bharat/conformer-multilingual-dravidian--gpu-t4',
+      en: 'ai4bharat/whisper--gpu-t4',
+      hi: 'ai4bharat/conformer-multilingual-all--gpu-t4',
+      gu: 'ai4bharat/conformer-gujarati--gpu-t4',
+      te: 'ai4bharat/conformer-multilingual-dravidian--gpu-t4',
+      or: 'ai4bharat/conformer-multilingual-indo-aryan--gpu-t4',
+    };
+    const serviceId = serviceIdMap[language] ?? `ai4bharat/conformer-${language}-gpu--t4`;
 
-      if (language === 'en') {
-        delete optionsObj.config.bestTokenCount;
-      }
-
-      const options = JSON.stringify(optionsObj);
-
-      const config = {
-        method: 'post',
-        url: process.env.AI4BHARAT_URL,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: process.env.AI4BHARAT_API_KEY,
-        },
-        data: options,
-      };
-
-      try {
-        const asrResponse = await axios.request(config);
-        return asrResponse.data;
-      } catch (error) {
-        const { status, body } = buildErrorPayload(error);
-        throw new HttpException(
-          {
-            ...body,
-            code: ErrorCodes.AI4BHARAT_UNAVAILABLE,
-            message:
-              'Speech recognition (AI4Bharat) is unavailable or failed to transcribe audio.',
-            upstream: 'ai4bharat',
-          },
-          status,
-        );
-      }
-    }
+    const [asrOutBeforeDenoised, processingResult] = await Promise.all([
+      this.callAsr(data, language, serviceId),
+      this.callAudioProcessing(data, contentType),
+    ]);
 
     return {
-      asrOutBeforeDenoised: asrOutBeforeDenoised,
-      pause_count: pause_count,
-      avg_pause: avg_pause,
-      pitch_classification: pitch_classification,
-      pitch_mean: pitch_mean,
-      pitch_std: pitch_std,
-      intensity_classification: intensity_classification,
-      intensity_mean: intensity_mean,
-      intensity_std: intensity_std,
-      expression_classification: expression_classification,
-      smoothness_classification: smoothness_classification,
+      asrOutBeforeDenoised,
+      pause_count: processingResult.pause_count ?? 0,
+      avg_pause: processingResult.avg_pause ?? 0,
+      pitch_classification: processingResult.pitch_classification,
+      pitch_mean: processingResult.pitch_mean ?? 0,
+      pitch_std: processingResult.pitch_std ?? 0,
+      intensity_classification: processingResult.intensity_classification,
+      intensity_mean: processingResult.intensity_mean ?? 0,
+      intensity_std: processingResult.intensity_std ?? 0,
+      expression_classification: processingResult.expression_classification,
+      smoothness_classification: processingResult.smoothness_classification,
     };
   }
 
