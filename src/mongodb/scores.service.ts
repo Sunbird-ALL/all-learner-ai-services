@@ -1337,6 +1337,9 @@ export class ScoresService {
           total_correctness_score: {
             $sum: '$sessions.correctness_score',
           },
+          total_count: {
+            $sum: 1,
+          },
         },
       },
     ]);
