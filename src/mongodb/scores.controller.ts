@@ -5558,6 +5558,14 @@ export class ScoresController {
         sessionResult = 'fail';
       }
 
+      // Require at least 3 successful record
+      const minContentThreshold = 3;
+      const totalContentCount = correct_score[0]?.total_count ?? 0;
+      if (sessionResult === 'pass' && totalContentCount < minContentThreshold) {
+        console.log(`[getSetResult] Insufficient content count: ${totalContentCount} < ${minContentThreshold}, overriding sessionResult to fail`);
+        sessionResult = 'fail';
+      }
+
       const { fluencyResult, prosodyResult } = await this.scoresService.computeFluencyAndProsodyResults(
         user_id,
         subSessionId,
