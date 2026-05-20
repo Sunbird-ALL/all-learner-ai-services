@@ -1903,7 +1903,7 @@ export class ScoresService {
       ];
     }
 
-    // Legacy fallback for old records without stored language.
+  
     // Step 1: find the latest null-language milestone entry (O(M) single pass, no sessions).
     const legacyMilestone = await this.scoreModel.aggregate([
       { $match: { user_id: userId } },
