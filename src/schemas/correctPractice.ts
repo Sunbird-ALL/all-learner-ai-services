@@ -38,4 +38,3 @@ export type correct_practice_wordDocument = correct_practice_word & Document;
 
 export const correct_practice_wordSchema =
   SchemaFactory.createForClass(correct_practice_word);
-correct_practice_wordSchema.index({ user_id: 1 });
