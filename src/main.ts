@@ -13,6 +13,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 
 
 async function bootstrap() {
+  const appVersion = process.env.APP_VERSION ?? 'All';
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule.forRoot(process.env.DATABASE),
     new FastifyAdapter({ logger: true, bodyLimit: 30 * 1024 * 1024 }),
@@ -72,6 +73,7 @@ async function bootstrap() {
       reply.header('X-Frame-Options', 'DENY');
       reply.header('Content-Security-Policy', "default-src 'self'");
       reply.header('X-XSS-Protection', '1; mode=block');
+      reply.header('X-App-Version', appVersion);
       return payload;
     });
 
