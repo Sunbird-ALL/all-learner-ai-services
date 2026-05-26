@@ -20,7 +20,7 @@ export class Score {
         read_duration: { type: Number, required: false },
         practice_duration: { type: Number, required: false },
         retry_count: { type: Number, required: false },
-        language: { type: String, required: true, index: true },
+        language: { type: String, required: true },
         is_correct_choice: { type: Boolean, required: false },
         correctness_score: { type: Number, required: false },
         comprehension: {

@@ -50,3 +50,4 @@ export type VocabularyDocument = Vocabulary & Document;
 export const VocabularySchema = SchemaFactory.createForClass(Vocabulary);
 
 VocabularySchema.index({ user_id: 1, contentId: 1, language: 1 }, { unique: true });
+VocabularySchema.index({ user_id: 1, language: 1 });

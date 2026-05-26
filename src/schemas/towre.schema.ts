@@ -40,3 +40,4 @@ class ResultItem {
 }
 
 export const TowreSchema = SchemaFactory.createForClass(Towre);
+TowreSchema.index({ user_id: 1, language: 1, createdAt: -1 });
