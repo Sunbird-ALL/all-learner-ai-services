@@ -18,7 +18,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ScoresService } from './scores.service';
-import { CacheService } from './cache/cache.service';
 import { CreateLearnerProfileDto } from './dto/CreateLearnerProfile.dto';
 import { AssessmentInputDto } from './dto/AssessmentInput.dto';
 import { CreateAssessmentTrackingDto } from './dto/create-assessment-tracking.dto';
@@ -62,7 +61,6 @@ export class ScoresController {
   constructor(
     private readonly scoresService: ScoresService,
     private readonly httpService: HttpService,
-    private readonly cacheService: CacheService,
   ) { }
 
   /** Hindi-specific variant — writes to session_summary instead of Score collection. */
@@ -5412,7 +5410,7 @@ export class ScoresController {
         fluency,
         familiarity,
         correct_score,
-        subSessionScores,
+        comprehensionResult,
         recordDataInitial,
         ansSelectionResult,
         originalTextSyllablesResult,
@@ -5443,13 +5441,6 @@ export class ScoresController {
             : this.scoresService.getSubsessionOriginalTextSyllables(user_id, subSessionId)
           : Promise.resolve(null),
       ]);
-
-      const comprehensionResult = await this.scoresService.getComprehensionScore(
-        user_id,
-        subSessionId,
-        requestLanguage,
-        subSessionScores,
-      );
 
       let targets = targetsInitial;
       let recordData = recordDataInitial;
@@ -5581,7 +5572,6 @@ export class ScoresController {
         requestLanguage,
         getSetResult.collectionId,
         previous_level,
-        subSessionScores,
       );
 
       // If fluencyResult is computed and is 'fail', enforce overall sessionResult to 'fail'
@@ -5788,29 +5778,33 @@ export class ScoresController {
       // Use ansSelectionPercentage when hasAnsSelectionStatus is true, otherwise use passingPercentage
       const responsePercentage = hasAnsSelectionStatus ? ansSelectionPercentage : (passingPercentage || 0);
 
-      // Fire-and-forget: log without blocking the response.
-      this.scoresService.addGetSetResultLog({
-        userId: user_id,
-        sessionId: getSetResult.session_id,
-        subSessionId: getSetResult.sub_session_id,
-        sessionResult: sessionResult,
-        totalTargets: totalTargets,
-        currentLevel: currentLevel,
-        previousLevel: previous_level,
-        totalSyllables: totalSyllables,
-        fluency: fluency,
-        percentage: responsePercentage,
-        fluencyResult: fluencyResult,
-        prosodyResult: prosodyResult,
-        targetsPercentage: targetsPercentage,
-        langauge: getSetResult.language,
-        totalCorrectnessScore:
-          (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
-        comprehensionScore: overallScore,
-        collectionId: getSetResult.collectionId || "",
-        setNo: getSetResult.setNo || "",
-        contentType: getSetResult.contentType || "",
-      }).catch((logError) => console.error('Failed to log session result:', logError));
+      // log the responce data into the collection
+      try {
+        await this.scoresService.addGetSetResultLog({
+          userId: user_id,
+          sessionId: getSetResult.session_id,
+          subSessionId: getSetResult.sub_session_id,
+          sessionResult: sessionResult,
+          totalTargets: totalTargets,
+          currentLevel: currentLevel,
+          previousLevel: previous_level,
+          totalSyllables: totalSyllables,
+          fluency: fluency,
+          percentage: responsePercentage,
+          fluencyResult: fluencyResult,
+          prosodyResult: prosodyResult,
+          targetsPercentage: targetsPercentage,
+          langauge: getSetResult.language,
+          totalCorrectnessScore:
+            (correct_score[0]?.total_correctness_score ?? 0) / contentLimit,
+          comprehensionScore: overallScore,
+          collectionId: getSetResult.collectionId || "",
+          setNo: getSetResult.setNo || "",
+          contentType: getSetResult.contentType || "",
+        });
+      } catch (logError) {
+        console.error('Failed to log session result:', logError);
+      }
 
       return response.status(HttpStatus.CREATED).send({
         status: 'success',
@@ -5909,18 +5903,18 @@ export class ScoresController {
         language,
       );
 
-      const [recordData, latest_towre_data, vocabulary_count, vocabularyStats]: any =
-        await Promise.all([
-          this.scoresService.getlatestmilestone(id, language),
-          this.scoresService.getTowreData(id, language),
-          this.scoresService.getVocabularyCount(id, language),
-          this.scoresService.getVocabularyStats(id),
-        ]);
+      // voc count
+      const vocabulary_count = await this.scoresService.getVocabularyCount(
+        id,
+        language,
+      );
+      // Get vocabulary statistics (learned and understood words count)
+      const vocabularyStats = await this.scoresService.getVocabularyStats(id);
 
       // milestone data
       const milestone_level = recordData[0]?.milestone_level || 'm0';
       const sub_milestone_level = recordData[0]?.sub_milestone_level || '';
-      const result = {
+      return response.status(HttpStatus.CREATED).send({
         status: 'success',
         data: {
           milestone_level: milestone_level,
@@ -5932,8 +5926,7 @@ export class ScoresController {
             understood_voc_count: vocabularyStats.understood_words_count
           }
         },
-      };
-      return response.status(HttpStatus.CREATED).send(result);
+      });
     } catch (err) {
       throw mapUnknownToHttpException(err);
     }
