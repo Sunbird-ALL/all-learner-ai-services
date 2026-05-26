@@ -9,7 +9,7 @@ export enum EvaluationType {
 
 @Schema({ timestamps: true })
 export class AssessmentTracking {
-  @Prop({ type: String, required: true, unique: true, index: true })
+  @Prop({ type: String, required: true, unique: true })
   assessmentTrackingId: string;
 
   @Prop({ type: String, required: true, index: true })

@@ -260,7 +260,7 @@ export class Score {
     sub_milestone_level: string;
     language: string;
     createdAt: Date;
-  }[]; // This array includes milestone progress and we take latest entry in array as current milestone for user
+  }[];
 }
 
 export type ScoreDocument = Score & Document;

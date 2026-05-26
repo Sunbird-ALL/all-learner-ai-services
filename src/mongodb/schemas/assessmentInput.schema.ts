@@ -6,7 +6,7 @@ export class assessmentInput extends Document {
   @Prop({ required: true })
   user_id: string;
 
-  @Prop({ required: true, index: true })
+  @Prop({ required: true })
   session_id: string;
 
   @Prop({ required: true })
