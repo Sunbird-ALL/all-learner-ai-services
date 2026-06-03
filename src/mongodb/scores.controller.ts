@@ -13,7 +13,7 @@ import {
   Req,
   Res,
   Search,
-  SetMetadata,
+
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
@@ -53,7 +53,7 @@ import { isNotEmptyObject } from 'class-validator';
 import { splitGraphemes } from "split-graphemes";
 import { SessionResult } from 'src/common/enums/scores.enum';
 
-const Public = () => SetMetadata('isPublic', true);
+
 @ApiTags('scores')
 @UseGuards(JwtAuthGuard)
 @Controller('scores')
@@ -4122,24 +4122,12 @@ export class ScoresController {
     }
   }
 
-  @Public()
-  @Get('/GetTargets/user/:userId')
-  @ApiParam({
-    name: 'userId',
-    description: 'The unique user identifier',
-    example: '8819167684',
-  })
+  @Get('/GetTargets/user')
   @ApiQuery({
     name: 'language',
     required: true,
     description: 'Language code for the content (e.g., en, ta, hi, gu, or, kn, te)',
     example: 'ta',
-  })
-  @ApiQuery({
-    name: 'user_id',
-    required: true,
-    description: 'The user ID to fetch targets for',
-    example: '8819167684',
   })
   @ApiOperation({
     summary: 'Get target characters by user ID',
@@ -4173,10 +4161,10 @@ export class ScoresController {
   async GetTargetsbyUser(
     @Req() request: FastifyRequest,
     @Query('language') language: string,
-    @Query('user_id') user_id: string,
     @Res() response: FastifyReply,
   ) {
     try {
+      const user_id = (request as any).user.virtual_id.toString();
       const targetResult = await this.scoresService.getTargetsByUser(
         user_id,
         language,
