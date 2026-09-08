@@ -7,6 +7,7 @@ import {
   getSigningKey,
   postJson,
   checkTokenStatus,
+  AuthServiceUnavailableError,
 } from './authHelper';
 
 jest.mock('jose', () => ({
@@ -21,12 +22,14 @@ function mockHttpRequest(
   module: typeof http | typeof https,
   responsePayload?: any,
   error?: Error,
+  statusCode = 200,
 ) {
   const mockReq = Object.assign(new EventEmitter(), {
     write: jest.fn(),
     end: jest.fn(),
   });
-  const mockRes = new EventEmitter();
+  const mockRes: any = new EventEmitter();
+  mockRes.statusCode = statusCode;
 
   const spy = jest
     .spyOn(module, 'request')
@@ -130,7 +133,7 @@ describe('authHelper', () => {
       const { spy } = mockHttpRequest(http, 'invalid-json');
       await expect(
         postJson('http://example.com/api', { foo: 'bar' }),
-      ).rejects.toThrow();
+      ).rejects.toThrow(AuthServiceUnavailableError);
       spy.mockRestore();
     });
 
@@ -142,132 +145,85 @@ describe('authHelper', () => {
       );
       await expect(
         postJson('http://example.com/api', { foo: 'bar' }),
-      ).rejects.toThrow('Connection refused');
+      ).rejects.toThrow(AuthServiceUnavailableError);
       spy.mockRestore();
     });
 
     it('should reject on invalid URL string', async () => {
-      await expect(postJson('not-a-valid-url', {})).rejects.toThrow();
+      await expect(postJson('not-a-valid-url', {})).rejects.toThrow(
+        AuthServiceUnavailableError,
+      );
+    });
+
+    it('should reject on a non-2xx status code without inspecting the body', async () => {
+      const { spy } = mockHttpRequest(http, { message: 'not found' }, undefined, 404);
+      await expect(
+        postJson('http://example.com/api', { foo: 'bar' }),
+      ).rejects.toThrow(AuthServiceUnavailableError);
+      spy.mockRestore();
     });
   });
 
   describe('checkTokenStatus', () => {
-    it('should return isActive true when orchestration service returns result.isActive = true', async () => {
-      process.env.ALL_ORC_SERVICE_URL =
-        'http://points-lesson-tracking:3009/api/virtualId/tokenStatus';
-      delete process.env.AXL_LOGIN_SERVICE_URL;
-
-      const { spy } = mockHttpRequest(http, { result: { isActive: true } });
-      const result = await checkTokenStatus('12345', 'mock-token');
-      expect(result).toEqual({ isActive: true });
-      spy.mockRestore();
-    });
-
-    it('should return isActive true when orchestration service returns data.result.isActive = true', async () => {
-      process.env.ALL_ORC_SERVICE_URL =
-        'http://points-lesson-tracking:3009/api/virtualId/tokenStatus';
+    it('should return true when axl-login-service reports isActive via responseObj shape', async () => {
+      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000/api/v1/virtualId/tokenStatus';
 
       const { spy } = mockHttpRequest(http, {
-        data: { result: { isActive: true } },
+        result: 'Success',
+        responseObj: { responseDataParams: { data: { isActive: true } } },
       });
       const result = await checkTokenStatus('12345', 'mock-token');
-      expect(result).toEqual({ isActive: true });
+      expect(result).toBe(true);
       spy.mockRestore();
     });
 
-    it('should return isActive true when login service returns matching token', async () => {
-      delete process.env.ALL_ORC_SERVICE_URL;
-      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000';
+    it('should return true when axl-login-service reports isActive via flat data shape', async () => {
+      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000/api/v1/virtualId/tokenStatus';
 
-      const { spy } = mockHttpRequest(http, {
-        responseObj: {
-          responseDataParams: {
-            data: {
-              token: 'target-token',
-            },
-          },
-        },
-      });
-      const result = await checkTokenStatus('12345', 'target-token');
-      expect(result).toEqual({ isActive: true });
+      const { spy } = mockHttpRequest(http, { data: { isActive: true } });
+      const result = await checkTokenStatus('12345', 'mock-token');
+      expect(result).toBe(true);
       spy.mockRestore();
     });
 
-    it('should return isActive false when login service returns mismatched token', async () => {
-      delete process.env.ALL_ORC_SERVICE_URL;
-      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000';
+    it('should return false when axl-login-service reports isActive: false', async () => {
+      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000/api/v1/virtualId/tokenStatus';
 
-      const { spy } = mockHttpRequest(http, {
-        data: {
-          token: 'target-token',
-        },
-      });
-      const result = await checkTokenStatus('12345', 'different-token');
-      expect(result).toEqual({ isActive: false });
+      const { spy } = mockHttpRequest(http, { isActive: false });
+      const result = await checkTokenStatus('12345', 'mock-token');
+      expect(result).toBe(false);
       spy.mockRestore();
     });
 
-    it('should fallback gracefully to login service if orchestration service throws error', async () => {
-      process.env.ALL_ORC_SERVICE_URL =
-        'http://points-lesson-tracking:3009/api/virtualId/tokenStatus';
-      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000';
+    it('should return false when the response has no isActive field at all', async () => {
+      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000/api/v1/virtualId/tokenStatus';
 
-      let callCount = 0;
-      const requestSpy = jest
-        .spyOn(http, 'request')
-        .mockImplementation((_url: any, _options: any, callback?: any) => {
-          callCount++;
-          const mockReq = Object.assign(new EventEmitter(), {
-            write: jest.fn(),
-            end: jest.fn(),
-          });
-          const mockRes = new EventEmitter();
-
-          if (callCount === 1) {
-            setTimeout(() => {
-              mockReq.emit('error', new Error('Orc network error'));
-            }, 5);
-          } else {
-            if (callback) callback(mockRes);
-            setTimeout(() => {
-              mockRes.emit(
-                'data',
-                JSON.stringify({
-                  token: 'my-token',
-                }),
-              );
-              mockRes.emit('end');
-            }, 5);
-          }
-          return mockReq as any;
-        });
-
-      const result = await checkTokenStatus('12345', 'my-token');
-      expect(result).toEqual({ isActive: true });
-      requestSpy.mockRestore();
+      const { spy } = mockHttpRequest(http, { token: 'unrelated' });
+      const result = await checkTokenStatus('12345', 'mock-token');
+      expect(result).toBe(false);
+      spy.mockRestore();
     });
 
-    it('should return isActive false if both services are unavailable or fail', async () => {
-      process.env.ALL_ORC_SERVICE_URL =
-        'http://points-lesson-tracking:3009/api/virtualId/tokenStatus';
-      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000';
+    it('should throw AuthServiceUnavailableError when the auth service is unreachable, not fall back to isActive:false', async () => {
+      process.env.AXL_LOGIN_SERVICE_URL = 'http://axl-login-service:8000/api/v1/virtualId/tokenStatus';
 
       const { spy } = mockHttpRequest(
         http,
         undefined,
         new Error('Network error'),
       );
-      const result = await checkTokenStatus('12345', 'my-token');
-      expect(result).toEqual({ isActive: false });
+      await expect(checkTokenStatus('12345', 'my-token')).rejects.toThrow(
+        AuthServiceUnavailableError,
+      );
       spy.mockRestore();
     });
 
-    it('should return isActive false if no URLs are configured', async () => {
-      delete process.env.ALL_ORC_SERVICE_URL;
+    it('should throw AuthServiceUnavailableError when AXL_LOGIN_SERVICE_URL is not configured', async () => {
       delete process.env.AXL_LOGIN_SERVICE_URL;
 
-      const result = await checkTokenStatus('12345', 'my-token');
-      expect(result).toEqual({ isActive: false });
+      await expect(checkTokenStatus('12345', 'my-token')).rejects.toThrow(
+        AuthServiceUnavailableError,
+      );
     });
   });
 });

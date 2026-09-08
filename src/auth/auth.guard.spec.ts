@@ -1,4 +1,8 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import * as jose from 'jose';
@@ -6,7 +10,14 @@ import { JwtAuthGuard } from './auth.guard';
 import * as authHelper from '../common/authHelper';
 
 jest.mock('jose');
-jest.mock('../common/authHelper');
+// Keep the real AuthServiceUnavailableError class so `instanceof` checks in
+// auth.guard.ts (which imports the same mocked module) work correctly.
+jest.mock('../common/authHelper', () => ({
+  ...jest.requireActual('../common/authHelper'),
+  getEncryptionKey: jest.fn(),
+  getSigningKey: jest.fn(),
+  checkTokenStatus: jest.fn(),
+}));
 
 const mockJose = jose as jest.Mocked<typeof jose>;
 const mockAuthHelper = authHelper as jest.Mocked<typeof authHelper>;
@@ -38,7 +49,7 @@ describe('JwtAuthGuard', () => {
 
     mockAuthHelper.getEncryptionKey.mockReturnValue(new Uint8Array(32));
     mockAuthHelper.getSigningKey.mockReturnValue(new Uint8Array(32));
-    mockAuthHelper.checkTokenStatus.mockResolvedValue({ isActive: true });
+    mockAuthHelper.checkTokenStatus.mockResolvedValue(true);
 
     jwtService = {
       sign: jest.fn(),
@@ -100,7 +111,7 @@ describe('JwtAuthGuard', () => {
         mockJose.jwtVerify.mockResolvedValue({
           payload: verifiedPayload,
         } as any);
-        mockAuthHelper.checkTokenStatus.mockResolvedValue({ isActive: true });
+        mockAuthHelper.checkTokenStatus.mockResolvedValue(true);
 
         const result = await guard.canActivate(mockContext);
 
@@ -245,21 +256,48 @@ describe('JwtAuthGuard', () => {
 
       mockJose.jwtDecrypt.mockResolvedValue(mockDecryptedToken as any);
       mockJose.jwtVerify.mockResolvedValue(mockVerifiedToken as any);
-      mockAuthHelper.checkTokenStatus.mockResolvedValue({ isActive: false });
+      mockAuthHelper.checkTokenStatus.mockResolvedValue(false);
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(
         new UnauthorizedException('User is logged out'),
+      );
+    });
+
+    it('should throw ServiceUnavailableException when axl-login-service is unreachable, not a generic invalid-token error', async () => {
+      const mockDecryptedToken = {
+        payload: {
+          jwtSignedToken: 'signed-jwt-token',
+        },
+      };
+
+      const mockVerifiedToken = {
+        payload: {
+          virtualId: 'user-123',
+          exp: Math.floor(Date.now() / 1000) + 3600,
+        },
+      };
+
+      mockJose.jwtDecrypt.mockResolvedValue(mockDecryptedToken as any);
+      mockJose.jwtVerify.mockResolvedValue(mockVerifiedToken as any);
+      mockAuthHelper.checkTokenStatus.mockRejectedValue(
+        new authHelper.AuthServiceUnavailableError('Auth service is unreachable'),
+      );
+
+      await expect(guard.canActivate(mockContext)).rejects.toThrow(
+        new ServiceUnavailableException(
+          'Not able to connect with axl-login-service',
+        ),
       );
     });
   });
 
   describe('checkTokenStatus delegation', () => {
     it('should delegate checkTokenStatus call to authHelper.checkTokenStatus', async () => {
-      mockAuthHelper.checkTokenStatus.mockResolvedValue({ isActive: true });
+      mockAuthHelper.checkTokenStatus.mockResolvedValue(true);
 
       const result = await guard.checkTokenStatus('user-123', 'mock-token');
 
-      expect(result).toEqual({ isActive: true });
+      expect(result).toBe(true);
       expect(mockAuthHelper.checkTokenStatus).toHaveBeenCalledWith(
         'user-123',
         'mock-token',
