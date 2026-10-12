@@ -1,0 +1,85 @@
+name: CI Build & Push - All Learner AI
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to push (e.g. v1.0.0)"
+        required: true
+        type: string
+
+env:
+  IMAGE_NAME: all-learner-ai
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    name: Build
+    if: ${{ contains(fromJSON('["SiddhiOptit", "bhargav"]'), github.actor) }}
+    runs-on:
+      group: all-jumphost-runner
+      labels: self-hosted
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Normalize owner to lowercase
+        id: owner
+        run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Docker image
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+        run: |
+          docker build -t "$IMAGE" -f ./Dockerfile .
+
+      - name: Save image to tar
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ env.IMAGE_NAME }}:${{ inputs.image_tag }}
+        run: |
+          docker save -o image.tar "$IMAGE"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image
+          path: image.tar
+          retention-days: 1
+
+  push:
+    name: Push
+    needs: build
+    if: ${{ contains(fromJSON('["SiddhiOptit", "bhargav"]'), github.actor) }}
+    runs-on:
+      group: all-jumphost-runner
+      labels: self-hosted
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: image
+
+      - name: Load image
+        run: |
+          docker load -i image.tar
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        env:
+          IMAGE_TAG: ${{ inputs.image_tag }}
+        run: |
+          OWNER="${GITHUB_REPOSITORY_OWNER,,}"
+          docker push "${REGISTRY}/${OWNER}/${IMAGE_NAME}:${IMAGE_TAG}"
