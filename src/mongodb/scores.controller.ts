@@ -5824,7 +5824,7 @@ export class ScoresController {
   @ApiForbiddenResponse({ description: 'Forbidden.' })
   @ApiOperation({
     summary: 'Calculate session result and update milestone level',
-    description: 'Calculates pass/fail result based on target character performance in a sub-session. Also handles milestone level updates for discovery and showcase modes. Supports different evaluation criteria based on content type (Char, Word, Sentence, Paragraph) and mechanics.',
+    description: 'Calculates pass/fail result based on target character performance in a sub-session. Also handles milestone level updates for discovery and showcase modes. Supports different evaluation criteria based on content type (Char, Word, Sentence, Paragraph) and mechanics. Send updateMilestone: false to get the result without saving a new milestone level.',
   })
   @Post('/getSetResult')
   async getSetResult(
@@ -6200,6 +6200,11 @@ export class ScoresController {
           getSetResult.collectionId === undefined)
       ) {
         milestone_level = 'B';
+      }
+
+      if (getSetResult.updateMilestone === false) {
+        milestoneEntry = false;
+        milestone_level = previous_level;
       }
 
       let currentLevel = milestone_level;
