@@ -43,7 +43,7 @@
     "fastify-multer": "^2.0.3",
     "jose": "^5.10.0",
     "mongoose": "^7.4.2",
-    "mysql2": "^3.5.2",
+    "mysql2": "^3.24.2",
     "redis": "^4.7.1",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
