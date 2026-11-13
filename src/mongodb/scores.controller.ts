@@ -3983,6 +3983,19 @@ export class ScoresController {
           responseText = CreateLearnerProfileDto.output[0].source;
         }
 
+        try {
+          await this.scoresService.vocabularyCount(
+            user_id,
+            originalText,
+            responseText,
+            language,
+            CreateLearnerProfileDto.session_id,
+            CreateLearnerProfileDto.sub_session_id
+          );
+        } catch (vocabError) {
+          console.error('Vocabulary count failed:', vocabError);
+        }
+
         // Update scores after final responseText is determined
         // Check if original text and final response text are the same or very similar
         const isSameText = CreateLearnerProfileDto.original_text === responseText.replace(/\s+/g, '');
