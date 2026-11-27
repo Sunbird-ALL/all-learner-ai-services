@@ -54,6 +54,7 @@ import kn_config from './config/language/kn';
 import { isNotEmptyObject } from 'class-validator';
 import { splitGraphemes } from "split-graphemes";
 import { SessionResult } from 'src/common/enums/scores.enum';
+import { ansSelectionFromSessions } from './subsession-metrics';
 
 
 @ApiTags('scores')
@@ -523,19 +524,15 @@ export class ScoresController {
 
       }
 
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
       const totalTargets = targets.length;
@@ -978,19 +975,15 @@ export class ScoresController {
 
       }
 
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
       const totalTargets = targets.length;
@@ -1388,19 +1381,15 @@ export class ScoresController {
 
       }
 
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
       const totalTargets = targets.length;
@@ -1827,19 +1816,15 @@ export class ScoresController {
         const data = await this.scoresService.create(createScoreData);
 
       }
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
 
@@ -2265,19 +2250,15 @@ export class ScoresController {
         const data = await this.scoresService.create(createScoreData);
 
       }
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
 
@@ -3090,19 +3071,15 @@ export class ScoresController {
 
       }
 
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
       const totalTargets = targets.length;
@@ -3668,19 +3645,12 @@ export class ScoresController {
 
       }
 
-      // Both post-save queries are independent — run in parallel
-      const [targets, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
-      ]);
+      // One aggregate gives both targets and fluency (was two in parallel).
+      const { targets, fluency } = await this.scoresService.getSubSessionSummary(
+        user_id,
+        CreateLearnerProfileDto.sub_session_id,
+        CreateLearnerProfileDto.language,
+      );
 
       const totalTargets = targets.length;
 
@@ -4498,19 +4468,15 @@ export class ScoresController {
 
       }
 
-      // All 3 post-save queries are independent — run in parallel
-      let [targets, originalTextSyllables, fluency] = await Promise.all([
-        this.scoresService.getTargetsBysubSession(
+      // Both post-save queries are independent — run in parallel. One aggregate
+      // gives targets and fluency (was two).
+      let [{ targets, fluency }, originalTextSyllables] = await Promise.all([
+        this.scoresService.getSubSessionSummary(
           user_id,
           CreateLearnerProfileDto.sub_session_id,
           CreateLearnerProfileDto.language,
         ),
         this.scoresService.getSubsessionOriginalTextSyllables(user_id, CreateLearnerProfileDto.sub_session_id),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          CreateLearnerProfileDto.sub_session_id,
-          CreateLearnerProfileDto.language,
-        ),
       ]);
       targets = targets.filter((targetsEle) => originalTextSyllables.includes(targetsEle.character));
       const totalTargets = targets.length;
@@ -5861,15 +5827,15 @@ export class ScoresController {
       const subSessionId = getSetResult.sub_session_id;
       const requestLanguage = getSetResult.language;
 
+      // One aggregate returns the sub-session's sessions, targets, familiarity,
+      // fluency and correctness (ScoresService.getSubSessionSummary) instead of
+      // 5 parallel aggregates on the same learner document, and answer
+      // selection is read from those sessions instead of loading the whole
+      // document again.
       const [
         getGetSetResultHistory,
-        targetsInitial,
-        fluency,
-        familiarity,
-        correct_score,
-        subSessionScores,
+        summary,
         recordDataInitial,
-        ansSelectionResult,
         originalTextSyllablesResult,
       ] = await Promise.all([
         this.scoresService.getGetSetResultHistory(
@@ -5877,27 +5843,7 @@ export class ScoresController {
           getSetResult.session_id,
           requestLanguage,
         ),
-        this.scoresService.getTargetsBysubSession(
-          user_id,
-          subSessionId,
-          requestLanguage,
-        ),
-        this.scoresService.getFluencyBysubSession(
-          user_id,
-          subSessionId,
-          requestLanguage,
-        ),
-        this.scoresService.getFamiliarityBysubSession(
-          user_id,
-          subSessionId,
-          requestLanguage,
-        ),
-        this.scoresService.getCorrectnessBysubSession(
-          user_id,
-          subSessionId,
-          requestLanguage,
-        ),
-        this.scoresService.getSubSessionScores(
+        this.scoresService.getSubSessionSummary(
           user_id,
           subSessionId,
           requestLanguage,
@@ -5906,12 +5852,6 @@ export class ScoresController {
           user_id,
           requestLanguage
         ),
-        this.scoresService.calculateAnsSelectionResult(
-          user_id,
-          getSetResult.session_id,
-          subSessionId,
-          requestLanguage,
-        ),
         requestLanguage !== 'en'
           ? this.scoresService.getSubsessionOriginalTextSyllables(
             user_id,
@@ -5919,6 +5859,15 @@ export class ScoresController {
           )
           : Promise.resolve(null),
       ]);
+      const subSessionScores = summary.sessions;
+      const targetsInitial = summary.targets;
+      const fluency = summary.fluency;
+      const familiarity = summary.familiarity;
+      const correct_score = summary.correctness;
+      const ansSelectionResult = ansSelectionFromSessions(
+        subSessionScores,
+        getSetResult.session_id,
+      );
 
       const comprehensionResult = await this.scoresService.getComprehensionScore(
         user_id,
