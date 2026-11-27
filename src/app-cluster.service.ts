@@ -1,8 +1,8 @@
 var cluster = require('cluster');
-import * as os from 'os';
 import { Injectable } from '@nestjs/common';
+import { workerCount } from './common/worker-count';
 
-const numCPUs = os.cpus().length;
+const numCPUs = workerCount();
 
 @Injectable()
 export class AppClusterService {

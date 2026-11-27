@@ -2,7 +2,7 @@ import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { ScoreDocument } from './schemas/scores.schema';
 import { hexcodeMappingDocument } from './schemas/hexcodeMapping.schema';
 import { assessmentInputDocument } from './schemas/assessmentInput.schema';
-import { Model } from 'mongoose';
+import { Model, PipelineStage } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import axios from 'axios';
 import { catchError, lastValueFrom, map } from 'rxjs';
@@ -1229,6 +1229,206 @@ export class ScoresService {
     ]);
 
     return RecordData;
+  }
+
+  // One aggregate that returns what getSubSessionScores, getTargetsBysubSession,
+  // getFamiliarityBysubSession, getFluencyBysubSession and
+  // getCorrectnessBysubSession return for a sub-session. Each of those ran its
+  // own aggregate on the learner's whole `scores` document, and getSetResult ran
+  // them all at once, holding 5 pool connections per request.
+  //
+  // MongoDB still does every calculation, with the same stages in the same
+  // order, so results are unchanged: tie order in $sort and $sum/$avg rounding
+  // come from the server exactly as before. Targets and familiarity were the
+  // same pipeline with opposite final filters, so one token list is split here.
+  async getSubSessionSummary(
+    userId: string,
+    subSessionId: string,
+    language: string,
+  ): Promise<{
+    sessions: any[];
+    targets: any[];
+    familiarity: any[];
+    fluency: number;
+    correctness: any[];
+  }> {
+    const threshold = 0.7;
+    const correctnessThreshold = 50;
+    const scoreRow = (field: string): PipelineStage.FacetPipelineStage[] => [
+      { $unwind: `$sessions.${field}` },
+      {
+        $project: {
+          _id: 0,
+          date: '$sessions.createdAt',
+          session_id: '$sessions.session_id',
+          character: `$sessions.${field}.token`,
+          score: `$sessions.${field}.confidence_score`,
+        },
+      },
+      { $sort: { date: -1 } },
+    ];
+
+    const [doc] = await this.scoreModel.aggregate([
+      { $match: { user_id: userId } },
+      {
+        $project: {
+          sessions: {
+            $filter: {
+              input: '$sessions',
+              as: 's',
+              cond: {
+                $and: [
+                  { $eq: ['$$s.sub_session_id', subSessionId] },
+                  { $eq: ['$$s.language', language] },
+                ],
+              },
+            },
+          },
+        },
+      },
+      { $unwind: '$sessions' },
+      {
+        $facet: {
+          sessions: [{ $replaceRoot: { newRoot: '$sessions' } }],
+          confidenceScores: scoreRow('confidence_scores'),
+          missingTokenScores: scoreRow('missing_token_scores'),
+          fluency: [
+            {
+              $group: {
+                _id: { subSessionId: '$sessions.sub_session_id' },
+                fluencyScore: { $avg: '$sessions.fluencyScore' },
+              },
+            },
+          ],
+          correctness: [
+            { $match: { $expr: { $ne: ['$sessions.response_text', ''] } } },
+            {
+              $group: {
+                _id: null,
+                count_scores_gte_50: {
+                  $sum: {
+                    $cond: [
+                      { $gte: ['$sessions.correctness_score', correctnessThreshold] },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+                total_correctness_score: { $sum: '$sessions.correctness_score' },
+                total_count: { $sum: 1 },
+              },
+            },
+          ],
+        },
+      },
+      {
+        $facet: {
+          sessions: [{ $project: { _id: 0, sessions: 1 } }],
+          fluency: [{ $project: { _id: 0, fluency: 1 } }],
+          correctness: [{ $project: { _id: 0, correctness: 1 } }],
+          tokens: [
+            {
+              $project: {
+                combinedResults: {
+                  $concatArrays: ['$confidenceScores', '$missingTokenScores'],
+                },
+              },
+            },
+            { $unwind: '$combinedResults' },
+            { $replaceRoot: { newRoot: '$combinedResults' } },
+            {
+              $project: {
+                sessionId: '$session_id',
+                date: '$date',
+                token: '$character',
+                score: '$score',
+                isRetryExists: { $ifNull: ['$sessions.isRetry', false] },
+              },
+            },
+            {
+              $match: {
+                $or: [{ isRetryExists: false }, { 'sessions.isRetry': false }],
+              },
+            },
+            { $sort: { date: -1 } },
+            { $group: { _id: { token: '$token' }, scores: { $push: '$score' } } },
+            {
+              $project: {
+                _id: 0,
+                character: '$_id.token',
+                latestScores: { $slice: ['$scores', -5] },
+              },
+            },
+            {
+              $addFields: {
+                countBelowThreshold: {
+                  $size: {
+                    $filter: {
+                      input: '$latestScores',
+                      as: 'score',
+                      cond: { $lt: ['$$score', threshold] },
+                    },
+                  },
+                },
+                countAboveThreshold: {
+                  $size: {
+                    $filter: {
+                      input: '$latestScores',
+                      as: 'score',
+                      cond: { $gte: ['$$score', threshold] },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const sessions = doc?.sessions?.[0]?.sessions ?? [];
+    const tokens = doc?.tokens ?? [];
+    const fluencyRows = doc?.fluency?.[0]?.fluency ?? [];
+    const correctness = doc?.correctness?.[0]?.correctness ?? [];
+    const targetRows = tokens.filter(
+      (t: any) => t.countBelowThreshold > t.countAboveThreshold,
+    );
+    return {
+      sessions,
+      targets: await this.orderTargetsByHexcode(targetRows, language),
+      familiarity: tokens.filter(
+        (t: any) => t.countAboveThreshold >= t.countBelowThreshold,
+      ),
+      fluency: fluencyRows[0]?.fluencyScore || 0,
+      correctness,
+    };
+  }
+
+  // The common/non-common ordering getTargetsBysubSession applies to its rows.
+  private async orderTargetsByHexcode(RecordData: any[], language: string) {
+    if (RecordData.length === 0) return [];
+
+    const tokenHexcodeDataArr = await this.gethexcodeMapping(language);
+    const tokenMap = new Map();
+    tokenHexcodeDataArr.forEach((tokenObj: any) => {
+      tokenMap.set(tokenObj.token, {
+        isCommon: tokenObj.isCommon,
+        indexNo: tokenObj.indexNo,
+      });
+    });
+
+    const commonTargets: any[] = [];
+    const nonCommonTargets: any[] = [];
+    RecordData.forEach((target: any) => {
+      const tokenInfo = tokenMap.get(target.character);
+      if (tokenInfo && tokenInfo.isCommon) {
+        commonTargets.push({ ...target, indexNo: tokenInfo.indexNo });
+      } else {
+        nonCommonTargets.push(target);
+      }
+    });
+    commonTargets.sort((a: any, b: any) => a.indexNo - b.indexNo);
+    return [...commonTargets, ...nonCommonTargets];
   }
 
   async getFamiliarityBysubSession(
